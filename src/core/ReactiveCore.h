@@ -1,0 +1,83 @@
+#pragma once
+
+#include "ActionArbiter.h"
+#include "Clock.h"
+#include "Config.h"
+#include "DodgeAction.h"
+#include "InputBuffer.h"
+#include "MotionCommand.h"
+#include "MotionDriver.h"
+
+namespace rdf
+{
+	struct FrameInput
+	{
+		float dt{ 0.0f };
+		Vec2  move{};             // world-space move input, length 0..1 (analog)
+		float actorYaw{ 0.0f };   // actor heading now
+		float locomotionSpeed{ 0.0f };  // measured planar speed, carried into a fresh dodge
+		bool  lockOn{ false };
+		float lockOnYaw{ 0.0f };
+	};
+
+	struct EngineView
+	{
+		EngineBlock  engine{ EngineBlock::None };
+		std::uint8_t attackState{ 0 };
+		bool         dodgeWindowOpen{ false };
+		bool         staminaOk{ true };
+	};
+
+	struct StepResult
+	{
+		MotionCommand command{};
+		bool          completed{ false };  // the dodge reached its natural end during this step
+	};
+
+	// Engine-free orchestration of one frame:
+	//   BeginFrame -> Press* -> Evaluate -> (caller performs side effects) -> Apply -> Step
+	// Evaluate does not mutate the buffer; Apply consumes commands only for accepted decisions,
+	// so a refused side effect leaves the press buffered until it expires.
+	class ReactiveCore
+	{
+	public:
+		explicit ReactiveCore(const Config& cfg);
+
+		void          BeginFrame(const FrameInput& frame);
+		std::uint64_t Press(CommandKind kind, Vec2 dir);
+		void          PromoteAttack() { buffer_.PromoteAttack(clock_.Now()); }
+
+		Decision   Evaluate(const EngineView& engine);
+		void       Apply(const Decision& decision, bool accepted);
+		StepResult Step();
+		void       Reset();
+
+		bool       DodgeRunning() const { return action_.Running(); }
+		DodgePhase Phase() const { return action_.Phase(); }
+		float      ActionTime() const { return action_.Time(); }
+		int        ChainCount() const { return action_.ChainCount(); }
+		bool       Exiting() const { return action_.Exiting(); }
+		float      Heading() const { return driver_.Heading(); }
+		float      Facing() const { return driver_.Facing(); }
+		float      Speed() const { return driver_.Speed(); }
+		// Heading of the current dodge relative to the actor's yaw when it began, degrees, +right.
+		float      StartAngleDeg() const { return startAngleDeg_; }
+		bool       InWindow(float from, float to) const { return action_.Running() && action_.Time() >= from && action_.Time() < to; }
+		double     Now() const { return clock_.Now(); }
+		const InputBuffer& Buffer() const { return buffer_; }
+
+	private:
+		void     StartDodge(const Decision& d, bool chain);
+		DriverInput MakeDriverInput() const;
+		bool     MoveHeld() const;
+
+		Config        cfg_;
+		Clock         clock_;
+		InputBuffer   buffer_;
+		ActionArbiter arbiter_;
+		DodgeAction   action_;
+		MotionDriver  driver_;
+		FrameInput    frame_{};
+		float         startAngleDeg_{ 0.0f };
+	};
+}
