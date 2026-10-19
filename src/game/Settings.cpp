@@ -259,8 +259,8 @@ namespace rdf::game
 		s.devLog = ReadBool("Dev", "bDevLog", s.devLog);
 		g_settings = std::move(s);
 
-		logger::info("settings: dodge keys kb={} mouse={} pad={} total={:.3f}s distance={:.0f} maxChain={} iframes={}",
+		logger::info("settings: dodge keys kb={} mouse={} pad={} total={:.3f}s distance={:.0f} maxChain={} iframes={} devLog={}",
 			g_settings.dodgeKeyboard, g_settings.dodgeMouse, g_settings.dodgeGamepad, g_settings.core.timing.Total(),
-			g_settings.core.motion.distance, g_settings.core.policy.maxChain, g_settings.iFrames);
+			g_settings.core.motion.distance, g_settings.core.policy.maxChain, g_settings.iFrames, g_settings.devLog);
 	}
 }
