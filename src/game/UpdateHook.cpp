@@ -51,6 +51,7 @@ namespace rdf::game::update
 			void       OnStopped();
 			void       Trace(RE::PlayerCharacter* player);
 			void       LogRejection(const Decision& d);
+			void       LogStamina(RE::PlayerCharacter* player, float current) const;
 			int        ClipIndex(float angleDeg) const;
 
 			std::unique_ptr<ReactiveCore> core_;
@@ -167,7 +168,11 @@ namespace rdf::game::update
 		view.attackState = state.attackState;
 		view.dodgeWindowOpen = graph::DodgeWindowOpen();
 		view.staminaOk = state.stamina >= settings.minStamina;
-		Execute(player, core_->Evaluate(view));
+		const Decision decision = core_->Evaluate(view);
+		if (decision.reject == RejectReason::StaminaLow) {
+			LogStamina(player, state.stamina);
+		}
+		Execute(player, decision);
 
 		StepAndPublish(player, dt);
 		Trace(player);
@@ -292,6 +297,14 @@ namespace rdf::game::update
 		const int octant = static_cast<int>(std::lround(angleDeg / 45.0f));
 		const int index = ((octant % 8) + 8) % 8;  // F, FR, R, BR, B, BL, L, FL
 		return index + (Settings::Get().sidestepWhenKeepFacing ? 8 : 0);
+	}
+
+	void Controller::LogStamina(RE::PlayerCharacter* player, float current) const
+	{
+		auto* owner = player->AsActorValueOwner();
+		DevLog("stamina current={:.1f} permanent={:.1f} base={:.1f} min={:.1f}", current,
+			owner->GetPermanentActorValue(RE::ActorValue::kStamina), owner->GetBaseActorValue(RE::ActorValue::kStamina),
+			Settings::Get().minStamina);
 	}
 
 	void Controller::LogRejection(const Decision& d)
