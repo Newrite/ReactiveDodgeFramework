@@ -180,3 +180,17 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   names) crashed the game in strcmp on a garbage name pointer: CommonLib's hkbNodeInfo layout (0x90 stride, template
   at +0x50) does not hold for every entry. Removed entirely. Rule kept from this: no unverified engine layout is
   dereferenced in game, not even behind bDevLog; check layouts in IDA first or read them with a guarded tool.
+* Start-of-dodge micro pop: parked (user: practically invisible). Facts so far, for whoever resumes it:
+  - the in-blend is NOT cut: a vtable probe on hkbBlendingTransitionEffect (IDA-verified: duration +0x50, timeRemaining
+    +0x80, timeInTransition +0x84; update slot 5 = 0x140A3F820, deactivate slot 7 = 0x140A3F830) showed RDF_DodgeInBlend
+    running its full 0.12 s (6 updates) and deactivating at remaining <= 0;
+  - in slow motion the pop is a single-frame spike on the second blend update, when the dodge clip's weight is ~0.4 %:
+    the change is in the pose being left (or applied on top), an upper-body straightening (head -17 forward, +5 up,
+    pelvis ~still);
+  - suspect: TDM's lean, hkbTwistModifiers bound to TDM_Pitch / TDM_Roll in 0_master modifier list #2517 (tdmlen), not
+    carried into the RDF states; not yet confirmed. The probe was removed (dev tool for this question only);
+  - why the earlier GraphProbe crashed: hkbBehaviorGraph::activeNodes (+0x98, 0x90 stride) is reached through a
+    template->index map (+0xA0) and entries may redirect (+0x89 flag, +0x68 index), so a linear walk reads junk.
+* Arm stance layer with a sheathed weapon / spell pulled the hands toward the centre: iRightHandType / iLeftHandType
+  keep reporting the equipped item while sheathed, so the layer forced its ready pose. RDF_ArmBlend is now 0 unless the
+  weapon is drawn (and not fists).

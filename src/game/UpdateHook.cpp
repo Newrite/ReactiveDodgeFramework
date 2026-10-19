@@ -118,12 +118,17 @@ namespace rdf::game::update
 		// Raised block without an action record: wantBlocking + the vanilla graph event.
 		constexpr int kFirstStepClip = 8;  // RDF_DodgeClip 0..7 rolls, 8..15 steps (ANIMATION_CONTRACT.md)
 
-		// Fists have no stance to keep (and the graph's left-hand "none" entry is a one-hander pose).
-		bool Unarmed(RE::PlayerCharacter* player)
+		// The arm layer holds the stance of what is drawn. iRightHandType / iLeftHandType report the
+		// equipped item even while it is sheathed, so a sheathed weapon or spell would pull the arms into
+		// its ready pose; fists have no stance (and the graph's left-hand "none" entry is a one-hander pose).
+		bool HasStanceToKeep(RE::PlayerCharacter* player)
 		{
+			if (!player->AsActorState()->IsWeaponDrawn()) {
+				return false;
+			}
 			std::int32_t right = 0;
 			player->GetGraphVariableInt("iRightHandType"sv, right);
-			return right == 0;
+			return right != 0;
 		}
 
 		bool IsBlocking(RE::PlayerCharacter* player)
@@ -431,7 +436,7 @@ namespace rdf::game::update
 		const float angle = core_->PreviewStartAngleDeg(d);
 		const int   clip = ClipIndex(angle, core_->PreviewKeepsFacing(d));
 		const auto  entry = EntryFor(chain);
-		const float armStance = Unarmed(player) ? 0.0f : clip >= kFirstStepClip ? settings.armStanceStep : settings.armStanceRoll;
+		const float armStance = !HasStanceToKeep(player) ? 0.0f : clip >= kFirstStepClip ? settings.armStanceStep : settings.armStanceRoll;
 		if (!graph::SendStart(player, entry, clip, settings.core.timing.PlaybackSpeed(settings.clipLength, settings.animSpeed), armStance)) {
 			DevLog("graph refused {} (clip {}); press stays buffered", chain ? "chain" : "start", clip);
 			core_->Apply(d, false);

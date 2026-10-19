@@ -1,4 +1,3 @@
-#include "game/BlendProbe.h"
 #include "game/Effects.h"
 #include "game/GraphCoordinator.h"
 #include "game/InputCollector.h"
@@ -80,9 +79,6 @@ SKSEPluginLoad(const SKSE::LoadInterface* a_skse)
 		}
 	}
 	rdf::game::update::Install();
-	if (rdf::game::Settings::Get().devLog) {
-		rdf::game::blendprobe::Install();
-	}
 
 	SKSE::GetMessagingInterface()->RegisterListener(OnMessage);
 
