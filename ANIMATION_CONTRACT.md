@@ -115,7 +115,7 @@ up to 5e-7.
 
 ### Per weapon (or any condition) — an OAR set, no Pandora run
 
-The graph always plays `Animations\RDFdf_{roll,step}_<dir>.hkx`. A set is an Open Animation Replacer mod
+The graph always plays `Animations\RDF\rdf_{roll,step}_<dir>.hkx`. A set is an Open Animation Replacer mod
 whose submod mirrors those 16 paths under its conditions, so it can be added, removed or reordered without
 regenerating behaviours:
 
