@@ -195,15 +195,9 @@ def main():
             b = cb.params["bindings"].findall("hkobject")
             if len(b) != 1 or b[0].find("hkparam[@name='memberPath']").text != "playbackSpeed" or g.var_name(int(b[0].find("hkparam[@name='variableIndex']").text)) != "RDF_DodgeSpeed":
                 problems.append("clip %d speed binding" % i)
-            ta = g.objs[c.text("triggers")].params["triggers"].findall("hkobject")
-            if len(ta) != 1:
-                problems.append("clip %d triggers" % i)
-            else:
-                t = {x.get("name"): x for x in ta[0].findall("hkparam")}
-                eid = int(t["event"].find("hkobject/hkparam[@name='id']").text)
-                if g.event_name(eid) != "RDF_DodgeClipEnd" or t["relativeToEndOfClip"].text != "true" or abs(float(t["localTime"].text) - G.CLIP_END_TRIGGER_TIME) > 1e-6:
-                    problems.append("clip %d trigger %s" % (i, g.event_name(eid)))
-        check("D  %d: 16 clips in order, SINGLE_PLAY, speed<-RDF_DodgeSpeed, RDF_DodgeClipEnd @ end%+.2f" % (sid, G.CLIP_END_TRIGGER_TIME), ok and not problems, "; ".join(problems[:4]))
+            if c.text("triggers") not in ("null", None):
+                problems.append("clip %d has triggers (no clip-end exit by design)" % i)
+        check("D  %d: 16 clips in order, SINGLE_PLAY, speed<-RDF_DodgeSpeed, no triggers" % sid, ok and not problems, "; ".join(problems[:4]))
 
     # ---- E
     def fxdesc(ptr):

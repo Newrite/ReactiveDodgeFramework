@@ -20,7 +20,6 @@ namespace rdf::game::graph
 	int  Depth();
 	// Dev diagnostics: log every animation-graph event while on.
 	void LogEvents(bool on);
-	bool TakeClipEnd();
 	bool DodgeWindowOpen();
 	// RDF_* clip annotations seen since the last call, in WindowEvent order.
 	void DrainClipWindows(const std::function<void(WindowEvent)>& sink);

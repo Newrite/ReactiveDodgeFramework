@@ -6,14 +6,16 @@ weapon / sheathed / magic sub-graphs, so it works with every weapon type and fro
 ## 1. What it changes (third person only)
 
 `0_master` (Nemesis ids in brackets):
-- events (`#0106/eventNames`, `#0108/eventInfos`): `RDF_DodgeStart/Chain/Exit/Entered/Left/ClipEnd`
+- events (`#0106/eventNames`, `#0108/eventInfos`): `RDF_DodgeStart/StartB/Chain/Exit/Entered/Left` and the clip annotation events
+  `RDF_Windows/IFrameStart/IFrameEnd/ChainOpen/AttackOpen/BlockOpen/ExitOpen`
 - variables (`#0106`, `#0107`, `#0108`): `RDF_DodgeClip` int 0, `RDF_DodgeSpeed` float 1.0, `RDF_IsDodging` bool
 - `RootBehaviorGraph` (`#0340`): new states `RDF_Dodge_A` (stateId 9701) and `RDF_Dodge_B` (9702). Each is
   `hkbModifierGenerator{ BSIsActiveModifier(bAnimationDriven, RDF_IsDodging), hkbManualSelectorGenerator(RDF_DodgeClip) ->
-  16 hkbClipGenerator (SINGLE_PLAY, speed <- RDF_DodgeSpeed, RDF_DodgeClipEnd trigger at end-0.05 s) }`, enter notify
+  16 hkbClipGenerator (SINGLE_PLAY, speed <- RDF_DodgeSpeed, no triggers) }`, enter notify
   `RDF_DodgeEntered`, exit notify `RDF_DodgeLeft`.
-- root wildcard array (`#0341`): `RDF_DodgeStart` -> 9701 (IS_LOCAL_WILDCARD, `RDF_DodgeInBlend` 0.12 s).
-- A/B transitions: `RDF_DodgeChain` A<->B (`RDF_DodgeChainBlend` 0.10 s); `RDF_DodgeExit`, `RDF_DodgeClipEnd` and
+- root wildcard array (`#0341`): `RDF_DodgeStart` -> 9701 and `RDF_DodgeStartB` -> 9702 (IS_LOCAL_WILDCARD,
+  `RDF_DodgeInBlend` 0.12 s). The plugin alternates them so a new dodge never targets the state still blending out.
+- A/B transitions: `RDF_DodgeChain` A<->B (`RDF_DodgeChainBlend` 0.10 s); `RDF_DodgeExit` and
   `IdleForceDefaultState` -> `Default_State` (14) with `RDF_DodgeOutBlend` 0.25 s. The return is written like vanilla
   `Stagger_State` (4 conditional transitions per event that restore the equip sub-state, reusing the vanilla conditions
   `#0355 #0354 #0353 #0350`); `RETURN_MODE = "simple"` in the generator gives one plain transition instead.

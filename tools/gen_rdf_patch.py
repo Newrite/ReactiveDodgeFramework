@@ -21,8 +21,7 @@ CODE = "rdf"
 MOD_NAME = "Reactive Dodge Framework"
 AUTHOR = "newrite"
 
-EVENTS = ["RDF_DodgeStart", "RDF_DodgeStartB", "RDF_DodgeChain", "RDF_DodgeExit", "RDF_DodgeEntered", "RDF_DodgeLeft",
-          "RDF_DodgeClipEnd"]
+EVENTS = ["RDF_DodgeStart", "RDF_DodgeStartB", "RDF_DodgeChain", "RDF_DodgeExit", "RDF_DodgeEntered", "RDF_DodgeLeft"]
 # Clip annotations (ANIMATION_CONTRACT.md). An annotation only reaches the plugin as an animation
 # event when its text is a registered event name of the graph that plays the clip.
 ANNOTATION_EVENTS = ["RDF_Windows", "RDF_IFrameStart", "RDF_IFrameEnd", "RDF_ChainOpen",
@@ -50,7 +49,6 @@ FX_IN = ("RDF_DodgeInBlend", 0.12, "FLAG_IGNORE_FROM_WORLD_FROM_MODEL", "SELF_TR
 FX_CHAIN = ("RDF_DodgeChainBlend", 0.10, "FLAG_IGNORE_FROM_WORLD_FROM_MODEL", "SELF_TRANSITION_MODE_RESET")
 FX_OUT = ("RDF_DodgeOutBlend", 0.25, "FLAG_IGNORE_TO_WORLD_FROM_MODEL", "SELF_TRANSITION_MODE_BLEND")
 
-CLIP_END_TRIGGER_TIME = -0.05                  # relative to end of clip
 DIRS = ["f", "fr", "r", "br", "b", "bl", "l", "fl"]
 ANIM_DIR = "Animations\\RDF"
 CLIPS = ([("rdf_roll_%s" % d) for d in DIRS] + [("rdf_step_%s" % d) for d in DIRS])   # index order = RDF_DodgeClip
@@ -58,7 +56,10 @@ CLIPS = ([("rdf_roll_%s" % d) for d in DIRS] + [("rdf_step_%s" % d) for d in DIR
 # "vanilla": mirror Stagger_State's return (4 conditional transitions that restore the Default_Behavior nested state);
 # "simple": one unconditional transition per exit event to Default_State (sync variable restores nested state anyway).
 RETURN_MODE = "vanilla"
-EXIT_EVENTS = ["RDF_DodgeExit", "RDF_DodgeClipEnd", "IdleForceDefaultState"]   # IdleForceDefaultState exists in 0_master (496)
+# No clip-end exit: a clip played for the first time in a session is still streaming in, has zero length,
+# and a relative-to-end trigger fires at once, which dropped the dodge on entry. The plugin ends every
+# dodge itself (RDF_DodgeExit); IdleForceDefaultState is the engine's own safety exit.
+EXIT_EVENTS = ["RDF_DodgeExit", "IdleForceDefaultState"]   # IdleForceDefaultState exists in 0_master (496)
 
 # vanilla 0_master (Nemesis ids)
 V = dict(
@@ -185,18 +186,12 @@ def build_state(nm, state_id, other_id, N, fx, bind_extra):
         flags])))
     clip_names = []
     for ci, cname in enumerate(CLIPS):
-        c, trg, cbs = N.new(), N.new(), N.new()
+        c, cbs = N.new(), N.new()
         clip_names.append(c)
         out.append(binding_set(cbs, [("playbackSpeed", "RDF_DodgeSpeed")]))
-        out.append(node(trg, "hkbClipTriggerArray", "0x59c23a0f",
-                        '<hkparam name="triggers" numelements="1"><hkobject>%s'
-                        '<hkparam name="event"><hkobject>%s%s</hkobject></hkparam>%s%s%s</hkobject></hkparam>'
-                        % (p("localTime", fl(CLIP_END_TRIGGER_TIME)), p("id", ev("RDF_DodgeClipEnd")),
-                           p("payload", "null"), p("relativeToEndOfClip", "true"), p("acyclic", "false"),
-                           p("isAnnotation", "false"))))
         out.append(node(c, "hkbClipGenerator", "0x333b85b9", "\n".join([
             p("variableBindingSet", cbs), p("userData", "0"), p("name", "%s_%s" % (nm, cname)),
-            p("animationName", "%s\\%s.hkx" % (ANIM_DIR, cname)), p("triggers", trg),
+            p("animationName", "%s\\%s.hkx" % (ANIM_DIR, cname)), p("triggers", "null"),
             p("cropStartAmountLocalTime", "0.000000"), p("cropEndAmountLocalTime", "0.000000"),
             p("startTime", "0.000000"), p("playbackSpeed", "1.000000"), p("enforcedDuration", "0.000000"),
             p("userControlledTimeFraction", "0.000000"), p("animationBindingIndex", "-1"),

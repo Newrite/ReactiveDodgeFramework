@@ -116,3 +116,9 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   graph stayed animation-driven ~0.3 s (out-blend) and the plugin moved the actor. Something transitions out of the
   dodge state immediately; not the out-blend case. Dev log now records every graph event (tag, payload, depth) from
   each dodge start until the trace tail ends, plus `bInJumpState` and depth in the trace.
+* Twitch, real cause (graph event log): `RDF_DodgeEntered` -> `RDF_DodgeClipEnd` -> `RDF_DodgeLeft` -> `MTState` in the
+  same millisecond. Each dodge state has its own 16 clip generators; the first time one plays after a load its
+  animation is still streaming in, the clip has zero length, and the relative-to-end trigger fires immediately; the
+  clip-end exit transition then dropped the dodge. Rare because it needs the first use of one of 32 state/clip pairs.
+  Fix: no clip-end trigger and no clip-end exit; the plugin ends every dodge (`RDF_DodgeExit`), IdleForceDefaultState
+  stays as the engine's safety exit. (The earlier note that RDF_DodgeClipEnd is a hand-over request is obsolete.)

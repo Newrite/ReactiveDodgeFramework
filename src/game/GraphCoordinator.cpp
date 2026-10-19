@@ -12,7 +12,7 @@ namespace rdf::game::graph
 	{
 		struct Names
 		{
-			RE::BSFixedString start, startB, chain, exit, entered, left, clipEnd, clip, speed, isDodging;
+			RE::BSFixedString start, startB, chain, exit, entered, left, clip, speed, isDodging;
 			std::vector<RE::BSFixedString> windowOpen, windowClose;
 		};
 		Names g_names;
@@ -20,7 +20,6 @@ namespace rdf::game::graph
 		std::atomic<std::uint32_t> g_entered{ 0 };
 		std::atomic<int>           g_depth{ 0 };
 		std::atomic<bool>          g_logEvents{ false };  // dev: log every graph event (see LogEvents)
-		std::atomic<std::uint32_t> g_clipEnd{ 0 };
 		std::atomic<bool>          g_window{ false };
 		std::atomic<std::uint32_t> g_clipWindows{ 0 };  // bit per WindowEvent seen since the last drain
 
@@ -73,8 +72,6 @@ namespace rdf::game::graph
 					int depth = g_depth.load(std::memory_order_acquire);
 					while (depth > 0 && !g_depth.compare_exchange_weak(depth, depth - 1, std::memory_order_acq_rel)) {
 					}
-				} else if (event->tag == g_names.clipEnd) {
-					g_clipEnd.fetch_add(1, std::memory_order_acq_rel);
 				} else if (const int w = WindowIndex(event->tag); w >= 0) {
 					g_clipWindows.fetch_or(1u << w, std::memory_order_acq_rel);
 				} else if (Contains(g_names.windowOpen, event->tag)) {
@@ -97,7 +94,6 @@ namespace rdf::game::graph
 		g_names.exit = g.exit;
 		g_names.entered = g.entered;
 		g_names.left = g.left;
-		g_names.clipEnd = g.clipEnd;
 		g_names.clip = g.clip;
 		g_names.speed = g.speed;
 		g_names.isDodging = g.isDodging;
@@ -125,7 +121,6 @@ namespace rdf::game::graph
 	bool TakeEntered() { return Take(g_entered); }
 	int  Depth() { return g_depth.load(std::memory_order_acquire); }
 	void LogEvents(bool on) { g_logEvents.store(on, std::memory_order_relaxed); }
-	bool TakeClipEnd() { return Take(g_clipEnd); }
 	bool DodgeWindowOpen() { return g_window.load(std::memory_order_acquire); }
 
 	void DrainClipWindows(const std::function<void(WindowEvent)>& sink)
@@ -142,7 +137,6 @@ namespace rdf::game::graph
 	{
 		g_entered = 0;
 		g_depth = 0;
-		g_clipEnd = 0;
 		g_window = false;
 		g_clipWindows = 0;
 	}

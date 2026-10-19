@@ -249,7 +249,6 @@ namespace rdf::game::update
 			DevLog("clip window event {} at t={:.3f}", static_cast<int>(e), core_->ActionTime());
 		});
 		const bool entered = graph::TakeEntered();
-		const bool clipEnd = graph::TakeClipEnd();
 		const int  depth = graph::Depth();
 		const int  previousDepth = prevDepth_;
 		prevDepth_ = depth;
@@ -276,13 +275,6 @@ namespace rdf::game::update
 				return;
 			}
 			DevLog("{}", "graph left the dodge state; finishing the hand-over blend");
-		}
-		if (clipEnd && !entered && !core_->Exiting()) {
-			// The graph returns to Default_State by itself: start the velocity handover without
-			// sending RDF_DodgeExit again.
-			DevLog("{}", "clip ended: starting locomotion handover");
-			exitSent_ = true;
-			core_->Apply(Decision{ DecisionKind::LocomotionExit }, true);
 		}
 	}
 

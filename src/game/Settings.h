@@ -18,7 +18,6 @@ namespace rdf::game
 		// events reported by the graph
 		std::string entered{ "RDF_DodgeEntered" };
 		std::string left{ "RDF_DodgeLeft" };
-		std::string clipEnd{ "RDF_DodgeClipEnd" };
 		// variables: clip and speed are written by us, isDodging is only read (set by the graph)
 		std::string clip{ "RDF_DodgeClip" };
 		std::string speed{ "RDF_DodgeSpeed" };

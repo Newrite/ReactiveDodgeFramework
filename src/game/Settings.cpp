@@ -239,7 +239,6 @@ namespace rdf::game
 			g.exit = ReadString("Graph", "sEventExit", g.exit);
 			g.entered = ReadString("Graph", "sEventEntered", g.entered);
 			g.left = ReadString("Graph", "sEventLeft", g.left);
-			g.clipEnd = ReadString("Graph", "sEventClipEnd", g.clipEnd);
 			g.clip = ReadString("Graph", "sVarClip", g.clip);
 			g.speed = ReadString("Graph", "sVarSpeed", g.speed);
 			g.isDodging = ReadString("Graph", "sVarIsDodging", g.isDodging);
