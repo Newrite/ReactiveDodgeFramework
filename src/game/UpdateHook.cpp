@@ -260,7 +260,7 @@ namespace rdf::game::update
 		if (clipEnd && !entered && !core_->Exiting()) {
 			// The graph returns to Default_State by itself: start the velocity handover without
 			// sending RDF_DodgeExit again.
-			DevLog("clip ended: starting locomotion handover");
+			DevLog("{}", "clip ended: starting locomotion handover");
 			exitSent_ = true;
 			core_->Apply(Decision{ DecisionKind::LocomotionExit }, true);
 		}
