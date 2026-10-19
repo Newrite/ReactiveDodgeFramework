@@ -11,6 +11,8 @@
 * Hand-over into running with the out-blend driven by the plugin (no planted frames).
 * Dodge -> attack (cancels at 0.21-0.46 s, momentum carried) and dodge -> held block.
 * Arm stance layer: during steps the arms keep the current weapon's stance (user: looks good).
+* First external clip set as an OAR mod (`AI - RDF Dodge Set - Greatsword`, `tools/build_clip_set.py`): 134/134
+  dodges played it with its own windows (user: looks and feels good).
 * The "press -> twitch, no dodge" bug: both causes fixed (start into the state being left; zero-length streaming clip
   firing a clip-end exit). 0/72 failures after the fix.
 
