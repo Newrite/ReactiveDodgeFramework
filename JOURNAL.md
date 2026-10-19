@@ -122,3 +122,10 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   clip-end exit transition then dropped the dodge. Rare because it needs the first use of one of 32 state/clip pairs.
   Fix: no clip-end trigger and no clip-end exit; the plugin ends every dodge (`RDF_DodgeExit`), IdleForceDefaultState
   stays as the engine's safety exit. (The earlier note that RDF_DodgeClipEnd is a hand-over request is obsolete.)
+* Post-dodge speed-up, RE: in controls-driven mode `Character::ApplyMovementDeltaAndFeedback` (0x1405D87F0) moves
+  the player by direction * speed * dt from `MovementControllerAI::BuildAggregateStatePayload` (MovementControllerNPC
+  vfunc 7, call at 0x1405D8A49; payload speed at +0x0C, read at 0x1405D8AC0 into SetCurrentMovementSpeed
+  0x14067CF60 = ID 38841). After animation-driven mode ends that speed restarts low (trace: 317 -> 127 -> 292 over
+  ~8 frames). Fix: vtable hook on vfunc 7, player only via the motion snapshot: after a dodge that completed into
+  running, the payload speed is floored at the exit speed decaying at `fCarryDecay` (1200 u/s^2). Direction and the
+  engine's own acceleration stay untouched. Not yet verified in game.

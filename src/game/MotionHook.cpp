@@ -30,6 +30,15 @@ namespace rdf::game::motion
 		using ProcessMotionData_t = bool (*)(RE::Actor*, float, RE::NiPoint3*, RE::NiPoint3*, bool*);
 		ProcessMotionData_t g_original = nullptr;
 
+		// MovementControllerAI::BuildAggregateStatePayload(this, dt, payload). The caller,
+		// Character::ApplyMovementDeltaAndFeedback (0x1405D87F0), moves the actor by
+		// direction(payload+0x00) * speed(payload+0x0C) * dt (speed read at 0x1405D8AC0).
+		constexpr std::size_t kPayloadVfunc = 7;
+		constexpr std::size_t kPayloadSpeed = 0x0C;
+		using BuildPayload_t = std::uintptr_t (*)(RE::MovementControllerNPC*, float, std::uint8_t*);
+		BuildPayload_t g_originalPayload = nullptr;
+		std::atomic<std::uint32_t> g_floorHits{ 0 };
+
 		std::uint32_t Bits(float f)
 		{
 			std::uint32_t u;
@@ -82,6 +91,33 @@ namespace rdf::game::motion
 		}
 	}
 
+	namespace
+	{
+		std::uintptr_t PayloadThunk(RE::MovementControllerNPC* self, float dt, std::uint8_t* payload)
+		{
+			const auto result = g_originalPayload(self, dt, payload);
+			MotionCommand cmd;
+			if (!payload || !self->actor || !g_box.TryRead(cmd) || cmd.active || !(cmd.speedFloor > 0.0f) ||
+				cmd.ownerFormId != self->actor->GetFormID() || cmd.generation != g_generation.load(std::memory_order_acquire)) {
+				return result;
+			}
+			auto* speed = reinterpret_cast<float*>(payload + kPayloadSpeed);
+			if (*speed < cmd.speedFloor) {
+				*speed = cmd.speedFloor;
+				g_floorHits.fetch_add(1, std::memory_order_relaxed);
+			}
+			return result;
+		}
+	}
+
+	bool InstallSpeedFloor()
+	{
+		REL::Relocation<std::uintptr_t> vtbl{ RE::VTABLE_MovementControllerNPC[0] };
+		g_originalPayload = reinterpret_cast<BuildPayload_t>(vtbl.write_vfunc(kPayloadVfunc, PayloadThunk));
+		logger::info("speed floor hook installed (MovementControllerNPC vfunc {})", kPayloadVfunc);
+		return true;
+	}
+
 	bool Install()
 	{
 		const REL::Relocation<std::uintptr_t> function{ REL::ID(kBuildOutputId) };
@@ -126,6 +162,7 @@ namespace rdf::game::motion
 		HookStats s;
 		s.calls = g_calls.load(std::memory_order_relaxed);
 		s.overrides = g_overrides.load(std::memory_order_relaxed);
+		s.floorHits = g_floorHits.load(std::memory_order_relaxed);
 		s.firstThread = g_firstThread.load(std::memory_order_relaxed);
 		s.lastThread = g_lastThread.load(std::memory_order_relaxed);
 		s.lastLocalX = FromBits(g_lastLocalX.load(std::memory_order_relaxed));

@@ -67,6 +67,9 @@ SKSEPluginLoad(const SKSE::LoadInterface* a_skse)
 	if (!rdf::game::motion::Install()) {
 		logger::error("root-motion hook not installed: dodges will not move the character");
 	}
+	if (rdf::game::Settings::Get().carryDecay > 0.0f) {
+		rdf::game::motion::InstallSpeedFloor();
+	}
 	if (rdf::game::Settings::Get().iFrames && !rdf::game::effects::InstallIFrames()) {
 		logger::error("i-frame hook not installed: dodges will not grant invulnerability");
 	}

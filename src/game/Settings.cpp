@@ -201,6 +201,7 @@ namespace rdf::game
 			m.runSpeed = ReadFloat("Motion", "fRunSpeed", m.runSpeed, 0.0f, 1500.0f);
 			m.maxCarrySpeed = ReadFloat("Motion", "fMaxCarrySpeed", m.maxCarrySpeed, 0.0f, 1500.0f);
 			m.backstepWithoutInput = ReadBool("Motion", "bBackstepWithoutInput", m.backstepWithoutInput);
+			s.carryDecay = ReadFloat("Motion", "fCarryDecay", s.carryDecay, 0.0f, 100000.0f);
 			s.yawSign = ReadInt("Motion", "iYawSign", s.yawSign, -1, 1);
 			if (s.yawSign == 0) {
 				logger::warn("[Motion] iYawSign 0 is invalid, using 1");

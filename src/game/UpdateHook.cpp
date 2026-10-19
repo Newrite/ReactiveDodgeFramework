@@ -69,8 +69,10 @@ namespace rdf::game::update
 			RE::NiAVObject* last3D_{ nullptr };
 			float           charged_{ 0.0f };
 			RejectReason    lastReject_{ RejectReason::None };
-			int             tailFrames_{ 0 };
-			bool            inStateB_{ true };  // dodge state used last; the first dodge goes to A  // dev trace keeps running this many ticks after a dodge
+			int             tailFrames_{ 0 };   // dev trace keeps running this many ticks after a dodge
+			bool            inStateB_{ true };  // dodge state used last; the first dodge goes to A
+			bool            moveHeld_{ false };
+			float           carry_{ 0.0f };     // post-dodge speed floor for the controls-driven engine, u/s
 
 			// measured motion (previous frame's displacement, seen at the start of this tick)
 			bool  havePos_{ false };
@@ -141,6 +143,7 @@ namespace rdf::game::update
 		awaitingEnter_ = false;
 		exitSent_ = true;
 		wasRunning_ = false;
+		carry_ = 0.0f;
 		prevDepth_ = 0;
 		retry_ = {};
 		havePos_ = false;
@@ -227,6 +230,7 @@ namespace rdf::game::update
 		f.locomotionSpeed = measuredSpeed_;
 		f.lockOn = lockon::LockedOn(player);
 		f.freeRotation = lockon::FreeRotation();
+		moveHeld_ = Length(f.move) > Settings::Get().core.steering.deadzone;
 		return f;
 	}
 
@@ -445,7 +449,11 @@ namespace rdf::game::update
 	void Controller::StepAndPublish(RE::PlayerCharacter* player, float dt)
 	{
 		const auto& settings = Settings::Get();
-		const auto  step = core_->Step();
+		auto step = core_->Step();
+		if (!step.command.active) {
+			carry_ = moveHeld_ ? std::max(0.0f, carry_ - settings.carryDecay * dt) : 0.0f;
+			step.command.speedFloor = carry_;
+		}
 		motion::Publish(step.command, player->GetFormID());
 		requestedDistance_ = step.command.speed * dt;
 		requestedHeading_ = core_->Heading();
@@ -465,6 +473,8 @@ namespace rdf::game::update
 
 	void Controller::OnStopped()
 	{
+		// Only a dodge that ran its course into running carries its speed; an interrupted one does not.
+		carry_ = core_->Phase() == DodgePhase::Done && moveHeld_ ? core_->Speed() : 0.0f;
 		tailFrames_ = 30;  // follow the hand-over into locomotion in the dev trace
 		lockon::ReleaseYaw();
 		effects::SetInvulnerable(false);
@@ -501,17 +511,13 @@ namespace rdf::game::update
 			headingErr, hook.calls, hook.overrides, hook.firstThread, hook.lastThread, hook.lastLocalX, hook.lastLocalY,
 			hook.lastYaw, graph::GraphIsDodging(player));
 		float midSpeed = -1.0f;
-		float pathSpeed = -1.0f;
 		if (const auto* process = player->GetActorRuntimeData().currentProcess) {
 			if (process->middleHigh) {
 				midSpeed = process->middleHigh->currentMovementSpeed;
 			}
-			if (process->high) {
-				pathSpeed = process->high->pathingCurrentMovementSpeed.Length();
-			}
 		}
-		logger::info("trace graph Speed={:.1f} SpeedSampled={:.1f} Direction={:.2f} inJump={} depth={} | process moveSpeed={:.1f} pathSpeed={:.1f}",
-			speed, sampled, direction, inJump, graph::Depth(), midSpeed, pathSpeed);
+		logger::info("trace graph Speed={:.1f} SpeedSampled={:.1f} Direction={:.2f} inJump={} depth={} | process moveSpeed={:.1f} | carry={:.1f} floorHits={}",
+			speed, sampled, direction, inJump, graph::Depth(), midSpeed, carry_, hook.floorHits);
 	}
 
 	namespace

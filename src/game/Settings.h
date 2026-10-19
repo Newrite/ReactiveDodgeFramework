@@ -41,6 +41,9 @@ namespace rdf::game
 		std::optional<RE::ActorValue> costResource{ RE::ActorValue::kStamina };
 		float                         cost{ 20.0f };
 		float                         minimum{ 10.0f };  // refuse below this much of costResource
+		// After a dodge hands over into running, the engine re-accelerates from below the dodge's exit
+		// speed; its speed may not drop under the exit speed decaying at this rate (u/s^2, 0 = off).
+		float carryDecay{ 1200.0f };
 
 		// [Graph]
 		GraphNames graph;

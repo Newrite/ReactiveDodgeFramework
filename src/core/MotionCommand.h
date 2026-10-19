@@ -14,5 +14,8 @@ namespace rdf
 		float         vy{ 0.0f };
 		float         yawRate{ 0.0f };   // rad/s, clockwise positive (Skyrim angle.z convention)
 		float         speed{ 0.0f };     // |v|, diagnostics only
+		// While not active: the engine's controls-driven speed may not drop below this (units/s).
+		// Bridges the engine's re-acceleration after a dodge hands over into running.
+		float speedFloor{ 0.0f };
 	};
 }
