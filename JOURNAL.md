@@ -158,3 +158,6 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   key-reading MGEF because TK Dodge has 4 directions). 8 unique spline-compressed clips (0.667 s, forward 0.833 s),
   root motion 197-234 u, step == normal. Rebuilt as an OAR set over RDF's own clip paths (greatsword, no spear;
   the source's BackwardLeft said battleaxe/warhammer, taken as a slip), annotated by `tools/build_clip_set.py`.
+* Greatsword set in game: 134/134 dodges played the set's clips (their own SDS dodge sound / MCO_InputBuffer
+  annotations fire), windows arrive at the computed clip times / playback speed (e.g. forward step attack 0.28 s,
+  chain 0.35 s), 0 rollbacks, 0 dropped dodges.
