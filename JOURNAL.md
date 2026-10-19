@@ -98,3 +98,11 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   `GetActualMovementInput()` (raw stick) when TDM is present.
 * The stop at the end persists although displacement continues (~280 u/s after the exit). Dev trace now follows 30
   ticks past each dodge with the locomotion graph floats `Speed` / `SpeedSampled` / `Direction` to find what restarts.
+* Diagonals broke with TDM's `GetActualMovementInput()`: TDM fills it per input event, so with W+D held it holds only
+  the last key's axis (every diagonal became 0/90/180). The plugin now tracks the movement keys (via the control map)
+  and the left stick in its own input sink; PlayerControls only gates "moving or not".
+* The end-of-dodge stop, measured: the dodge exit notify fires when the out-transition STARTS (not at blend end as
+  assumed for chains), the plugin released motion there, and the graph stayed animation-driven for the 0.25 s blend
+  with the clip's zero end motion -> ~13 frames planted. Then locomotion `Speed` restarts at 0 and ramps to 292 in
+  ~0.17 s. Fix 1: an exit we/clip-end started keeps driving the hand-over through the blend. The ramp is logged
+  (graph Speed vs process currentMovementSpeed / pathingCurrentMovementSpeed) before deciding what to seed.

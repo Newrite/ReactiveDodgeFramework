@@ -16,7 +16,6 @@ namespace rdf::game::lockon
 			bool LockedOn(RE::PlayerCharacter*) override { return false; }
 			bool FreeRotation() override { return false; }  // vanilla: the camera turns the player
 			void AcquireYaw() override {}
-			bool RawMoveInput(RE::NiPoint2&) override { return false; }
 			void ReleaseYaw() override {}
 		};
 
@@ -31,12 +30,6 @@ namespace rdf::game::lockon
 			bool FreeRotation() override
 			{
 				return api_->GetDirectionalMovementMode() == TDM_API::DirectionalMovementMode::kDirectional;
-			}
-
-			bool RawMoveInput(RE::NiPoint2& input) override
-			{
-				input = api_->GetActualMovementInput();
-				return true;
 			}
 
 			void AcquireYaw() override
@@ -105,6 +98,5 @@ namespace rdf::game::lockon
 
 	bool FreeRotation() { return g_provider->FreeRotation(); }
 	void AcquireYaw() { g_provider->AcquireYaw(); }
-	bool RawMoveInput(RE::NiPoint2& input) { return g_provider->RawMoveInput(input); }
 	void ReleaseYaw() { g_provider->ReleaseYaw(); }
 }

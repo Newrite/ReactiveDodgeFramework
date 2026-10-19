@@ -1,6 +1,5 @@
 #include "InputCollector.h"
 
-#include "LockOn.h"
 #include "Settings.h"
 
 #include <array>
@@ -27,6 +26,22 @@ namespace rdf::game::input
 			g_ring[head % kRing] = p;
 			g_head.store(head + 1, std::memory_order_release);
 		}
+
+		// Move input as the player gives it. PlayerControls::moveInputVec is not usable: in 360 mode
+		// TDM rewrites it to "forward" relative to the character it turns. Keys go through the control
+		// map, so remapped movement keys work.
+		enum MoveKey : std::uint32_t
+		{
+			kForward = 1 << 0,
+			kBack = 1 << 1,
+			kLeft = 1 << 2,
+			kRight = 1 << 3,
+		};
+		std::atomic<std::uint32_t> g_moveKeys{ 0 };
+		std::atomic<float>         g_stickX{ 0.0f };
+		std::atomic<float>         g_stickY{ 0.0f };
+
+		void TrackMoveKey(const RE::ButtonEvent& b, const RE::UserEvents& events);
 
 		bool GameIsInputBlocked()
 		{
@@ -70,6 +85,12 @@ namespace rdf::game::input
 				for (auto* e = *events; e; e = e->next) {
 					if (e->GetEventType() == RE::INPUT_EVENT_TYPE::kButton) {
 						Handle(*e->AsButtonEvent());
+					} else if (e->GetEventType() == RE::INPUT_EVENT_TYPE::kThumbstick) {
+						const auto* stick = static_cast<const RE::ThumbstickEvent*>(e);
+						if (stick->IsLeft()) {
+							g_stickX.store(stick->xValue, std::memory_order_relaxed);
+							g_stickY.store(stick->yValue, std::memory_order_relaxed);
+						}
 					}
 				}
 				return RE::BSEventNotifyControl::kContinue;
@@ -84,6 +105,7 @@ namespace rdf::game::input
 				if (!events) {
 					return;
 				}
+				TrackMoveKey(b, *events);
 
 				if (b.IsDown()) {
 					promoted_ = false;
@@ -108,6 +130,43 @@ namespace rdf::game::input
 		};
 
 		Sink g_sink;
+
+		void TrackMoveKey(const RE::ButtonEvent& b, const RE::UserEvents& events)
+		{
+			const auto device = b.GetDevice();
+			const auto code = b.GetIDCode();
+			std::uint32_t bit = 0;
+			if (IsMapped(events.forward, device, code)) {
+				bit = kForward;
+			} else if (IsMapped(events.back, device, code)) {
+				bit = kBack;
+			} else if (IsMapped(events.strafeLeft, device, code)) {
+				bit = kLeft;
+			} else if (IsMapped(events.strafeRight, device, code)) {
+				bit = kRight;
+			}
+			if (bit == 0) {
+				return;
+			}
+			if (b.IsPressed()) {
+				g_moveKeys.fetch_or(bit, std::memory_order_relaxed);
+			} else {
+				g_moveKeys.fetch_and(~bit, std::memory_order_relaxed);
+			}
+		}
+
+		RE::NiPoint2 PlayerMoveInput()
+		{
+			const float sx = g_stickX.load(std::memory_order_relaxed);
+			const float sy = g_stickY.load(std::memory_order_relaxed);
+			if (sx * sx + sy * sy > 1e-4f) {
+				return { sx, sy };
+			}
+			const auto keys = g_moveKeys.load(std::memory_order_relaxed);
+			const float x = ((keys & kRight) ? 1.0f : 0.0f) - ((keys & kLeft) ? 1.0f : 0.0f);
+			const float y = ((keys & kForward) ? 1.0f : 0.0f) - ((keys & kBack) ? 1.0f : 0.0f);
+			return { x, y };
+		}
 	}
 
 	void Install()
@@ -159,10 +218,13 @@ namespace rdf::game::input
 		if (!controls) {
 			return {};
 		}
-		// In 360 mode TDM rewrites moveInputVec to "forward" relative to the character it turns,
-		// so the raw stick has to come from TDM itself.
-		RE::NiPoint2 raw = controls->data.moveInputVec;
-		lockon::RawMoveInput(raw);
+		// The game's own vector says whether the player is moving at all (it is zero in menus and after
+		// a release the sink may have missed); the direction comes from the tracked keys / stick.
+		const auto& game = controls->data.moveInputVec;
+		if (game.x * game.x + game.y * game.y <= 1e-8f) {
+			return {};
+		}
+		const auto raw = PlayerMoveInput();
 		const float length = std::min(std::sqrt(raw.x * raw.x + raw.y * raw.y), 1.0f);
 		if (length <= 1e-4f) {
 			return {};

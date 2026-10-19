@@ -266,8 +266,14 @@ namespace rdf::game::update
 			return;
 		}
 		if (previousDepth > 0 && depth == 0) {
-			EndByGraph("graph left every dodge state");
-			return;
+			// The exit notify fires when the out-transition starts; the graph stays animation-driven
+			// for the whole out-blend. A hand-over we (or the clip end) began keeps driving the motion
+			// through it, otherwise the clip's own end-of-roll motion (zero) would plant the actor.
+			if (!core_->Exiting()) {
+				EndByGraph("graph left every dodge state");
+				return;
+			}
+			DevLog("{}", "graph left the dodge state; finishing the hand-over blend");
 		}
 		if (clipEnd && !entered && !core_->Exiting()) {
 			// The graph returns to Default_State by itself: start the velocity handover without
@@ -483,7 +489,18 @@ namespace rdf::game::update
 			player->data.angle.z * kRadToDeg, core_->Speed(), prevRequestedDistance_, measuredDistance_, measuredHeading_ * kRadToDeg,
 			headingErr, hook.calls, hook.overrides, hook.firstThread, hook.lastThread, hook.lastLocalX, hook.lastLocalY,
 			hook.lastYaw, graph::GraphIsDodging(player));
-		logger::info("trace graph Speed={:.1f} SpeedSampled={:.1f} Direction={:.2f}", speed, sampled, direction);
+		float midSpeed = -1.0f;
+		float pathSpeed = -1.0f;
+		if (const auto* process = player->GetActorRuntimeData().currentProcess) {
+			if (process->middleHigh) {
+				midSpeed = process->middleHigh->currentMovementSpeed;
+			}
+			if (process->high) {
+				pathSpeed = process->high->pathingCurrentMovementSpeed.Length();
+			}
+		}
+		logger::info("trace graph Speed={:.1f} SpeedSampled={:.1f} Direction={:.2f} | process moveSpeed={:.1f} pathSpeed={:.1f}",
+			speed, sampled, direction, midSpeed, pathSpeed);
 	}
 
 	namespace
