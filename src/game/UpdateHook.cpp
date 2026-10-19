@@ -261,7 +261,9 @@ namespace rdf::game::update
 		f.actorYaw = player->data.angle.z;
 		f.locomotionSpeed = measuredSpeed_;
 		f.lockOn = lockon::LockedOn(player);
-		f.freeRotation = lockon::FreeRotation();
+		// In first person the camera owns the yaw: the dodge never turns the player there.
+		const auto* camera = RE::PlayerCamera::GetSingleton();
+		f.freeRotation = lockon::FreeRotation() && !(camera && camera->IsInFirstPerson());
 		moveHeld_ = Length(f.move) > Settings::Get().core.steering.deadzone;
 		return f;
 	}
