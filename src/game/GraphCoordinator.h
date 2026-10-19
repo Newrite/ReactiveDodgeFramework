@@ -18,6 +18,8 @@ namespace rdf::game::graph
 	// and Left(A) when the blend ends, so depth goes 1 -> 2 -> 1; only 1 -> 0 is a real exit.
 	bool TakeEntered();
 	int  Depth();
+	// Dev diagnostics: log every animation-graph event while on.
+	void LogEvents(bool on);
 	bool TakeClipEnd();
 	bool DodgeWindowOpen();
 	// RDF_* clip annotations seen since the last call, in WindowEvent order.

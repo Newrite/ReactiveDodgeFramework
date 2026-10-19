@@ -19,6 +19,7 @@ namespace rdf::game::graph
 
 		std::atomic<std::uint32_t> g_entered{ 0 };
 		std::atomic<int>           g_depth{ 0 };
+		std::atomic<bool>          g_logEvents{ false };  // dev: log every graph event (see LogEvents)
 		std::atomic<std::uint32_t> g_clipEnd{ 0 };
 		std::atomic<bool>          g_window{ false };
 		std::atomic<std::uint32_t> g_clipWindows{ 0 };  // bit per WindowEvent seen since the last drain
@@ -60,6 +61,10 @@ namespace rdf::game::graph
 			{
 				if (!event) {
 					return RE::BSEventNotifyControl::kContinue;
+				}
+				if (g_logEvents.load(std::memory_order_relaxed)) {
+					logger::info("graph event {} '{}' (depth {})", event->tag.c_str(), event->payload.c_str(),
+						g_depth.load(std::memory_order_relaxed));
 				}
 				if (event->tag == g_names.entered) {
 					g_entered.fetch_add(1, std::memory_order_acq_rel);
@@ -119,6 +124,7 @@ namespace rdf::game::graph
 
 	bool TakeEntered() { return Take(g_entered); }
 	int  Depth() { return g_depth.load(std::memory_order_acquire); }
+	void LogEvents(bool on) { g_logEvents.store(on, std::memory_order_relaxed); }
 	bool TakeClipEnd() { return Take(g_clipEnd); }
 	bool DodgeWindowOpen() { return g_window.load(std::memory_order_acquire); }
 

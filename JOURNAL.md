@@ -112,3 +112,7 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   Fix: a second root wildcard `RDF_DodgeStartB` -> RDF_Dodge_B; the plugin alternates A/B for every new dodge, and a
   chain decided after the graph already left the dodge states enters as a start into the other state (4 chains were
   refused for that reason in the same log). validate_rdf: 90/90.
+* Twitch seen again on the first dodge after a load: Entered and Left in the same tick, no `RDF_Windows`, while the
+  graph stayed animation-driven ~0.3 s (out-blend) and the plugin moved the actor. Something transitions out of the
+  dodge state immediately; not the out-blend case. Dev log now records every graph event (tag, payload, depth) from
+  each dodge start until the trace tail ends, plus `bInJumpState` and depth in the trace.

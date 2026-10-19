@@ -389,6 +389,7 @@ namespace rdf::game::update
 			return;
 		}
 		inStateB_ = entry == graph::DodgeEntry::Chain ? !inStateB_ : entry == graph::DodgeEntry::StartB;
+		graph::LogEvents(settings.devLog);
 		effects::ChargeCost(player, settings.cost);
 		charged_ = settings.cost;
 		core_->Apply(d, true);
@@ -487,6 +488,7 @@ namespace rdf::game::update
 		}
 		if (!wasRunning_ && core_->Phase() != DodgePhase::Done) {
 			if (tailFrames_ <= 0) {
+				graph::LogEvents(false);
 				return;
 			}
 			--tailFrames_;
@@ -495,6 +497,8 @@ namespace rdf::game::update
 		player->GetGraphVariableFloat("Speed"sv, speed);
 		player->GetGraphVariableFloat("SpeedSampled"sv, sampled);
 		player->GetGraphVariableFloat("Direction"sv, direction);
+		bool inJump = false;
+		player->GetGraphVariableBool("bInJumpState"sv, inJump);
 		const auto  hook = motion::ReadStats();
 		const float headingErr = AngleDelta(prevRequestedHeading_, measuredHeading_) * kRadToDeg;
 		logger::info(
@@ -514,8 +518,8 @@ namespace rdf::game::update
 				pathSpeed = process->high->pathingCurrentMovementSpeed.Length();
 			}
 		}
-		logger::info("trace graph Speed={:.1f} SpeedSampled={:.1f} Direction={:.2f} | process moveSpeed={:.1f} pathSpeed={:.1f}",
-			speed, sampled, direction, midSpeed, pathSpeed);
+		logger::info("trace graph Speed={:.1f} SpeedSampled={:.1f} Direction={:.2f} inJump={} depth={} | process moveSpeed={:.1f} pathSpeed={:.1f}",
+			speed, sampled, direction, inJump, graph::Depth(), midSpeed, pathSpeed);
 	}
 
 	namespace
