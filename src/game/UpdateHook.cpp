@@ -53,6 +53,7 @@ namespace rdf::game::update
 			void       Trace(RE::PlayerCharacter* player);
 			void       LogRejection(const Decision& d);
 			void       MaintainBlock(RE::PlayerCharacter* player);
+			void       TracePose(RE::PlayerCharacter* player) const;
 			void       LogCost(RE::PlayerCharacter* player, float current) const;
 			static int ClipIndex(float angleDeg, bool keepFacing);
 
@@ -582,6 +583,26 @@ namespace rdf::game::update
 		}
 		logger::info("trace graph Speed={:.1f} SpeedSampled={:.1f} Direction={:.2f} inJump={} depth={} | process moveSpeed={:.1f} | carry={:.1f} floorHits={}",
 			speed, sampled, direction, inJump, graph::Depth(), midSpeed, carry_, hook.floorHits);
+		TracePose(player);
+	}
+
+	// Dev: bone positions in the actor's own frame (last rendered pose), to see a one-frame pose pop.
+	void Controller::TracePose(RE::PlayerCharacter* player) const
+	{
+		auto* root = player->Get3D(false);
+		if (!root) {
+			return;
+		}
+		static const std::array<RE::BSFixedString, 3> kBones{ "NPC Pelvis [Pelv]", "NPC Head [Head]", "NPC R Hand [RHnd]" };
+		std::array<RE::NiPoint3, kBones.size()> local{};
+		const auto toLocal = root->world.rotate.Transpose();
+		for (std::size_t i = 0; i < kBones.size(); ++i) {
+			if (const auto* bone = root->GetObjectByName(kBones[i])) {
+				local[i] = toLocal * (bone->world.translate - root->world.translate);
+			}
+		}
+		logger::info("trace pose pelvis=({:.1f},{:.1f},{:.1f}) head=({:.1f},{:.1f},{:.1f}) rhand=({:.1f},{:.1f},{:.1f})",
+			local[0].x, local[0].y, local[0].z, local[1].x, local[1].y, local[1].z, local[2].x, local[2].y, local[2].z);
 	}
 
 	namespace
