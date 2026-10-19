@@ -1,5 +1,6 @@
 #include "InputCollector.h"
 
+#include "LockOn.h"
 #include "Settings.h"
 
 #include <array>
@@ -158,7 +159,10 @@ namespace rdf::game::input
 		if (!controls) {
 			return {};
 		}
-		const auto raw = controls->data.moveInputVec;
+		// In 360 mode TDM rewrites moveInputVec to "forward" relative to the character it turns,
+		// so the raw stick has to come from TDM itself.
+		RE::NiPoint2 raw = controls->data.moveInputVec;
+		lockon::RawMoveInput(raw);
 		const float length = std::min(std::sqrt(raw.x * raw.x + raw.y * raw.y), 1.0f);
 		if (length <= 1e-4f) {
 			return {};

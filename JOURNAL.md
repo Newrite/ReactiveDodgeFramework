@@ -92,3 +92,9 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
 * `RDF_*` annotation events registered in 0_master; plugin switches a dodge to annotation windows on `RDF_Windows`.
 * Validation: once `rdf` has a Pandora priority slot, mods after it append their events after ours and get renumbered.
   `validate_rdf.py` now compares objects with event/variable ids replaced by names (87/87 against a fresh baseline).
+* In-game: annotations fire (91 window events / 29 dodges, `RDF_Windows` at clip start every time).
+* 360-mode backward dodges curved forward: TDM rewrites `PlayerControls::moveInputVec` to "forward" relative to the
+  character it turns, so steering chased forward at 260 deg/s. Input now comes from TDM's
+  `GetActualMovementInput()` (raw stick) when TDM is present.
+* The stop at the end persists although displacement continues (~280 u/s after the exit). Dev trace now follows 30
+  ticks past each dodge with the locomotion graph floats `Speed` / `SpeedSampled` / `Direction` to find what restarts.

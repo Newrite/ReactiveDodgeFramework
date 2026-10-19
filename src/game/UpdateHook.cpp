@@ -68,6 +68,7 @@ namespace rdf::game::update
 			RE::NiAVObject* last3D_{ nullptr };
 			float           charged_{ 0.0f };
 			RejectReason    lastReject_{ RejectReason::None };
+			int             tailFrames_{ 0 };  // dev trace keeps running this many ticks after a dodge
 
 			// measured motion (previous frame's displacement, seen at the start of this tick)
 			bool  havePos_{ false };
@@ -450,6 +451,7 @@ namespace rdf::game::update
 
 	void Controller::OnStopped()
 	{
+		tailFrames_ = 30;  // follow the hand-over into locomotion in the dev trace
 		lockon::ReleaseYaw();
 		effects::SetInvulnerable(false);
 		awaitingEnter_ = false;
@@ -459,9 +461,19 @@ namespace rdf::game::update
 
 	void Controller::Trace(RE::PlayerCharacter* player)
 	{
-		if (!Settings::Get().devLog || !(wasRunning_ || core_->Phase() == DodgePhase::Done)) {
+		if (!Settings::Get().devLog) {
 			return;
 		}
+		if (!wasRunning_ && core_->Phase() != DodgePhase::Done) {
+			if (tailFrames_ <= 0) {
+				return;
+			}
+			--tailFrames_;
+		}
+		float speed = 0.0f, sampled = 0.0f, direction = 0.0f;
+		player->GetGraphVariableFloat("Speed"sv, speed);
+		player->GetGraphVariableFloat("SpeedSampled"sv, sampled);
+		player->GetGraphVariableFloat("Direction"sv, direction);
 		const auto  hook = motion::ReadStats();
 		const float headingErr = AngleDelta(prevRequestedHeading_, measuredHeading_) * kRadToDeg;
 		logger::info(
@@ -471,6 +483,7 @@ namespace rdf::game::update
 			player->data.angle.z * kRadToDeg, core_->Speed(), prevRequestedDistance_, measuredDistance_, measuredHeading_ * kRadToDeg,
 			headingErr, hook.calls, hook.overrides, hook.firstThread, hook.lastThread, hook.lastLocalX, hook.lastLocalY,
 			hook.lastYaw, graph::GraphIsDodging(player));
+		logger::info("trace graph Speed={:.1f} SpeedSampled={:.1f} Direction={:.2f}", speed, sampled, direction);
 	}
 
 	namespace

@@ -13,6 +13,8 @@ namespace rdf::game::lockon
 		virtual bool FreeRotation() = 0;
 		// Keep the mod from turning the player while a dodge turns it; balanced by ReleaseYaw.
 		virtual void AcquireYaw() = 0;
+		// The player's stick input before the mod rewrote it; false = use PlayerControls as is.
+		virtual bool RawMoveInput(RE::NiPoint2& input) = 0;
 		virtual void ReleaseYaw() = 0;
 	};
 
@@ -21,5 +23,6 @@ namespace rdf::game::lockon
 	bool LockedOn(RE::PlayerCharacter* player);
 	bool FreeRotation();
 	void AcquireYaw();
+	bool RawMoveInput(RE::NiPoint2& input);
 	void ReleaseYaw();
 }
