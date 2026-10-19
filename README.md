@@ -35,10 +35,10 @@ replaces them. RDF ignores clip root motion — direction and distance come from
 
 ```
 xmake build -y                                   # DLL + tests (CommonLib: S:/Programming/CommonLibSSE-NG)
-build\windows\x64\releasedbg\rdf_tests.exe       # 51 deterministic core tests
+build\windows\x64\releasedbg\rdf_tests.exe       # 53 deterministic core tests
 python tools\gen_rdf_patch.py                    # regenerate the Pandora patch
 python tools\stage_pandora.py --label rdf --rdf behavior/Pandora_Engine/mod/rdf
-python tools\validate_rdf.py                     # 87 checks on the generated graphs
+python tools\validate_rdf.py                     # 127 checks on the generated graphs
 python tools\annotate_clips.py                   # write RDF_* window annotations into the clips
 ```
 

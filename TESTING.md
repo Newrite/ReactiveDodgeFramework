@@ -5,7 +5,7 @@ what is still waiting.
 
 ## 1. Automated (passing)
 
-`build\windows\x64\releasedbg\rdf_tests.exe` — 51 cases, 0 failures. Deterministic traces at
+`build\windows\x64\releasedbg\rdf_tests.exe` — 53 cases, 0 failures. Deterministic traces at
 30/60/64/144/240 fps and with 0.25 s frame spikes:
 
 * input buffer: press before a window opens executes when it opens; presses at window start/end;
@@ -48,9 +48,12 @@ what is still waiting.
 | Hand-over into running without planted frames | trace: motion driven through the out-blend |
 | No dropped dodges | 0/72 entered-and-left after the clip-end fix (was: Entered -> ClipEnd -> Left in one ms) |
 
+| Dodge -> attack / block | 24 attack cancels at 0.21-0.46 s, 0 failures; held block kept until release |
+| Arm stance layer on steps | 72 steps with stance 1.0; user: looks good |
+
 ### Waiting
 * Post-dodge speed floor (`carry` / `floorHits` in the trace).
 * Projectile i-frames (`i-frames: projectile ... passed through` lines).
-* Dodge -> attack / power attack / block, attack -> dodge, MCO-style windows.
+* Power attack from a dodge, attack -> dodge, MCO-style windows; arm stance on rolls (default off).
 * Gamepad, slopes/stairs/walls, save/load and cell change mid-dodge, death, menus.
 * Visual blend quality with a proper animation set (fixtures are TUDM clips).
