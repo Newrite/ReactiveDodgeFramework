@@ -4,7 +4,6 @@
 #include "Effects.h"
 #include "EngineState.h"
 #include "GraphCoordinator.h"
-#include "GraphProbe.h"
 #include "InputCollector.h"
 #include "LockOn.h"
 #include "MotionHook.h"
@@ -585,7 +584,6 @@ namespace rdf::game::update
 		logger::info("trace graph Speed={:.1f} SpeedSampled={:.1f} Direction={:.2f} inJump={} depth={} | process moveSpeed={:.1f} | carry={:.1f} floorHits={}",
 			speed, sampled, direction, inJump, graph::Depth(), midSpeed, carry_, hook.floorHits);
 		TracePose(player);
-		probe::LogRootTransitions(player);
 	}
 
 	// Dev: bone positions in the actor's own frame (last rendered pose), to see a one-frame pose pop.

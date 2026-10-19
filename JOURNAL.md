@@ -176,3 +176,7 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   state played last time was: the SE hkbManualSelectorGenerator reactivates on its previous child and switches to the
   bound index a frame later, unblended. The dodge clip choosers are now state machines with startStateId bound to
   RDF_DodgeClip (TUDM / vanilla pattern), 128/128. The hand-over end itself showed no pose step (<= 0.4 u/frame).
+* 2026-10-20: the GraphProbe dev diagnostic (walk hkbBehaviorGraph::activeNodes as hkArray<hkbNodeInfo>, strcmp node
+  names) crashed the game in strcmp on a garbage name pointer: CommonLib's hkbNodeInfo layout (0x90 stride, template
+  at +0x50) does not hold for every entry. Removed entirely. Rule kept from this: no unverified engine layout is
+  dereferenced in game, not even behind bDevLog; check layouts in IDA first or read them with a guarded tool.
