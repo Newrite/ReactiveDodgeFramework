@@ -12,7 +12,7 @@ namespace rdf::game::graph
 	{
 		struct Names
 		{
-			RE::BSFixedString start, startB, chain, exit, entered, left, clip, speed, isDodging;
+			RE::BSFixedString start, startB, chain, exit, entered, left, clip, speed, armBlend, isDodging;
 			std::vector<RE::BSFixedString> windowOpen, windowClose;
 		};
 		Names g_names;
@@ -96,6 +96,7 @@ namespace rdf::game::graph
 		g_names.left = g.left;
 		g_names.clip = g.clip;
 		g_names.speed = g.speed;
+		g_names.armBlend = g.armBlend;
 		g_names.isDodging = g.isDodging;
 		for (std::size_t i = 0; i < kWindowEventNames.size(); ++i) {
 			g_windowNames[i] = kWindowEventNames[i];
@@ -141,10 +142,18 @@ namespace rdf::game::graph
 		g_clipWindows = 0;
 	}
 
-	bool SendStart(RE::PlayerCharacter* player, DodgeEntry entry, int clip, float animSpeed)
+	float ArmBlendWeight(float stanceShare)
+	{
+		// RDF_ArmBlend is the blend parameter of a parametric blend between the dodge (0) and the
+		// stance (1), so it is the share itself (BEHAVIOR_INTEGRATION.md section 5).
+		return std::clamp(stanceShare, 0.0f, 1.0f);
+	}
+
+	bool SendStart(RE::PlayerCharacter* player, DodgeEntry entry, int clip, float animSpeed, float armStance)
 	{
 		player->SetGraphVariableInt(g_names.clip, clip);
 		player->SetGraphVariableFloat(g_names.speed, animSpeed);
+		player->SetGraphVariableFloat(g_names.armBlend, ArmBlendWeight(armStance));
 		switch (entry) {
 		case DodgeEntry::Chain: return player->NotifyAnimationGraph(g_names.chain);
 		case DodgeEntry::StartB: return player->NotifyAnimationGraph(g_names.startB);

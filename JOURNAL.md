@@ -149,3 +149,8 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   at the cancel, so the character lost all dodge speed in one frame. Now the momentum decays to rest over
   `fActionExitBlend` (0.15 s); during that carry the dodge is "over" for decisions (no chain out of the attack), and no
   post-dodge speed floor follows an attack/block cancel.
+* Arm stance layer (graph by the behavior agent, 127/127): each dodge state blends the dodge clip with the current
+  weapon's ready-idle pose on the arms only (vanilla RightArm/LeftArm character-property masks, complementary
+  NOT_ARMS mask, stance clips selected by iRightHandType / iLeftHandType). `RDF_ArmBlend` is the parametric blend
+  parameter, so the plugin writes the stance share directly: `fArmStanceStep` 1.0 for steps, `fArmStanceRoll` 0.0 for
+  rolls, 0 when unarmed. Not yet seen in game.

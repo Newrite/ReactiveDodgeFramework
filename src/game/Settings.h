@@ -21,6 +21,7 @@ namespace rdf::game
 		// variables: clip and speed are written by us, isDodging is only read (set by the graph)
 		std::string clip{ "RDF_DodgeClip" };
 		std::string speed{ "RDF_DodgeSpeed" };
+		std::string armBlend{ "RDF_ArmBlend" };  // weight of the arm-stance layer over the dodge clip
 		std::string isDodging{ "RDF_IsDodging" };
 		std::vector<std::string> windowOpen{ "MCO_DodgeOpen" };
 		std::vector<std::string> windowClose{ "MCO_DodgeClose" };
@@ -49,6 +50,10 @@ namespace rdf::game
 		GraphNames graph;
 		float      animSpeed{ 1.0f };
 		float      clipLength{ 0.667f };  // seconds of the dodge clip at speed 1
+		// Share of the current weapon stance on the arms during a dodge (0..1): steps keep the guard,
+		// rolls let the clip move the arms (a body turning over with arms frozen in a stance looks wrong).
+		float      armStanceStep{ 1.0f };
+		float      armStanceRoll{ 0.0f };
 		bool       sidestepWhenKeepFacing{ true };  // clips 8..15 instead of 0..7 when the actor keeps its facing
 		int        enterTimeoutFrames{ 6 };
 

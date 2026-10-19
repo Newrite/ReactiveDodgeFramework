@@ -32,7 +32,10 @@ namespace rdf::game::graph
 		Chain,   // from the dodge state the graph is in to the other one
 	};
 	// Sets RDF_DodgeClip / RDF_DodgeSpeed, then sends the entry event. False = the graph refused it.
-	bool SendStart(RE::PlayerCharacter* player, DodgeEntry entry, int clip, float animSpeed);
+	// armStance: share (0..1) of the current weapon stance on the arms, over the dodge clip.
+	bool SendStart(RE::PlayerCharacter* player, DodgeEntry entry, int clip, float animSpeed, float armStance);
+	// The graph value of RDF_ArmBlend that gives `stanceShare` of the stance on the arms.
+	float ArmBlendWeight(float stanceShare);
 	void SendExit(RE::PlayerCharacter* player);
 	// RDF_IsDodging is set by the graph itself; read-only truth for "graph is in a dodge state".
 	bool GraphIsDodging(const RE::PlayerCharacter* player);
