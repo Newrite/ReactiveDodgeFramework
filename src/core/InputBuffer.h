@@ -53,6 +53,8 @@ namespace rdf
 		void Restore(std::uint64_t seq);
 		// Attack held long enough: turn the newest pending light attack into a power attack.
 		void PromoteAttack(double now);
+		// The button behind pending `kind` presses is still held: they stay fresh while it is.
+		void KeepAlive(CommandKind kind, double now);
 
 		void Expire(double now);
 		void Clear();

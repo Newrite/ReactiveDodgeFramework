@@ -52,6 +52,7 @@ namespace rdf::game::update
 			void       OnStopped();
 			void       Trace(RE::PlayerCharacter* player);
 			void       LogRejection(const Decision& d);
+			void       MaintainBlock(RE::PlayerCharacter* player);
 			void       LogCost(RE::PlayerCharacter* player, float current) const;
 			static int ClipIndex(float angleDeg, bool keepFacing);
 
@@ -73,6 +74,8 @@ namespace rdf::game::update
 			int             tailFrames_{ 0 };   // dev trace keeps running this many ticks after a dodge
 			bool            inStateB_{ true };  // dodge state used last; the first dodge goes to A
 			bool            moveHeld_{ false };
+			bool            blockHolding_{ false };  // a block we started out of a dodge, kept while held
+			int             blockAge_{ 0 };          // ticks since that block started
 			float           carry_{ 0.0f };     // post-dodge speed floor for the controls-driven engine, u/s
 
 			// measured motion (previous frame's displacement, seen at the start of this tick)
@@ -112,6 +115,13 @@ namespace rdf::game::update
 		}
 
 		// Raised block without an action record: wantBlocking + the vanilla graph event.
+		bool IsBlocking(RE::PlayerCharacter* player)
+		{
+			bool blocking = false;
+			player->GetGraphVariableBool("IsBlocking"sv, blocking);
+			return blocking;
+		}
+
 		bool StartBlock(RE::PlayerCharacter* player)
 		{
 			player->AsActorState()->actorState2.wantBlocking = 1;
@@ -145,6 +155,7 @@ namespace rdf::game::update
 		exitSent_ = true;
 		wasRunning_ = false;
 		carry_ = 0.0f;
+		blockHolding_ = false;
 		prevDepth_ = 0;
 		retry_ = {};
 		havePos_ = false;
@@ -166,6 +177,10 @@ namespace rdf::game::update
 		const FrameInput frame = BuildFrame(player, dt);
 		core_->BeginFrame(frame);
 		DrainInput(frame);
+		if (input::BlockHeld()) {
+			core_->KeepAlive(CommandKind::Block);
+		}
+		MaintainBlock(player);
 		HandleGraphEvents(player);
 		RetryDeferred(player);
 
@@ -320,6 +335,30 @@ namespace rdf::game::update
 			owner->GetPermanentActorValue(resource), settings.minimum);
 	}
 
+	// The game's block handler never saw a button-down that came during the dodge, so it would drop
+	// our block on its next update. Keep the block up while the button stays down, end it on release.
+	void Controller::MaintainBlock(RE::PlayerCharacter* player)
+	{
+		if (!blockHolding_) {
+			return;
+		}
+		// The graph reports IsBlocking a tick or two after blockStart; only then can "not blocking"
+		// mean the game ended the block (stagger, bash, ...).
+		if (++blockAge_ > 3 && !IsBlocking(player)) {
+			blockHolding_ = false;
+			return;
+		}
+		auto& state = player->AsActorState()->actorState2;
+		if (input::BlockHeld()) {
+			state.wantBlocking = 1;
+			return;
+		}
+		state.wantBlocking = 0;
+		player->NotifyAnimationGraph("blockStop"sv);
+		blockHolding_ = false;
+		DevLog("{}", "block released");
+	}
+
 	void Controller::LogRejection(const Decision& d)
 	{
 		if (d.reject == lastReject_ && d.rejectedCommand == lastRejectCommand_) {
@@ -407,7 +446,9 @@ namespace rdf::game::update
 		case DecisionKind::PowerAttack:
 			return PlayAction(player, RE::DEFAULT_OBJECT::kActionRightPowerAttack);
 		case DecisionKind::Block:
-			return StartBlock(player);
+			blockHolding_ = StartBlock(player);
+			blockAge_ = 0;
+			return blockHolding_;
 		default:
 			return PlayAction(player, RE::DEFAULT_OBJECT::kActionRightAttack);
 		}
@@ -476,7 +517,7 @@ namespace rdf::game::update
 	void Controller::OnStopped()
 	{
 		// Only a dodge that ran its course into running carries its speed; an interrupted one does not.
-		carry_ = core_->Phase() == DodgePhase::Done && moveHeld_ ? core_->Speed() : 0.0f;
+		carry_ = core_->Phase() == DodgePhase::Done && moveHeld_ && !core_->CancelledIntoAction() ? core_->Speed() : 0.0f;
 		tailFrames_ = 30;  // follow the hand-over into locomotion in the dev trace
 		lockon::ReleaseYaw();
 		effects::SetInvulnerable(false);

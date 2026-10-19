@@ -181,15 +181,24 @@ TEST(failed_side_effect_keeps_press_until_expiry)
 
 TEST(attack_from_dodge_only_after_window_and_cancels_action)
 {
+	// The cancel happens exactly when the window opens; the dodge's momentum then runs out over
+	// actionExitBlend instead of stopping dead, decreasing every frame, and the dodge is over after it.
 	Sim s(ExactConfig());
 	s.Frame(kDt64, Dir(0), { CommandKind::Dodge });
-	int attackFrame = -1;
+	int   attackFrame = -1;
+	float lastSpeed = 1e9f;
 	for (int n = 1; n < 40; ++n) {
 		const auto f = n == 10 ? s.Frame(kDt64, Dir(0), { CommandKind::Attack }) : s.Frame(kDt64, Dir(0));
 		if (f.decision.kind == DecisionKind::Attack) {
 			attackFrame = n;
+		}
+		if (attackFrame > 0 && f.cmd.active) {
+			CHECK(f.cmd.speed <= lastSpeed + 1e-3f);
+			CHECK(f.cmd.vy >= 0.0f);
+			lastSpeed = f.cmd.speed;
+		}
+		if (attackFrame > 0 && n > attackFrame + 10) {  // 0.15 s at 64 fps is under 10 frames
 			CHECK(!f.running);
-			CHECK(f.cmd.active == 0 || f.cmd.vy >= 0.0f);
 		}
 	}
 	CHECK(attackFrame == 20);  // 0.3125 s

@@ -87,6 +87,12 @@ namespace rdf
 		return cmd;
 	}
 
+	void MotionDriver::BeginStop(float t, float blend)
+	{
+		profile_.BlendOut(t, 0.0f, blend);
+		exiting_ = true;
+	}
+
 	void MotionDriver::BeginExit(float t, bool moveHeld)
 	{
 		profile_.BlendOut(t, ExitSpeed(moveHeld), cfg_.timing.exitBlend);

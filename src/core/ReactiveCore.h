@@ -46,6 +46,8 @@ namespace rdf
 		void          BeginFrame(const FrameInput& frame);
 		std::uint64_t Press(CommandKind kind, Vec2 dir);
 		void          PromoteAttack() { buffer_.PromoteAttack(clock_.Now()); }
+		// Called every frame the button behind `kind` is held (a held block outlasts the buffer window).
+		void          KeepAlive(CommandKind kind) { buffer_.KeepAlive(kind, clock_.Now()); }
 
 		Decision   Evaluate(const EngineView& engine);
 		void       Apply(const Decision& decision, bool accepted);
@@ -57,6 +59,7 @@ namespace rdf
 		float      ActionTime() const { return action_.Time(); }
 		int        ChainCount() const { return action_.ChainCount(); }
 		bool       Exiting() const { return action_.Exiting(); }
+		bool       CancelledIntoAction() const { return intoAction_; }
 		float      Heading() const { return driver_.Heading(); }
 		float      Facing() const { return driver_.Facing(); }
 		float      Speed() const { return driver_.Speed(); }
@@ -90,6 +93,7 @@ namespace rdf
 		MotionDriver  driver_;
 		FrameInput    frame_{};
 		float         startAngleDeg_{ 0.0f };
+		bool          intoAction_{ false };  // the current dodge was cancelled into an attack/block
 		WindowTracker windows_;
 	};
 }

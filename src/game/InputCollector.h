@@ -28,6 +28,8 @@ namespace rdf::game::input
 
 	// Analog move input (x right, y forward) rotated into world space by the camera yaw. Length 0..1.
 	Vec2  WorldMoveInput();
+	// The block ("Left Attack/Block") button is down right now.
+	bool  BlockHeld();
 	float CameraYaw();
 
 	template <class F>

@@ -181,6 +181,7 @@ namespace rdf::game
 			t.active = ReadFloat("Timing", "fActive", t.active, 0.0f, 3.0f);
 			t.recovery = ReadFloat("Timing", "fRecovery", t.recovery, 0.0f, 3.0f);
 			t.exitBlend = ReadFloat("Timing", "fExitBlend", t.exitBlend, 0.02f, 1.0f);
+			t.actionExitBlend = ReadFloat("Timing", "fActionExitBlend", t.actionExitBlend, 0.02f, 1.0f);
 			if (t.Total() < 0.1f) {
 				logger::warn("[Timing] total duration {} too short, using defaults", t.Total());
 				t = Timing{};

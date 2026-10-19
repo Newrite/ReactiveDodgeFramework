@@ -112,3 +112,14 @@ TEST(seqlock_never_tears)
 	writer.join();
 	CHECK(torn == 0);
 }
+
+TEST(held_button_keeps_press_alive_released_one_expires)
+{
+	InputBuffer b(0.20f, 0.0f);
+	b.Push(CommandKind::Block, 0.0);
+	for (double t = 0.05; t <= 1.0; t += 0.05) {
+		b.KeepAlive(CommandKind::Block, t);  // held for a second
+	}
+	CHECK(b.Peek(CommandKind::Block, 1.0) != nullptr);
+	CHECK(b.Peek(CommandKind::Block, 1.25) == nullptr);  // released at 1.0: gone after the window
+}

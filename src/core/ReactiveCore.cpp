@@ -30,7 +30,9 @@ namespace rdf
 	Decision ReactiveCore::Evaluate(const EngineView& engine)
 	{
 		ArbiterState s;
-		s.dodgeActive = action_.Running();
+		// While momentum runs out into an attack/block the dodge is over as far as decisions go:
+		// a dodge press is judged against the attack, not chained.
+		s.dodgeActive = action_.Running() && !intoAction_;
 		s.exiting = action_.Exiting();
 		s.actionTime = action_.Time();
 		s.chainCount = action_.ChainCount();
@@ -95,6 +97,7 @@ namespace rdf
 		start.keepFacing = PreviewKeepsFacing(d);
 
 		windows_.Reset();  // the new clip announces its own windows
+		intoAction_ = false;
 		const int chainCount = chain ? action_.ChainCount() + 1 : 1;
 		action_.Start(cfg_.timing, chainCount);
 		driver_.Begin(start);
@@ -138,12 +141,12 @@ namespace rdf
 			break;
 		case DecisionKind::Attack:
 		case DecisionKind::PowerAttack:
-			Consume(d);
-			action_.Reset();
-			break;
 		case DecisionKind::Block:
+			// The action owns the actor from now on; the dodge only lets its momentum run out.
 			Consume(d);
-			action_.Reset();
+			action_.RequestExit(cfg_.timing.actionExitBlend);
+			driver_.BeginStop(action_.Time(), cfg_.timing.actionExitBlend);
+			intoAction_ = true;
 			break;
 		case DecisionKind::LocomotionExit:
 			action_.RequestExit(cfg_.timing.exitBlend);
@@ -184,5 +187,6 @@ namespace rdf
 		buffer_.Clear();
 		action_.Reset();
 		windows_.Reset();
+		intoAction_ = false;
 	}
 }

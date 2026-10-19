@@ -140,3 +140,12 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   swallowed the press. Now: attack/block may leave a dodge once its exit window is open or the hand-over began, and
   the annotation rule has a threshold per window (attack/block 90 %, capped at 0.35 s; chain/exit 75 %; i-frames end
   60 %). Attack/block now open at 0.20-0.35 s of clip time.
+* Block from a dodge, second run: a press 0.10 s into the dodge expired before BlockOpen (0.36 s), and a block that did
+  start was dropped by the game after ~0.2 s although the button was held: the game's block handler never saw the
+  button-down (it came during the dodge). Now a held button keeps its buffered press alive (`InputBuffer::KeepAlive`),
+  and a block the plugin starts is kept (`wantBlocking`) while the button stays down and ended with `blockStop`.
+* Dodge -> attack "feels like waiting": the attack transition starts 3-6 ms after the decision (mid-dodge); the first
+  hit frame follows 0.52-0.56 s later (the weapon moveset's windup). What the plugin did wrong: it released the motion
+  at the cancel, so the character lost all dodge speed in one frame. Now the momentum decays to rest over
+  `fActionExitBlend` (0.15 s); during that carry the dodge is "over" for decisions (no chain out of the attack), and no
+  post-dodge speed floor follows an attack/block cancel.

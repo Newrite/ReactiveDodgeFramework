@@ -38,6 +38,7 @@ namespace rdf::game::input
 			kRight = 1 << 3,
 		};
 		std::atomic<std::uint32_t> g_moveKeys{ 0 };
+		std::atomic<bool>          g_blockHeld{ false };
 		std::atomic<float>         g_stickX{ 0.0f };
 		std::atomic<float>         g_stickY{ 0.0f };
 
@@ -106,6 +107,9 @@ namespace rdf::game::input
 					return;
 				}
 				TrackMoveKey(b, *events);
+				if (IsMapped(events->leftAttack, device, code)) {
+					g_blockHeld.store(b.IsPressed(), std::memory_order_relaxed);
+				}
 
 				if (b.IsDown()) {
 					promoted_ = false;
@@ -199,6 +203,11 @@ namespace rdf::game::input
 		Press p;
 		while (detail::Pop(p)) {
 		}
+	}
+
+	bool BlockHeld()
+	{
+		return g_blockHeld.load(std::memory_order_relaxed);
 	}
 
 	float CameraYaw()

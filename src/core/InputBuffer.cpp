@@ -83,6 +83,16 @@ namespace rdf
 		}
 	}
 
+	void InputBuffer::KeepAlive(CommandKind kind, double now)
+	{
+		for (std::size_t i = 0; i < count_; ++i) {
+			auto& c = ring_[i];
+			if (c.kind == kind && !c.consumed && Alive(c, now)) {
+				c.t = now;
+			}
+		}
+	}
+
 	void InputBuffer::Expire(double now)
 	{
 		std::size_t keep = 0;
