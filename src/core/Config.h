@@ -74,9 +74,15 @@ namespace rdf
 	};
 
 	// True when the actor keeps its facing (lock-on strafing) instead of turning to the trajectory.
-	inline bool KeepsFacing(const SteeringConfig& cfg, bool lockOn)
+	// Auto: turn to face the trajectory only when the actor may rotate freely (TDM 360 movement)
+	// and no target is locked; otherwise the camera or the lock-on owns the facing.
+	inline bool KeepsFacing(const SteeringConfig& cfg, bool lockOn, bool freeRotation)
 	{
-		return cfg.orientation == OrientationMode::KeepFacing || (cfg.orientation == OrientationMode::Auto && lockOn);
+		switch (cfg.orientation) {
+		case OrientationMode::KeepFacing: return true;
+		case OrientationMode::FaceMotion: return false;
+		default: return lockOn || !freeRotation;
+		}
 	}
 
 	struct InputConfig

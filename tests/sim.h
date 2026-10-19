@@ -48,6 +48,7 @@ namespace sim
 			in.locomotionSpeed = carry;
 			in.lockOn = lockOn;
 			in.lockOnYaw = lockYaw;
+			in.freeRotation = freeRotation;
 			core.BeginFrame(in);
 			for (auto k : presses) {
 				core.Press(k, move);
@@ -93,6 +94,7 @@ namespace sim
 		float              carry{ 0.0f };
 		bool               lockOn{ false };
 		float              lockYaw{ 0.0f };
+		bool               freeRotation{ true };
 		std::vector<Sample> log;
 	};
 

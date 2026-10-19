@@ -15,6 +15,8 @@ namespace rdf
 		float moveMagnitude{ 0.0f };  // 0..1
 		bool  lockOn{ false };
 		float lockOnYaw{ 0.0f };  // heading toward the lock-on target
+		float actorYaw{ 0.0f };   // the actor's real yaw this frame (other mods may rotate it too)
+		bool  freeRotation{ true };
 	};
 
 	struct DriverStart
@@ -45,7 +47,6 @@ namespace rdf
 
 	private:
 		float ExitSpeed(bool moveHeld) const { return moveHeld ? cfg_.motion.runSpeed : 0.0f; }
-		float FacingTarget(const DriverInput& in) const;
 		float YawRate(DodgePhase phase) const;
 		bool  ResolveSteering(const DriverInput& in, float& desired, float& magnitude);
 
@@ -53,7 +54,6 @@ namespace rdf
 		Steering      steering_;
 		MotionProfile profile_;
 		float         facing_{ 0.0f };
-		float         facingAtStart_{ 0.0f };
 		float         speed_{ 0.0f };
 		float         latchedHeading_{ 0.0f };
 		bool          latched_{ false };

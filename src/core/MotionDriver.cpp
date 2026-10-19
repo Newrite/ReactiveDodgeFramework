@@ -16,7 +16,7 @@ namespace rdf
 			steering_.Reset(s.heading);
 			latched_ = false;
 		}
-		facing_ = facingAtStart_ = WrapAngle(s.facing);
+		facing_ = WrapAngle(s.facing);
 		profile_.Plan(cfg_.timing, cfg_.motion, s.carrySpeed, ExitSpeed(s.moveHeld));
 		speed_ = profile_.Speed(0.0f);
 		retargeted_ = false;
@@ -43,14 +43,6 @@ namespace rdf
 		return false;
 	}
 
-	float MotionDriver::FacingTarget(const DriverInput& in) const
-	{
-		if (!KeepsFacing(cfg_.steering, in.lockOn)) {
-			return steering_.Heading();
-		}
-		return in.lockOn ? in.lockOnYaw : facingAtStart_;
-	}
-
 	float MotionDriver::YawRate(DodgePhase phase) const
 	{
 		return (phase == DodgePhase::Startup ? cfg_.steering.startupYawRate : cfg_.steering.faceYawRate) * kDegToRad;
@@ -73,9 +65,16 @@ namespace rdf
 		const float v = dt > 0.0f ? distance / dt : 0.0f;
 		speed_ = profile_.Speed(t1);
 
-		const float newFacing = MoveToward(facing_, FacingTarget(in), YawRate(phase) * dt);
-		const float yawRate = dt > 0.0f ? AngleDelta(facing_, newFacing) / dt : 0.0f;
-		facing_ = newFacing;
+		// Closed loop on the real yaw: whatever else turned the actor since the last step is
+		// corrected here instead of accumulating as a drift between our facing and the actor.
+		// When keeping facing, the camera / lock-on owns the yaw and the clip carries the direction.
+		const float actual = WrapAngle(in.actorYaw);
+		float       yawRate = 0.0f;
+		facing_ = actual;
+		if (!KeepsFacing(cfg_.steering, in.lockOn, in.freeRotation) && dt > 0.0f) {
+			facing_ = MoveToward(actual, steering_.Heading(), YawRate(phase) * dt);
+			yawRate = AngleDelta(actual, facing_) / dt;
+		}
 
 		const Vec2 dir = FromHeading(steering_.Heading());
 		MotionCommand cmd;

@@ -511,3 +511,32 @@ TEST(keep_facing_holds_yaw_on_lock_on)
 	CHECK_NEAR(s.yaw, 0.0, 1e-4);
 	CHECK(s.pos.x > 100.0f);  // still travelled east
 }
+
+// ---- orientation -------------------------------------------------------------------------------
+
+TEST(facing_recovers_when_another_system_turns_the_actor)
+{
+	// Another plugin (TDM) may rotate the actor between our steps. The yaw command is computed
+	// from the real yaw, so the actor ends up facing the trajectory again instead of drifting.
+	Sim s;
+	StartAndRunTo(s, Dir(90), 6);
+	s.yaw = WrapAngle(s.yaw + 60.0f * kDegToRad);  // external disturbance
+	for (int i = 0; i < 10; ++i) {
+		s.Frame(kDt64, Dir(90));
+	}
+	CHECK_NEAR(DegDelta(s.core.Heading(), s.yaw), 0.0, 1.0);
+}
+
+TEST(camera_owned_facing_never_commands_yaw)
+{
+	// TDM "Vanilla Style" / no TDM: the camera owns the facing, the directional clip carries the
+	// direction, and the dodge must not fight the camera over the yaw.
+	Sim s;
+	s.freeRotation = false;
+	s.Frame(kDt64, Dir(135), { CommandKind::Dodge });
+	CHECK(s.core.KeepsFacing());
+	for (int i = 0; i < 30; ++i) {
+		const auto f = s.Frame(kDt64, Dir(45));
+		CHECK_NEAR(f.cmd.yawRate, 0.0, 1e-6);
+	}
+}

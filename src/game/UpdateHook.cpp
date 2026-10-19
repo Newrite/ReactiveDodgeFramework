@@ -50,6 +50,7 @@ namespace rdf::game::update
 			void       StepAndPublish(RE::PlayerCharacter* player, float dt);
 			void       OnStopped();
 			void       Trace(RE::PlayerCharacter* player);
+			void       ResumeLocomotion(RE::PlayerCharacter* player) const;
 			void       LogRejection(const Decision& d);
 			void       LogCost(RE::PlayerCharacter* player, float current) const;
 			int        ClipIndex(float angleDeg) const;
@@ -68,6 +69,7 @@ namespace rdf::game::update
 			RE::NiAVObject* last3D_{ nullptr };
 			float           charged_{ 0.0f };
 			RejectReason    lastReject_{ RejectReason::None };
+			bool            moveHeld_{ false };
 
 			// measured motion (previous frame's displacement, seen at the start of this tick)
 			bool  havePos_{ false };
@@ -133,6 +135,7 @@ namespace rdf::game::update
 		}
 		motion::Reset();
 		graph::ClearEvents();
+		lockon::ReleaseYaw();
 		effects::SetInvulnerable(false);
 		awaitingEnter_ = false;
 		exitSent_ = true;
@@ -222,6 +225,8 @@ namespace rdf::game::update
 		f.actorYaw = player->data.angle.z;
 		f.locomotionSpeed = measuredSpeed_;
 		f.lockOn = lockon::TargetYaw(player, f.lockOnYaw);
+		f.freeRotation = lockon::FreeRotation();
+		moveHeld_ = Length(f.move) > Settings::Get().core.steering.deadzone;
 		return f;
 	}
 
@@ -268,6 +273,7 @@ namespace rdf::game::update
 			DevLog("{}", "clip ended: starting locomotion handover");
 			exitSent_ = true;
 			core_->Apply(Decision{ DecisionKind::LocomotionExit }, true);
+			ResumeLocomotion(player);
 		}
 	}
 
@@ -308,6 +314,17 @@ namespace rdf::game::update
 			owner->GetPermanentActorValue(resource), settings.minimum);
 	}
 
+	// The engine sends moveStart only when movement input begins. Input held through the dodge never
+	// "begins", so the locomotion graph would sit in its idle state until the player let go and
+	// pressed again; tell it the move is already under way.
+	void Controller::ResumeLocomotion(RE::PlayerCharacter* player) const
+	{
+		if (moveHeld_) {
+			const bool accepted = player->NotifyAnimationGraph("moveStart"sv);
+			DevLog("resume locomotion: moveStart {}", accepted ? "accepted" : "refused");
+		}
+	}
+
 	void Controller::LogRejection(const Decision& d)
 	{
 		if (d.reject == lastReject_) {
@@ -346,6 +363,7 @@ namespace rdf::game::update
 			graph::SendExit(player);
 			exitSent_ = true;
 			core_->Apply(d, true);
+			ResumeLocomotion(player);
 			break;
 		}
 	}
@@ -367,7 +385,11 @@ namespace rdf::game::update
 		awaitingEnter_ = true;
 		enterFrames_ = 0;
 		exitSent_ = false;
-		DevLog("dodge {} angle={:.1f} clip={} keepFacing={}", chain ? "chain" : "start", angle, clip, core_->KeepsFacing());
+		if (!core_->KeepsFacing()) {
+			lockon::AcquireYaw();  // TDM would otherwise turn the player back toward its own target yaw
+		}
+		DevLog("dodge {} angle={:.1f} clip={} keepFacing={} freeRotation={}", chain ? "chain" : "start", angle, clip,
+			core_->KeepsFacing(), lockon::FreeRotation());
 	}
 
 	bool Controller::Perform(RE::PlayerCharacter* player, const Decision& d)
@@ -440,6 +462,7 @@ namespace rdf::game::update
 
 	void Controller::OnStopped()
 	{
+		lockon::ReleaseYaw();
 		effects::SetInvulnerable(false);
 		awaitingEnter_ = false;
 		charged_ = 0.0f;

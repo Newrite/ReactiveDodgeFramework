@@ -82,7 +82,7 @@ namespace rdf
 
 		DriverStart start;
 		start.chain = chain;
-		start.facing = chain ? driver_.Facing() : frame_.actorYaw;
+		start.facing = frame_.actorYaw;
 		start.moveHeld = MoveHeld();
 		start.carrySpeed = chain ? driver_.Speed() : std::min(frame_.locomotionSpeed, cfg_.motion.maxCarrySpeed);
 		start.heading = StartHeading(d, chain);
@@ -135,6 +135,8 @@ namespace rdf
 		in.moveMagnitude = magnitude;
 		in.lockOn = frame_.lockOn;
 		in.lockOnYaw = frame_.lockOnYaw;
+		in.actorYaw = frame_.actorYaw;
+		in.freeRotation = frame_.freeRotation;
 		return in;
 	}
 

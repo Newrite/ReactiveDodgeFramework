@@ -59,3 +59,14 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   ini if the tail should match.
 * **Clip/timeline sync.** `RDF_DodgeSpeed = fAnimSpeed * fClipLength / (fStartup+fActive+fRecovery)`
   (`Timing::PlaybackSpeed`, unit tested), default `fClipLength=0.667`.
+
+## 2026-10-19 — first in-game traces
+* Axes confirmed: requested vs actual displacement match per frame, heading error ~0 while nothing else rotates the
+  actor. The motion hook runs on several job threads (seqlock snapshot holds up).
+* Yaw fight: in TDM 360 mode TDM turned the player back while the dodge turned it; the internal facing then drifted
+  from the real yaw (heading errors up to 180 deg). Fixes: facing is closed-loop on the actor's real yaw each step;
+  FaceMotion dodges take TDM yaw control (`RequestYawControl`, released when the dodge stops).
+* In TDM "Vanilla Style" (or without TDM) the camera owns the facing, so `sOrientation=Auto` now keeps facing and
+  picks the directional clip unless TDM reports free (360) movement; no yaw is commanded in that mode.
+* Pause after a dodge with input held: the engine only sends `moveStart` when input begins, so locomotion sat idle.
+  The plugin sends `moveStart` on the locomotion handover when move input is held.
