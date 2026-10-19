@@ -1,0 +1,189 @@
+{
+    "rule": {
+        "iframeOn": 0.3,
+        "actionLatest": 0.35,
+        "iframeEnd": 0.6,
+        "chain": 0.75,
+        "attack": 0.9,
+        "block": 0.9,
+        "exit": 0.75
+    },
+    "clips": {
+        "rdf_roll_b": {
+            "peakTime": 0.2667,
+            "peakSpeed": 423.8,
+            "RDF_Windows": 0.0,
+            "RDF_IFrameStart": 0.0333,
+            "RDF_IFrameEnd": 0.4333,
+            "RDF_ChainOpen": 0.4,
+            "RDF_AttackOpen": 0.35,
+            "RDF_BlockOpen": 0.35,
+            "RDF_ExitOpen": 0.4
+        },
+        "rdf_roll_bl": {
+            "peakTime": 0.2667,
+            "peakSpeed": 427.3,
+            "RDF_Windows": 0.0,
+            "RDF_IFrameStart": 0.0333,
+            "RDF_IFrameEnd": 0.4333,
+            "RDF_ChainOpen": 0.4,
+            "RDF_AttackOpen": 0.35,
+            "RDF_BlockOpen": 0.35,
+            "RDF_ExitOpen": 0.4
+        },
+        "rdf_roll_br": {
+            "peakTime": 0.2667,
+            "peakSpeed": 386.6,
+            "RDF_Windows": 0.0,
+            "RDF_IFrameStart": 0.0333,
+            "RDF_IFrameEnd": 0.5,
+            "RDF_ChainOpen": 0.4333,
+            "RDF_AttackOpen": 0.35,
+            "RDF_BlockOpen": 0.35,
+            "RDF_ExitOpen": 0.4333
+        },
+        "rdf_roll_f": {
+            "peakTime": 0.2333,
+            "peakSpeed": 487.1,
+            "RDF_Windows": 0.0,
+            "RDF_IFrameStart": 0.0333,
+            "RDF_IFrameEnd": 0.3667,
+            "RDF_ChainOpen": 0.3333,
+            "RDF_AttackOpen": 0.2667,
+            "RDF_BlockOpen": 0.2667,
+            "RDF_ExitOpen": 0.3333
+        },
+        "rdf_roll_fl": {
+            "peakTime": 0.1667,
+            "peakSpeed": 503.1,
+            "RDF_Windows": 0.0,
+            "RDF_IFrameStart": 0.0333,
+            "RDF_IFrameEnd": 0.3333,
+            "RDF_ChainOpen": 0.3,
+            "RDF_AttackOpen": 0.2667,
+            "RDF_BlockOpen": 0.2667,
+            "RDF_ExitOpen": 0.3
+        },
+        "rdf_roll_fr": {
+            "peakTime": 0.2333,
+            "peakSpeed": 472.4,
+            "RDF_Windows": 0.0,
+            "RDF_IFrameStart": 0.0333,
+            "RDF_IFrameEnd": 0.3333,
+            "RDF_ChainOpen": 0.3,
+            "RDF_AttackOpen": 0.2667,
+            "RDF_BlockOpen": 0.2667,
+            "RDF_ExitOpen": 0.3
+        },
+        "rdf_roll_l": {
+            "peakTime": 0.2667,
+            "peakSpeed": 400.6,
+            "RDF_Windows": 0.0,
+            "RDF_IFrameStart": 0.0333,
+            "RDF_IFrameEnd": 0.4667,
+            "RDF_ChainOpen": 0.4333,
+            "RDF_AttackOpen": 0.35,
+            "RDF_BlockOpen": 0.35,
+            "RDF_ExitOpen": 0.4333
+        },
+        "rdf_roll_r": {
+            "peakTime": 0.1667,
+            "peakSpeed": 439.2,
+            "RDF_Windows": 0.0,
+            "RDF_IFrameStart": 0.0333,
+            "RDF_IFrameEnd": 0.4333,
+            "RDF_ChainOpen": 0.4,
+            "RDF_AttackOpen": 0.35,
+            "RDF_BlockOpen": 0.35,
+            "RDF_ExitOpen": 0.4
+        },
+        "rdf_step_b": {
+            "peakTime": 0.2667,
+            "peakSpeed": 423.8,
+            "RDF_Windows": 0.0,
+            "RDF_IFrameStart": 0.0333,
+            "RDF_IFrameEnd": 0.4333,
+            "RDF_ChainOpen": 0.4,
+            "RDF_AttackOpen": 0.35,
+            "RDF_BlockOpen": 0.35,
+            "RDF_ExitOpen": 0.4
+        },
+        "rdf_step_bl": {
+            "peakTime": 0.2667,
+            "peakSpeed": 427.3,
+            "RDF_Windows": 0.0,
+            "RDF_IFrameStart": 0.0333,
+            "RDF_IFrameEnd": 0.4333,
+            "RDF_ChainOpen": 0.4,
+            "RDF_AttackOpen": 0.35,
+            "RDF_BlockOpen": 0.35,
+            "RDF_ExitOpen": 0.4
+        },
+        "rdf_step_br": {
+            "peakTime": 0.2667,
+            "peakSpeed": 386.6,
+            "RDF_Windows": 0.0,
+            "RDF_IFrameStart": 0.0333,
+            "RDF_IFrameEnd": 0.5,
+            "RDF_ChainOpen": 0.4333,
+            "RDF_AttackOpen": 0.35,
+            "RDF_BlockOpen": 0.35,
+            "RDF_ExitOpen": 0.4333
+        },
+        "rdf_step_f": {
+            "peakTime": 0.2333,
+            "peakSpeed": 487.1,
+            "RDF_Windows": 0.0,
+            "RDF_IFrameStart": 0.0333,
+            "RDF_IFrameEnd": 0.3667,
+            "RDF_ChainOpen": 0.3333,
+            "RDF_AttackOpen": 0.2667,
+            "RDF_BlockOpen": 0.2667,
+            "RDF_ExitOpen": 0.3333
+        },
+        "rdf_step_fl": {
+            "peakTime": 0.1667,
+            "peakSpeed": 503.1,
+            "RDF_Windows": 0.0,
+            "RDF_IFrameStart": 0.0333,
+            "RDF_IFrameEnd": 0.3333,
+            "RDF_ChainOpen": 0.3,
+            "RDF_AttackOpen": 0.2667,
+            "RDF_BlockOpen": 0.2667,
+            "RDF_ExitOpen": 0.3
+        },
+        "rdf_step_fr": {
+            "peakTime": 0.2333,
+            "peakSpeed": 472.4,
+            "RDF_Windows": 0.0,
+            "RDF_IFrameStart": 0.0333,
+            "RDF_IFrameEnd": 0.3333,
+            "RDF_ChainOpen": 0.3,
+            "RDF_AttackOpen": 0.2667,
+            "RDF_BlockOpen": 0.2667,
+            "RDF_ExitOpen": 0.3
+        },
+        "rdf_step_l": {
+            "peakTime": 0.2667,
+            "peakSpeed": 400.6,
+            "RDF_Windows": 0.0,
+            "RDF_IFrameStart": 0.0333,
+            "RDF_IFrameEnd": 0.4667,
+            "RDF_ChainOpen": 0.4333,
+            "RDF_AttackOpen": 0.35,
+            "RDF_BlockOpen": 0.35,
+            "RDF_ExitOpen": 0.4333
+        },
+        "rdf_step_r": {
+            "peakTime": 0.1667,
+            "peakSpeed": 439.2,
+            "RDF_Windows": 0.0,
+            "RDF_IFrameStart": 0.0333,
+            "RDF_IFrameEnd": 0.4333,
+            "RDF_ChainOpen": 0.4,
+            "RDF_AttackOpen": 0.35,
+            "RDF_BlockOpen": 0.35,
+            "RDF_ExitOpen": 0.4
+        }
+    }
+}

@@ -113,6 +113,26 @@ up to 5e-7.
 
 ## 6. Adding another clip set
 
+### Per weapon (or any condition) — an OAR set, no Pandora run
+
+The graph always plays `Animations\RDFdf_{roll,step}_<dir>.hkx`. A set is an Open Animation Replacer mod
+whose submod mirrors those 16 paths under its conditions, so it can be added, removed or reordered without
+regenerating behaviours:
+
+1. Write a spec in `behavior/sets/<name>.json`: target MO2 mod name, OAR mod/submod names, priority, the OAR
+   conditions, and one source clip per direction (`f fr r br b bl l fl`). Roll and step slots get the same clip.
+2. Extract the source archive into a new folder under `_work/` and run
+   `python tools/build_clip_set.py behavior/sets/<name>.json --src _work/<folder>`. It writes the mod, copies
+   the clips, adds the `RDF_*` windows (keeping the clips' own annotations) and records the times in
+   `behavior/sets/<name>.windows.json`.
+3. Enable the mod in MO2. Its OAR priority decides between sets; MO2 order does not matter.
+
+Example: `behavior/sets/greatsword-2hm.json` -> mod `AI - RDF Dodge Set - Greatsword` (greatsword in the right
+hand, not a spear).
+
+### Replacing the default set
+
+
 1. Author 16 clips with the naming and index convention above.
 2. Put them in a new folder (e.g. `Animations\RDF2\`) and change `ANIM_DIR` in `tools/gen_rdf_patch.py`, or enlarge `CLIPS`
    to several sets: the selector simply grows (`RDF_DodgeClip = set * 16 + index`); nothing else in the graph changes.

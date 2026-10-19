@@ -1,0 +1,26 @@
+{
+  "mod": "AI - RDF Dodge Set - Greatsword",
+  "oarMod": "RDF Dodge Set - Greatsword",
+  "author": "newrite",
+  "description": "Greatsword (2hm) dodge clips for the Reactive Dodge Framework: the 8 directional TK-Dodge style clips from the user's 'PlayerDodge* - 2hm' OAR set, one per RDF slot (roll and step slots share the clip), with RDF_* window annotations.",
+  "source": "F:\\downloads\\PlayerDodgeForwardRight - 2hm.zip",
+  "submod": {
+    "name": "Greatsword",
+    "priority": 9100005,
+    "conditions": [
+      { "condition": "IsEquippedType", "requiredVersion": "1.0.0.0", "Type": { "value": 5.0 }, "Left hand": false },
+      { "condition": "IsEquippedHasKeyword", "requiredVersion": "1.0.0.0", "negated": true,
+        "Keyword": { "editorID": "WeapTypeSpear" }, "Left hand": false }
+    ]
+  },
+  "clips": {
+    "f":  "PlayerDodge - 2hm/DodgeForward.hkx",
+    "fr": "PlayerDodgeForwardRight - 2hm/DodgeForward.hkx",
+    "r":  "PlayerDodge - 2hm/DodgeRight.hkx",
+    "br": "PlayerDodgeBackwardRight - 2hm/DodgeBack.hkx",
+    "b":  "PlayerDodge - 2hm/DodgeBack.hkx",
+    "bl": "PlayerDodgeBackwardLeft - 2hm/DodgeBack.hkx",
+    "l":  "PlayerDodge - 2hm/DodgeLeft.hkx",
+    "fl": "PlayerDodgeForwardLeft - 2hm/DodgeForward.hkx"
+  }
+}

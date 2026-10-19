@@ -154,3 +154,7 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   NOT_ARMS mask, stance clips selected by iRightHandType / iLeftHandType). `RDF_ArmBlend` is the parametric blend
   parameter, so the plugin writes the stance share directly: `fArmStanceStep` 1.0 for steps, `fArmStanceRoll` 0.0 for
   rolls, 0 when unarmed. Not yet seen in game.
+* First external clip set: the user's TK-Dodge OAR set "PlayerDodge* - 2hm" (5 submods; diagonals were picked by a
+  key-reading MGEF because TK Dodge has 4 directions). 8 unique spline-compressed clips (0.667 s, forward 0.833 s),
+  root motion 197-234 u, step == normal. Rebuilt as an OAR set over RDF's own clip paths (greatsword, no spear;
+  the source's BackwardLeft said battleaxe/warhammer, taken as a slip), annotated by `tools/build_clip_set.py`.
