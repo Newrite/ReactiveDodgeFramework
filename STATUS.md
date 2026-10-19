@@ -12,7 +12,8 @@
   (no one-frame speed drop / stance jerk; 51/58 continuous, the rest had no movement held or were sprinting).
 * Attack -> dodge before the attack's end (user-verified).
 * Dodge -> attack (cancels at 0.21-0.46 s, momentum carried) and dodge -> held block.
-* Arm stance layer: during steps the arms keep the current weapon's stance (user: looks good).
+* Arm stance layer: during steps the arms keep the current weapon's stance while it is drawn; sheathed dodges use the
+  clip's own arms (user: both look right).
 * First external clip set as an OAR mod (`AI - RDF Dodge Set - Greatsword`, `tools/build_clip_set.py`): 134/134
   dodges played it with its own windows (user: looks and feels good).
 * The "press -> twitch, no dodge" bug: both causes fixed (start into the state being left; zero-length streaming clip
@@ -24,6 +25,7 @@
 * Lifecycle: cell change, death, menus mid-dodge.
 
 ## Known limitations
+* A one-frame upper-body pop at dodge start, visible only in slow motion (parked; findings in JOURNAL.md).
 * Fixture animations are TUDM's clips (local only, not redistributable); visual quality is bounded by them, e.g. they
   settle into a full stance at the end. A proper clip set is needed for final visuals.
 * First person: dodge is refused (no 1P graph patch).
