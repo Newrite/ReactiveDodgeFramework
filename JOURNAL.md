@@ -129,3 +129,8 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   ~8 frames). Fix: vtable hook on vfunc 7, player only via the motion snapshot: after a dodge that completed into
   running, the payload speed is floored at the exit speed decaying at `fCarryDecay` (1200 u/s^2). Direction and the
   engine's own acceleration stay untouched. Not yet verified in game.
+* Projectile i-frames: `Projectile::Func190` (0x1407521F0, vfunc 190) takes (Projectile*, hkpAllCdPointCollector*)
+  (verified in IDA; CommonLib's name "HandleHits(hkpCollidable*)" has the wrong argument). It is shared by Arrow,
+  Missile and three other projectile vtables. Hooked on ArrowProjectile and MissileProjectile: while invulnerable and
+  a contact root collidable resolves to the player, that step's contacts are dropped and the projectile flies on.
+  Beams/flames (continuous) are not covered. `bProjectileIFrames` (default 1). Not yet verified in game.

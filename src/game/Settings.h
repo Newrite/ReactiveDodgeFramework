@@ -60,6 +60,7 @@ namespace rdf::game
 
 		// [IFrames]
 		bool  iFrames{ true };
+		bool  projectileIFrames{ true };  // arrows and spell missiles pass through during i-frames
 		float iFrameStart{ 0.05f };
 		float iFrameEnd{ 0.35f };
 

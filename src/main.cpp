@@ -70,8 +70,13 @@ SKSEPluginLoad(const SKSE::LoadInterface* a_skse)
 	if (rdf::game::Settings::Get().carryDecay > 0.0f) {
 		rdf::game::motion::InstallSpeedFloor();
 	}
-	if (rdf::game::Settings::Get().iFrames && !rdf::game::effects::InstallIFrames()) {
-		logger::error("i-frame hook not installed: dodges will not grant invulnerability");
+	if (rdf::game::Settings::Get().iFrames) {
+		if (!rdf::game::effects::InstallIFrames()) {
+			logger::error("i-frame hook not installed: dodges will not grant invulnerability");
+		}
+		if (rdf::game::Settings::Get().projectileIFrames) {
+			rdf::game::effects::InstallProjectileIFrames();
+		}
 	}
 	rdf::game::update::Install();
 

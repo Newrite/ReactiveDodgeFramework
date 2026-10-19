@@ -1,5 +1,6 @@
 #include "Effects.h"
 
+#include "Diagnostics.h"
 #include "Settings.h"
 
 #include <atomic>
@@ -24,6 +25,45 @@ namespace rdf::game::effects
 			}
 			g_originalHit(victim, hit);
 		}
+
+		// Projectile::Func190 (0x1407521F0), shared by ArrowProjectile and MissileProjectile.
+		constexpr std::size_t kProjectileCollisionVfunc = 190;
+		using Collision_t = void (*)(RE::Projectile*, RE::hkpAllCdPointCollector*);
+
+		bool TouchesPlayer(const RE::hkpAllCdPointCollector& collector)
+		{
+			for (const auto& hit : collector.hits) {
+				for (const auto* root : { hit.rootCollidableA, hit.rootCollidableB }) {
+					const auto* ref = root ? RE::TESHavokUtilities::FindCollidableRef(*root) : nullptr;
+					if (ref && ref->IsPlayerRef()) {
+						return true;
+					}
+				}
+			}
+			return false;
+		}
+
+		template <int Kind>
+		struct CollisionHook
+		{
+			static void Thunk(RE::Projectile* projectile, RE::hkpAllCdPointCollector* collector)
+			{
+				if (collector && g_invulnerable.load(std::memory_order_acquire) && TouchesPlayer(*collector)) {
+					DevLog("i-frames: projectile {:08X} passed through the player", projectile ? projectile->GetFormID() : 0u);
+					return;  // this step's contacts are dropped; the projectile keeps flying
+				}
+				original(projectile, collector);
+			}
+			static inline Collision_t original = nullptr;
+		};
+
+		template <int Kind>
+		void HookCollision(REL::VariantID vtableId, const char* name)
+		{
+			REL::Relocation<std::uintptr_t> vtbl{ vtableId };
+			CollisionHook<Kind>::original = reinterpret_cast<Collision_t>(vtbl.write_vfunc(kProjectileCollisionVfunc, CollisionHook<Kind>::Thunk));
+			logger::info("projectile i-frame hook installed ({})", name);
+		}
 	}
 
 	void ChargeCost(RE::PlayerCharacter* player, float cost)
@@ -40,6 +80,12 @@ namespace rdf::game::effects
 		if (resource && cost > 0.0f) {
 			player->AsActorValueOwner()->RestoreActorValue(*resource, cost);
 		}
+	}
+
+	void InstallProjectileIFrames()
+	{
+		HookCollision<0>(RE::VTABLE_ArrowProjectile[0], "ArrowProjectile");
+		HookCollision<1>(RE::VTABLE_MissileProjectile[0], "MissileProjectile");
 	}
 
 	bool InstallIFrames()

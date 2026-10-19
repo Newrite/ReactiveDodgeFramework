@@ -8,6 +8,9 @@ namespace rdf::game::effects
 
 	// Melee hit hook (ID 37673 + 0x3C0): while invulnerable, hits on the player are dropped.
 	bool InstallIFrames();
+	// Arrow and missile projectiles (shared Projectile vfunc 190, which turns contacts into hits):
+	// while invulnerable, a projectile touching the player flies on instead of hitting.
+	void InstallProjectileIFrames();
 	// Main thread; read by the hit hook.
 	void SetInvulnerable(bool invulnerable);
 }
