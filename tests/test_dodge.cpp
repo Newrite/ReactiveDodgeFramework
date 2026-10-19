@@ -503,7 +503,6 @@ TEST(keep_facing_holds_yaw_on_lock_on)
 {
 	Sim s(ExactConfig());
 	s.lockOn = true;
-	s.lockYaw = 0.0f;
 	s.Frame(kDt64, Dir(90), { CommandKind::Dodge });
 	for (int n = 1; n < 40; ++n) {
 		s.Frame(kDt64, Dir(90));
@@ -537,6 +536,23 @@ TEST(camera_owned_facing_never_commands_yaw)
 	CHECK(s.core.KeepsFacing());
 	for (int i = 0; i < 30; ++i) {
 		const auto f = s.Frame(kDt64, Dir(45));
+		CHECK_NEAR(f.cmd.yawRate, 0.0, 1e-6);
+	}
+}
+
+TEST(free_rotation_backstep_keeps_facing_side_dodge_turns)
+{
+	// TDM 360 mode: up to fFaceMotionMaxAngle (100 deg) the character turns to its path; beyond
+	// that it keeps facing and the graph plays a backward clip instead of spinning around first.
+	Sim side;
+	side.Frame(kDt64, Dir(90), { CommandKind::Dodge });
+	CHECK(!side.core.KeepsFacing());
+
+	Sim back;
+	back.Frame(kDt64, Dir(180), { CommandKind::Dodge });
+	CHECK(back.core.KeepsFacing());
+	for (int i = 0; i < 30; ++i) {
+		const auto f = back.Frame(kDt64, Dir(180));
 		CHECK_NEAR(f.cmd.yawRate, 0.0, 1e-6);
 	}
 }

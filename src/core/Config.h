@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include <cstdint>
 
 namespace rdf
@@ -27,7 +28,7 @@ namespace rdf
 		float         attackFrom{ 0.30f };
 		float         chainFrom{ 0.34f };
 		float         blockFrom{ 0.30f };
-		float         exitFrom{ 0.45f };
+		float         exitFrom{ 0.34f };
 		int           maxChain{ 3 };  // 0 = unlimited
 		std::uint32_t attackStateMask{ attack_state::Bit(attack_state::kFollowThrough) | attack_state::Bit(attack_state::kNextAttack) |
 			                           attack_state::Bit(attack_state::kBowDrawn) | attack_state::Bit(attack_state::kBowReleased) |
@@ -70,18 +71,22 @@ namespace rdf
 		float           responseExponent{ 1.0f };  // strength = ((m - dz) / (1 - dz)) ^ exponent
 		float           faceYawRate{ 720.0f };     // deg/s: actor yaw follows its target at most this fast
 		float           startupYawRate{ 3600.0f };  // deg/s during Startup: effectively a snap-turn
+		float           faceMotionMaxAngle{ 100.0f };  // Auto + free rotation: wider dodges keep facing (backsteps)
 		OrientationMode orientation{ OrientationMode::Auto };
 	};
 
 	// True when the actor keeps its facing (lock-on strafing) instead of turning to the trajectory.
 	// Auto: turn to face the trajectory only when the actor may rotate freely (TDM 360 movement)
 	// and no target is locked; otherwise the camera or the lock-on owns the facing.
-	inline bool KeepsFacing(const SteeringConfig& cfg, bool lockOn, bool freeRotation)
+	// Even with free rotation, a dodge more than faceMotionMaxAngle away from the facing keeps it
+	// and plays a backward clip: a 180-degree snap-turn before a backstep reads as a spin.
+	// Decided once per dodge from the angle between the facing and the start heading.
+	inline bool KeepsFacing(const SteeringConfig& cfg, bool lockOn, bool freeRotation, float startAngleDeg)
 	{
 		switch (cfg.orientation) {
 		case OrientationMode::KeepFacing: return true;
 		case OrientationMode::FaceMotion: return false;
-		default: return lockOn || !freeRotation;
+		default: return lockOn || !freeRotation || std::fabs(startAngleDeg) > cfg.faceMotionMaxAngle;
 		}
 	}
 

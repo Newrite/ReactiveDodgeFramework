@@ -110,12 +110,13 @@ TEST(arbiter_windows_and_limits)
 
 TEST(arbiter_exit_only_once_and_only_after_threshold)
 {
-	ActionArbiter arb{ ActionPolicy{} };
-	InputBuffer   b(5.0f, 0.0f);
-	auto          s = Running(0.44f);
+	const ActionPolicy policy{};
+	ActionArbiter      arb{ policy };
+	InputBuffer        b(5.0f, 0.0f);
+	auto               s = Running(policy.exitFrom - 0.01f);
 	s.moveHeld = true;
 	CHECK(arb.Arbitrate(s, b, 1.0).kind == DecisionKind::None);
-	s.actionTime = 0.45f;
+	s.actionTime = policy.exitFrom;
 	CHECK(arb.Arbitrate(s, b, 1.0).kind == DecisionKind::LocomotionExit);
 	s.exiting = true;
 	CHECK(arb.Arbitrate(s, b, 1.0).kind == DecisionKind::None);

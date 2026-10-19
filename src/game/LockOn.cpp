@@ -5,7 +5,6 @@
 
 #include <Windows.h>
 
-#include <cmath>
 
 namespace rdf::game::lockon
 {
@@ -14,7 +13,7 @@ namespace rdf::game::lockon
 		class NullProvider final : public Provider
 		{
 		public:
-			bool TargetYaw(RE::PlayerCharacter*, float&) override { return false; }
+			bool LockedOn(RE::PlayerCharacter*) override { return false; }
 			bool FreeRotation() override { return false; }  // vanilla: the camera turns the player
 			void AcquireYaw() override {}
 			void ReleaseYaw() override {}
@@ -53,19 +52,13 @@ namespace rdf::game::lockon
 				}
 			}
 
-			bool TargetYaw(RE::PlayerCharacter* player, float& yaw) override
+			bool LockedOn(RE::PlayerCharacter* player) override
 			{
 				if (!api_->GetTargetLockState()) {
 					return false;
 				}
-				const auto handle = api_->GetCurrentTarget();
-				const auto target = handle.get();
-				if (!target || target.get() == player) {
-					return false;
-				}
-				const auto delta = target->GetPosition() - player->GetPosition();
-				yaw = std::atan2(delta.x, delta.y);
-				return true;
+				const auto target = api_->GetCurrentTarget().get();
+				return target && target.get() != player;
 			}
 
 		private:
@@ -98,9 +91,9 @@ namespace rdf::game::lockon
 		logger::info("lock-on: using True Directional Movement target lock");
 	}
 
-	bool TargetYaw(RE::PlayerCharacter* player, float& yaw)
+	bool LockedOn(RE::PlayerCharacter* player)
 	{
-		return g_provider->TargetYaw(player, yaw);
+		return g_provider->LockedOn(player);
 	}
 
 	bool FreeRotation() { return g_provider->FreeRotation(); }

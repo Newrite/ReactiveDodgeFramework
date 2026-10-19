@@ -17,6 +17,7 @@ namespace rdf
 			latched_ = false;
 		}
 		facing_ = WrapAngle(s.facing);
+		keepFacing_ = s.keepFacing;
 		profile_.Plan(cfg_.timing, cfg_.motion, s.carrySpeed, ExitSpeed(s.moveHeld));
 		speed_ = profile_.Speed(0.0f);
 		retargeted_ = false;
@@ -71,7 +72,7 @@ namespace rdf
 		const float actual = WrapAngle(in.actorYaw);
 		float       yawRate = 0.0f;
 		facing_ = actual;
-		if (!KeepsFacing(cfg_.steering, in.lockOn, in.freeRotation) && dt > 0.0f) {
+		if (!keepFacing_ && dt > 0.0f) {
 			facing_ = MoveToward(actual, steering_.Heading(), YawRate(phase) * dt);
 			yawRate = AngleDelta(actual, facing_) / dt;
 		}

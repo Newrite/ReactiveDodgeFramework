@@ -50,11 +50,9 @@ namespace rdf::game::update
 			void       StepAndPublish(RE::PlayerCharacter* player, float dt);
 			void       OnStopped();
 			void       Trace(RE::PlayerCharacter* player);
-			void       ResumeLocomotion();
-			void       SendPendingMoveStart(RE::PlayerCharacter* player);
 			void       LogRejection(const Decision& d);
 			void       LogCost(RE::PlayerCharacter* player, float current) const;
-			int        ClipIndex(float angleDeg) const;
+			static int ClipIndex(float angleDeg, bool keepFacing);
 
 			std::unique_ptr<ReactiveCore> core_;
 
@@ -70,8 +68,6 @@ namespace rdf::game::update
 			RE::NiAVObject* last3D_{ nullptr };
 			float           charged_{ 0.0f };
 			RejectReason    lastReject_{ RejectReason::None };
-			bool            moveHeld_{ false };
-			bool            moveStartPending_{ false };
 
 			// measured motion (previous frame's displacement, seen at the start of this tick)
 			bool  havePos_{ false };
@@ -142,7 +138,6 @@ namespace rdf::game::update
 		awaitingEnter_ = false;
 		exitSent_ = true;
 		wasRunning_ = false;
-		moveStartPending_ = false;
 		prevDepth_ = 0;
 		retry_ = {};
 		havePos_ = false;
@@ -227,9 +222,8 @@ namespace rdf::game::update
 		f.move = input::WorldMoveInput();
 		f.actorYaw = player->data.angle.z;
 		f.locomotionSpeed = measuredSpeed_;
-		f.lockOn = lockon::TargetYaw(player, f.lockOnYaw);
+		f.lockOn = lockon::LockedOn(player);
 		f.freeRotation = lockon::FreeRotation();
-		moveHeld_ = Length(f.move) > Settings::Get().core.steering.deadzone;
 		return f;
 	}
 
@@ -252,9 +246,6 @@ namespace rdf::game::update
 		const int  depth = graph::Depth();
 		const int  previousDepth = prevDepth_;
 		prevDepth_ = depth;
-		if (previousDepth > 0 && depth == 0) {
-			SendPendingMoveStart(player);
-		}
 		if (!core_->DodgeRunning()) {
 			awaitingEnter_ = false;
 			return;
@@ -279,7 +270,6 @@ namespace rdf::game::update
 			DevLog("{}", "clip ended: starting locomotion handover");
 			exitSent_ = true;
 			core_->Apply(Decision{ DecisionKind::LocomotionExit }, true);
-			ResumeLocomotion();
 		}
 	}
 
@@ -301,9 +291,9 @@ namespace rdf::game::update
 		core_->Apply(Decision{ DecisionKind::Interrupt }, true);
 	}
 
-	int Controller::ClipIndex(float angleDeg) const
+	int Controller::ClipIndex(float angleDeg, bool keepFacing)
 	{
-		if (!core_->KeepsFacing()) {
+		if (!keepFacing) {
 			return 0;  // the character turns to face the trajectory: always the forward roll
 		}
 		const int octant = static_cast<int>(std::lround(angleDeg / 45.0f));
@@ -318,27 +308,6 @@ namespace rdf::game::update
 		const auto  resource = *settings.costResource;  // only called after a cost rejection
 		DevLog("cost resource {} current={:.1f} permanent={:.1f} minimum={:.1f}", static_cast<int>(resource), current,
 			owner->GetPermanentActorValue(resource), settings.minimum);
-	}
-
-	// The engine sends moveStart only when movement input begins. Input held through the dodge never
-	// "begins", so the locomotion graph would sit in its idle state until the player let go and
-	// pressed again; tell it the move is already under way. The dodge state itself does not handle
-	// moveStart, so the event waits until the graph has left every dodge state.
-	void Controller::ResumeLocomotion()
-	{
-		moveStartPending_ = moveHeld_;
-	}
-
-	void Controller::SendPendingMoveStart(RE::PlayerCharacter* player)
-	{
-		if (!moveStartPending_) {
-			return;
-		}
-		moveStartPending_ = false;
-		if (moveHeld_) {
-			const bool accepted = player->NotifyAnimationGraph("moveStart"sv);
-			DevLog("resume locomotion: moveStart {}", accepted ? "accepted" : "refused");
-		}
 	}
 
 	void Controller::LogRejection(const Decision& d)
@@ -379,7 +348,6 @@ namespace rdf::game::update
 			graph::SendExit(player);
 			exitSent_ = true;
 			core_->Apply(d, true);
-			ResumeLocomotion();
 			break;
 		}
 	}
@@ -389,7 +357,7 @@ namespace rdf::game::update
 		const auto& settings = Settings::Get();
 		const bool  chain = d.kind == DecisionKind::ChainDodge;
 		const float angle = core_->PreviewStartAngleDeg(d);
-		const int   clip = ClipIndex(angle);
+		const int   clip = ClipIndex(angle, core_->PreviewKeepsFacing(d));
 		if (!graph::SendStart(player, chain, clip, settings.core.timing.PlaybackSpeed(settings.clipLength, settings.animSpeed))) {
 			DevLog("graph refused {} (clip {}); press stays buffered", chain ? "chain" : "start", clip);
 			core_->Apply(d, false);
@@ -401,7 +369,6 @@ namespace rdf::game::update
 		awaitingEnter_ = true;
 		enterFrames_ = 0;
 		exitSent_ = false;
-		moveStartPending_ = false;
 		if (!core_->KeepsFacing()) {
 			lockon::AcquireYaw();  // TDM would otherwise turn the player back toward its own target yaw
 		}

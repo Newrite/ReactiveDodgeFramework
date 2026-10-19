@@ -76,3 +76,10 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   `GetDirectionalMovementMode() == kDirectional` (API V3).
 * `moveStart` sent in the exit tick was refused: the dodge state is still active then. It is now sent when the graph
   has left every dodge state (depth 1 -> 0) and move input is still held.
+* Third run: mode detection right (Vanilla Style -> directional clips 9/11/13/15, 360 -> clip 0 + turn), 45
+  dodge->dodge chains, direction never stuck. `moveStart` is refused even after the graph left the dodge: locomotion
+  is already running, so the end-of-dodge stop is the fixture clip settling into a full stance. Removed the
+  moveStart path; `fExitFrom` default 0.45 -> 0.34 so the hand-over to running starts before that pose.
+* 360 mode spun the character 180 deg before backward dodges. New `fFaceMotionMaxAngle` (100): wider dodges keep
+  facing and play the backward/diagonal-back clip. The facing decision is made once per dodge (per-frame flags
+  could flip it mid-dodge). Lock-on yaw removed from the core: TDM turns toward the target itself.

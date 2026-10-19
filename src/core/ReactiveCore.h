@@ -17,7 +17,6 @@ namespace rdf
 		float actorYaw{ 0.0f };   // actor heading now
 		float locomotionSpeed{ 0.0f };  // measured planar speed, carried into a fresh dodge
 		bool  lockOn{ false };
-		float lockOnYaw{ 0.0f };
 		bool  freeRotation{ true };  // something lets the actor face any direction (TDM 360 mode)
 	};
 
@@ -63,7 +62,8 @@ namespace rdf
 		float      Speed() const { return driver_.Speed(); }
 		// What StartDodge would do, without doing it: lets the caller ask the graph first.
 		float PreviewStartAngleDeg(const Decision& d) const;
-		bool  KeepsFacing() const { return rdf::KeepsFacing(cfg_.steering, frame_.lockOn, frame_.freeRotation); }
+		bool  PreviewKeepsFacing(const Decision& d) const;  // what a dodge started by `d` would do
+		bool  KeepsFacing() const { return driver_.KeepsFacing(); }  // the current dodge
 		// Marks the command behind an attack/block decision consumed (after a deferred success).
 		void  Consume(const Decision& d);
 		// Heading of the current dodge relative to the actor's yaw when it began, degrees, +right.

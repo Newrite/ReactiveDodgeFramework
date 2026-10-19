@@ -13,10 +13,7 @@ namespace rdf
 		bool  hasMove{ false };  // analog move input present this frame
 		float moveHeading{ 0.0f };   // world heading of the input
 		float moveMagnitude{ 0.0f };  // 0..1
-		bool  lockOn{ false };
-		float lockOnYaw{ 0.0f };  // heading toward the lock-on target
 		float actorYaw{ 0.0f };   // the actor's real yaw this frame (other mods may rotate it too)
-		bool  freeRotation{ true };
 	};
 
 	struct DriverStart
@@ -26,6 +23,7 @@ namespace rdf
 		float carrySpeed{ 0.0f };    // speed at the moment the dodge begins
 		bool  moveHeld{ false };     // decides the exit speed
 		bool  chain{ false };        // continue the previous trajectory and turn toward `heading`
+		bool  keepFacing{ false };   // the camera / lock-on owns the yaw for this dodge
 	};
 
 	// Composes Steering x MotionProfile into a world velocity and a yaw rate.
@@ -43,6 +41,7 @@ namespace rdf
 		float Speed() const { return speed_; }
 		float Heading() const { return steering_.Heading(); }
 		float Facing() const { return facing_; }
+		bool  KeepsFacing() const { return keepFacing_; }
 		float Peak() const { return profile_.Peak(); }
 
 	private:
@@ -59,5 +58,6 @@ namespace rdf
 		bool          latched_{ false };
 		bool          retargeted_{ false };
 		bool          exiting_{ false };
+		bool          keepFacing_{ false };
 	};
 }

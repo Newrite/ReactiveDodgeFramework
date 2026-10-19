@@ -58,6 +58,11 @@ namespace rdf
 		return AngleDelta(frame_.actorYaw, StartHeading(d, d.kind == DecisionKind::ChainDodge)) * kRadToDeg;
 	}
 
+	bool ReactiveCore::PreviewKeepsFacing(const Decision& d) const
+	{
+		return rdf::KeepsFacing(cfg_.steering, frame_.lockOn, frame_.freeRotation, PreviewStartAngleDeg(d));
+	}
+
 	void ReactiveCore::Consume(const Decision& d)
 	{
 		const double now = clock_.Now();
@@ -86,6 +91,7 @@ namespace rdf
 		start.moveHeld = MoveHeld();
 		start.carrySpeed = chain ? driver_.Speed() : std::min(frame_.locomotionSpeed, cfg_.motion.maxCarrySpeed);
 		start.heading = StartHeading(d, chain);
+		start.keepFacing = PreviewKeepsFacing(d);
 
 		const int chainCount = chain ? action_.ChainCount() + 1 : 1;
 		action_.Start(cfg_.timing, chainCount);
@@ -133,10 +139,7 @@ namespace rdf
 		in.hasMove = magnitude > 0.0f;
 		in.moveHeading = in.hasMove ? HeadingOf(frame_.move) : 0.0f;
 		in.moveMagnitude = magnitude;
-		in.lockOn = frame_.lockOn;
-		in.lockOnYaw = frame_.lockOnYaw;
 		in.actorYaw = frame_.actorYaw;
-		in.freeRotation = frame_.freeRotation;
 		return in;
 	}
 
