@@ -1,0 +1,18 @@
+<patch>
+  <append path="#0029/animationNames"><hkcstring>Animations\RDF\rdf_roll_f.hkx</hkcstring></append>
+  <append path="#0029/animationNames"><hkcstring>Animations\RDF\rdf_roll_fr.hkx</hkcstring></append>
+  <append path="#0029/animationNames"><hkcstring>Animations\RDF\rdf_roll_r.hkx</hkcstring></append>
+  <append path="#0029/animationNames"><hkcstring>Animations\RDF\rdf_roll_br.hkx</hkcstring></append>
+  <append path="#0029/animationNames"><hkcstring>Animations\RDF\rdf_roll_b.hkx</hkcstring></append>
+  <append path="#0029/animationNames"><hkcstring>Animations\RDF\rdf_roll_bl.hkx</hkcstring></append>
+  <append path="#0029/animationNames"><hkcstring>Animations\RDF\rdf_roll_l.hkx</hkcstring></append>
+  <append path="#0029/animationNames"><hkcstring>Animations\RDF\rdf_roll_fl.hkx</hkcstring></append>
+  <append path="#0029/animationNames"><hkcstring>Animations\RDF\rdf_step_f.hkx</hkcstring></append>
+  <append path="#0029/animationNames"><hkcstring>Animations\RDF\rdf_step_fr.hkx</hkcstring></append>
+  <append path="#0029/animationNames"><hkcstring>Animations\RDF\rdf_step_r.hkx</hkcstring></append>
+  <append path="#0029/animationNames"><hkcstring>Animations\RDF\rdf_step_br.hkx</hkcstring></append>
+  <append path="#0029/animationNames"><hkcstring>Animations\RDF\rdf_step_b.hkx</hkcstring></append>
+  <append path="#0029/animationNames"><hkcstring>Animations\RDF\rdf_step_bl.hkx</hkcstring></append>
+  <append path="#0029/animationNames"><hkcstring>Animations\RDF\rdf_step_l.hkx</hkcstring></append>
+  <append path="#0029/animationNames"><hkcstring>Animations\RDF\rdf_step_fl.hkx</hkcstring></append>
+</patch>
