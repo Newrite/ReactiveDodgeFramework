@@ -60,6 +60,7 @@ namespace rdf::game::update
 			int  enterFrames_{ 0 };
 			bool exitSent_{ true };
 			bool wasRunning_{ false };
+			int  prevDepth_{ 0 };
 			Retry retry_;
 
 			// bookkeeping
@@ -135,6 +136,7 @@ namespace rdf::game::update
 		awaitingEnter_ = false;
 		exitSent_ = true;
 		wasRunning_ = false;
+		prevDepth_ = 0;
 		retry_ = {};
 		havePos_ = false;
 		measuredSpeed_ = 0.0f;
@@ -233,27 +235,34 @@ namespace rdf::game::update
 	void Controller::HandleGraphEvents(RE::PlayerCharacter* player)
 	{
 		const bool entered = graph::TakeEntered();
-		const bool left = graph::TakeLeft();
 		const bool clipEnd = graph::TakeClipEnd();
+		const int  depth = graph::Depth();
+		const int  previousDepth = prevDepth_;
+		prevDepth_ = depth;
 		if (!core_->DodgeRunning()) {
 			awaitingEnter_ = false;
 			return;
 		}
 
-		const bool waiting = awaitingEnter_;
 		if (entered) {
-			awaitingEnter_ = false;  // Left + Entered in one tick is a successful chain, not an exit
-			DevLog("graph entered dodge (graph var {})", graph::GraphIsDodging(player));
-			return;
-		}
-		if (waiting) {
+			awaitingEnter_ = false;  // any Entered completes the start/chain handshake
+			DevLog("graph entered dodge (depth {}, graph var {})", depth, graph::GraphIsDodging(player));
+		} else if (awaitingEnter_) {
 			if (++enterFrames_ > Settings::Get().enterTimeoutFrames) {
 				RollbackStart(player);
 			}
-			return;  // a Left while waiting belongs to the state we are leaving
+			return;
 		}
-		if (left || clipEnd) {
-			EndByGraph(clipEnd ? "clip ended" : "graph left the dodge state");
+		if (previousDepth > 0 && depth == 0) {
+			EndByGraph("graph left every dodge state");
+			return;
+		}
+		if (clipEnd && !entered && !core_->Exiting()) {
+			// The graph returns to Default_State by itself: start the velocity handover without
+			// sending RDF_DodgeExit again.
+			DevLog("clip ended: starting locomotion handover");
+			exitSent_ = true;
+			core_->Apply(Decision{ DecisionKind::LocomotionExit }, true);
 		}
 	}
 
@@ -333,7 +342,7 @@ namespace rdf::game::update
 		const bool  chain = d.kind == DecisionKind::ChainDodge;
 		const float angle = core_->PreviewStartAngleDeg(d);
 		const int   clip = ClipIndex(angle);
-		if (!graph::SendStart(player, chain, clip, settings.animSpeed)) {
+		if (!graph::SendStart(player, chain, clip, settings.core.timing.PlaybackSpeed(settings.clipLength, settings.animSpeed))) {
 			DevLog("graph refused {} (clip {}); press stays buffered", chain ? "chain" : "start", clip);
 			core_->Apply(d, false);
 			return;

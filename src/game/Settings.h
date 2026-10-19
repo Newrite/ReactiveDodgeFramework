@@ -42,6 +42,7 @@ namespace rdf::game
 		// [Graph]
 		GraphNames graph;
 		float      animSpeed{ 1.0f };
+		float      clipLength{ 0.667f };  // seconds of the dodge clip at speed 1
 		bool       sidestepWhenKeepFacing{ true };  // clips 8..15 instead of 0..7 when the actor keeps its facing
 		int        enterTimeoutFrames{ 6 };
 

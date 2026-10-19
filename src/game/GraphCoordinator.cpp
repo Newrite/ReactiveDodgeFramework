@@ -17,7 +17,7 @@ namespace rdf::game::graph
 		Names g_names;
 
 		std::atomic<std::uint32_t> g_entered{ 0 };
-		std::atomic<std::uint32_t> g_left{ 0 };
+		std::atomic<int>           g_depth{ 0 };
 		std::atomic<std::uint32_t> g_clipEnd{ 0 };
 		std::atomic<bool>          g_window{ false };
 
@@ -46,8 +46,11 @@ namespace rdf::game::graph
 				}
 				if (event->tag == g_names.entered) {
 					g_entered.fetch_add(1, std::memory_order_acq_rel);
+					g_depth.fetch_add(1, std::memory_order_acq_rel);
 				} else if (event->tag == g_names.left) {
-					g_left.fetch_add(1, std::memory_order_acq_rel);
+					int depth = g_depth.load(std::memory_order_acquire);
+					while (depth > 0 && !g_depth.compare_exchange_weak(depth, depth - 1, std::memory_order_acq_rel)) {
+					}
 				} else if (event->tag == g_names.clipEnd) {
 					g_clipEnd.fetch_add(1, std::memory_order_acq_rel);
 				} else if (Contains(g_names.windowOpen, event->tag)) {
@@ -92,14 +95,14 @@ namespace rdf::game::graph
 	}
 
 	bool TakeEntered() { return Take(g_entered); }
-	bool TakeLeft() { return Take(g_left); }
+	int  Depth() { return g_depth.load(std::memory_order_acquire); }
 	bool TakeClipEnd() { return Take(g_clipEnd); }
 	bool DodgeWindowOpen() { return g_window.load(std::memory_order_acquire); }
 
 	void ClearEvents()
 	{
 		g_entered = 0;
-		g_left = 0;
+		g_depth = 0;
 		g_clipEnd = 0;
 		g_window = false;
 	}

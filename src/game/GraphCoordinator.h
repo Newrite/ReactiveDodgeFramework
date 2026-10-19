@@ -10,8 +10,11 @@ namespace rdf::game::graph
 	void RegisterSink(RE::PlayerCharacter* player);
 
 	// What the graph reported since the last Take*.
+	// Entered is the start/chain handshake. Depth counts dodge states the graph is in: +1 on
+	// Entered, -1 on Left (clamped at 0). A chain A->B reports Entered(B) when the transition begins
+	// and Left(A) when the blend ends, so depth goes 1 -> 2 -> 1; only 1 -> 0 is a real exit.
 	bool TakeEntered();
-	bool TakeLeft();
+	int  Depth();
 	bool TakeClipEnd();
 	bool DodgeWindowOpen();
 	void ClearEvents();

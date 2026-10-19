@@ -43,3 +43,19 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   `RestoreActorValue(modifier, ...)` overload on Actor in this tree).
 * **Trampoline** is allocated through `SKSE::Init(..., {.trampoline = true, .trampolineSize = 64})`
   (the old `AllocTrampoline` is deprecated).
+
+## 2026-10-19 — review fixes
+
+* **Graph depth instead of Left events.** Havok fires the to-state's enter notify when a transition begins
+  and the from-state's exit notify when the blend ends. A chain A->B therefore reports `Entered(B)` first and
+  `Left(A)` about one blend later, so a bare "Left means the dodge is over" would kill a healthy chain.
+  The sink now keeps `depth = #Entered - #Left` (clamped at 0): start 0->1, chain 1->2->1, real exit 1->0.
+  Any `Entered` completes the start/chain handshake; ownership ends only on the 1->0 transition. Depth is
+  reset on load/new game (`ClearEvents`). While waiting for the handshake, a lowering depth is ignored.
+* **`RDF_DodgeClipEnd` is a handover request, not an interrupt.** The graph returns to Default_State by
+  itself, so we run the same path as the locomotion exit (blend-out of the speed profile, `exitBlend`) without
+  sending `RDF_DodgeExit`. Velocity stays continuous; ownership ends when depth reaches 0 or the core completes,
+  whichever is first. Note `fExitBlend` (0.15 s) is shorter than the graph's 0.25 s out-blend; raise it in the
+  ini if the tail should match.
+* **Clip/timeline sync.** `RDF_DodgeSpeed = fAnimSpeed * fClipLength / (fStartup+fActive+fRecovery)`
+  (`Timing::PlaybackSpeed`, unit tested), default `fClipLength=0.667`.

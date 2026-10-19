@@ -232,6 +232,7 @@ namespace rdf::game
 			g.isDodging = ReadString("Graph", "sVarIsDodging", g.isDodging);
 			g.windowOpen = Split(ReadString("Graph", "sDodgeWindowOpenEvents", Join(g.windowOpen)));
 			g.windowClose = Split(ReadString("Graph", "sDodgeWindowCloseEvents", Join(g.windowClose)));
+			s.clipLength = ReadFloat("Graph", "fClipLength", s.clipLength, 0.05f, 10.0f);
 			s.animSpeed = ReadFloat("Graph", "fAnimSpeed", s.animSpeed, 0.1f, 5.0f);
 			s.sidestepWhenKeepFacing = ReadBool("Graph", "bSidestepWhenKeepFacing", s.sidestepWhenKeepFacing);
 			s.enterTimeoutFrames = ReadInt("Graph", "iEnterTimeoutFrames", s.enterTimeoutFrames, 1, 120);

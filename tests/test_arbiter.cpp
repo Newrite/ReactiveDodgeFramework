@@ -159,3 +159,11 @@ TEST(world_to_local_matches_skyrim_axes)
 	CHECK_NEAR(east.x, 0.0, 1e-5);
 	CHECK_NEAR(east.y, 1.0, 1e-5);
 }
+
+TEST(playback_speed_fits_clip_to_timeline)
+{
+	Timing t;  // 0.70 s total
+	CHECK_NEAR(t.PlaybackSpeed(0.667f, 1.0f), 0.667 / 0.70, 1e-6);
+	CHECK_NEAR(t.PlaybackSpeed(0.667f, 1.5f), 1.5 * 0.667 / 0.70, 1e-6);
+	CHECK_NEAR(t.PlaybackSpeed(t.Total(), 1.0f), 1.0, 1e-6);
+}
