@@ -170,3 +170,5 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   last tick it was set from the command's tick-average speed, which spreads the dodge's final milliseconds over the
   whole frame (301.8 -> 45.6 / 124.3 depending on where the end fell), so some hand-overs still dropped to 48-136 for
   a frame. The floor now uses the driver's instantaneous speed (the exit speed at the end).
+* Verified: 51/58 hand-overs into running continuous (Speed 316 -> 290 -> 265 -> 260, the engine's own run speed);
+  the other 7 had no floor by design (move input released, or sprinting) and show no one-frame dip either.

@@ -8,7 +8,9 @@
   play the directional clip.
 * Dodge -> dodge chaining (A/B states), mashing consumes presses once, buffered presses fire when the window opens.
 * Clip annotations drive the cancel windows (`RDF_Windows` received on 72/72 dodges in the last run).
-* Hand-over into running with the out-blend driven by the plugin (no planted frames).
+* Hand-over into running with the out-blend driven by the plugin (no planted frames) and the post-dodge speed floor
+  (no one-frame speed drop / stance jerk; 51/58 continuous, the rest had no movement held or were sprinting).
+* Attack -> dodge before the attack's end (user-verified).
 * Dodge -> attack (cancels at 0.21-0.46 s, momentum carried) and dodge -> held block.
 * Arm stance layer: during steps the arms keep the current weapon's stance (user: looks good).
 * First external clip set as an OAR mod (`AI - RDF Dodge Set - Greatsword`, `tools/build_clip_set.py`): 134/134
@@ -17,9 +19,7 @@
   firing a clip-end exit). 0/72 failures after the fix.
 
 ## Built and deployed, waiting for an in-game check
-* Post-dodge speed floor (`fCarryDecay`): the engine's re-acceleration after the hand-over.
 * Projectile i-frames (`bProjectileIFrames`): arrows and spell missiles fly through during the window.
-* Attack -> dodge from the follow-through states and MCO-style `*_DodgeOpen` windows.
 * Gamepad (right-stick click) and analog magnitudes.
 * Lifecycle: cell change, death, menus mid-dodge.
 
