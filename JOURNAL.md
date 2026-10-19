@@ -166,3 +166,7 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   the speed floor was published only once the dodge had finished, one frame after the engine took the movement back.
   The floor is now published from the hand-over on (following its speed), and the payload hook applies it whenever
   set (the payload exists only in controls-driven mode). Attack -> dodge before the end of the attack: user-verified.
+* Hand-over jerk, second look (20 hand-overs, some at sgtm 0.2): the floor now arrived in time, but on the dodge's
+  last tick it was set from the command's tick-average speed, which spreads the dodge's final milliseconds over the
+  whole frame (301.8 -> 45.6 / 124.3 depending on where the end fell), so some hand-overs still dropped to 48-136 for
+  a frame. The floor now uses the driver's instantaneous speed (the exit speed at the end).

@@ -508,8 +508,10 @@ namespace rdf::game::update
 			// During a hand-over into running the floor already follows the hand-over speed: the engine
 			// takes the movement back in the frame the out-blend ends, before this tick sees the dodge
 			// finish, and one frame without the floor dropped its speed to ~70 (a one-frame stance jerk).
+			// The instantaneous speed, not the command's tick average: on the tick the dodge ends that
+			// average spreads its last milliseconds over the whole frame and was a fraction of it.
 			const bool handingOver = core_->Exiting() && moveHeld_ && !core_->CancelledIntoAction();
-			carry_ = handingOver ? step.command.speed : 0.0f;
+			carry_ = handingOver ? core_->Speed() : 0.0f;
 		} else {
 			carry_ = moveHeld_ ? std::max(0.0f, carry_ - settings.carryDecay * dt) : 0.0f;
 		}
