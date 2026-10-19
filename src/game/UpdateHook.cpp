@@ -535,7 +535,7 @@ namespace rdf::game::update
 	{
 		// Only a dodge that ran its course into running carries its speed; an interrupted one does not.
 		if (core_->Phase() != DodgePhase::Done || !moveHeld_ || core_->CancelledIntoAction()) {
-			carry_ = 0.0f;  // only a dodge that ran its course into running keeps its speed floor
+			carry_ = 0.0f;
 		}
 		tailFrames_ = 30;  // follow the hand-over into locomotion in the dev trace
 		lockon::ReleaseYaw();
