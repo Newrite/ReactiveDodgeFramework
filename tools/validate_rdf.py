@@ -108,6 +108,162 @@ def sm_stats(g):
     return out
 
 
+
+def bind_list(g, o):
+    """[(memberPath, variableName-or-('prop', name), bindingType)] of an object's binding set."""
+    bs = g.objs.get(o.text("variableBindingSet", "null"))
+    out = []
+    if bs is None:
+        return out
+    for b in bs.params["bindings"].findall("hkobject"):
+        d = {x.get("name"): (x.text or "").strip() for x in b.findall("hkparam")}
+        idx = int(d["variableIndex"])
+        if "CHARACTER_PROPERTY" in d["bindingType"]:
+            nm = g.char_prop_names[idx] if 0 <= idx < len(g.char_prop_names) else "?%d" % idx
+            out.append((d["memberPath"], ("prop", nm), d["bindingType"]))
+        else:
+            out.append((d["memberPath"], g.var_name(idx), d["bindingType"]))
+    return out
+
+
+def floats(o, name):
+    return [float(x) for x in (o.params[name].text or "").split()]
+
+
+def char_masks(ch):
+    """name -> list of bone weights from the character-property hkbBoneWeightArray values of a character file."""
+    names = [c.text for c in ch.by_class["hkbCharacterStringData"][0].params["characterPropertyNames"].findall("hkcstring")]
+    vs = ch.by_class["hkbVariableValueSet"][0]
+    words = vs.params["wordVariableValues"].findall("hkobject")
+    variants = vs.params["variantVariableValues"].text.split()
+    infos = ch.by_class["hkbCharacterData"][0].params["characterPropertyInfos"].findall("hkobject")
+    out = {}
+    for i, n in enumerate(names):
+        t = infos[i].find("hkparam[@name='type']").text
+        if "POINTER" in t or "VARIANT" in t:
+            o = ch.objs.get(variants[int(words[i].find("hkparam[@name='value']").text)])
+            if o is not None and o.cls == "hkbBoneWeightArray":
+                out[n] = floats(o, "boneWeights")
+    return out
+
+
+def dodge_selector_problems(g, sel):
+    problems = []
+    if sel.cls != "hkbManualSelectorGenerator":
+        return ["not a ManualSelector"]
+    if bind_list(g, sel) != [("selectedGeneratorIndex", "RDF_DodgeClip", "BINDING_TYPE_VARIABLE")]:
+        problems.append("selector binding %s" % bind_list(g, sel))
+    clips = sel.text("generators").split()
+    if len(clips) != len(G.CLIPS):
+        problems.append("%d clips" % len(clips))
+    for i, cp in enumerate(clips):
+        c = g.objs[cp]
+        exp = "%s\\%s.hkx" % (G.ANIM_DIR, G.CLIPS[i])
+        if c.cls != "hkbClipGenerator" or c.text("animationName") != exp or c.text("mode") != "MODE_SINGLE_PLAY":
+            problems.append("clip %d %s" % (i, c.text("animationName")))
+        if bind_list(g, c) != [("playbackSpeed", "RDF_DodgeSpeed", "BINDING_TYPE_VARIABLE")]:
+            problems.append("clip %d speed binding" % i)
+        if c.text("triggers") not in ("null", None):
+            problems.append("clip %d has triggers (no clip-end exit by design)" % i)
+    return problems
+
+
+def children_of(g, blender):
+    return [g.objs[c] for c in blender.text("children").split()]
+
+
+def stance_entry(g, ptr):
+    """clip file, or ('sel', var, [entries]) for a nested selector."""
+    o = g.objs[ptr]
+    if o.cls == "hkbClipGenerator":
+        assert o.text("mode") == "MODE_LOOPING", "stance clip %s not looping" % o.text("name")
+        return o.text("animationName")
+    assert o.cls == "hkbManualSelectorGenerator"
+    return ("sel", bind_list(g, o)[0][1], [stance_entry(g, c) for c in o.text("generators").split()])
+
+
+def reachable(g, ptr):
+    seen, todo = set(), [ptr]
+    while todo:
+        x = todo.pop()
+        o = g.objs.get(x)
+        if o is None or x in seen:
+            continue
+        seen.add(x)
+        for _path, _anc, prm in g.walk_params(o):
+            for t in (prm.text or "").split():
+                if t.startswith("#") and t in g.objs:
+                    todo.append(t)
+    return seen
+
+
+def check_arm_layer(g, male, female, masks_real, sid, outer):
+    """H: arm stance layer of one RDF state. `outer` = the hkbBlenderGenerator under the ModifierGenerator."""
+    tag = "H  %d" % sid
+    check(tag + " outer blender: plain blend (flags 0), 2 children", outer.cls == "hkbBlenderGenerator" and outer.text("flags") == "0" and len(children_of(g, outer)) == 2)
+    c0, c1 = children_of(g, outer)
+    right, left = masks_real["RightArm"], masks_real["LeftArm"]
+    n = len(right)
+    union = [1.0 if (right[i] > 0 or left[i] > 0) else 0.0 for i in range(n)]
+    check(tag + " masks: RightArm and LeftArm of the real character files do not overlap, length %d" % n,
+          not any(right[i] > 0 and left[i] > 0 for i in range(n)) and n == G.N_BONES)
+    m0, m1 = floats(g.objs[c0.text("boneWeights")], "boneWeights"), floats(g.objs[c1.text("boneWeights")], "boneWeights")
+    check(tag + " child0 (dodge) mask = complement of RightArm|LeftArm; child1 mask = RightArm|LeftArm",
+          m1 == union and m0 == [1.0 - u for u in union], "len %d/%d vs %d" % (len(m0), len(m1), n))
+    check(tag + " per bone: dodge + right + left masks sum to 1 (result independent of weight normalisation)",
+          all(abs(m0[i] + right[i] + left[i] - 1.0) < 1e-6 for i in range(n)))
+    check(tag + " child0 weight 1 worldFromModel 1; child1 weight 1 worldFromModel 0 (root motion only from the dodge clip)",
+          (float(c0.text("weight")), float(c0.text("worldFromModelWeight")), float(c1.text("weight")), float(c1.text("worldFromModelWeight"))) == (1.0, 1.0, 1.0, 0.0))
+    sel_main = g.objs[c0.text("generator")]
+    pr = dodge_selector_problems(g, sel_main)
+    check(tag + " child0 generator = dodge selector (16 clips, speed binding, no triggers)", not pr, "; ".join(pr[:3]))
+    arm = g.objs[c1.text("generator")]
+    check(tag + " ArmLayer = parametric blender (flags 16), blendParameter <- RDF_ArmBlend",
+          arm.cls == "hkbBlenderGenerator" and arm.text("flags") == "16" and bind_list(g, arm) == [("blendParameter", "RDF_ArmBlend", "BINDING_TYPE_VARIABLE")], str(bind_list(g, arm)))
+    p0, p1 = children_of(g, arm)
+    check(tag + " ArmLayer children: weight 0 = dodge copy, weight 1 = stance; no masks; worldFromModel 0",
+          float(p0.text("weight")) == 0.0 and float(p1.text("weight")) == 1.0 and p0.text("boneWeights") == "null" and p1.text("boneWeights") == "null"
+          and p0.text("worldFromModelWeight") == p1.text("worldFromModelWeight") == "0.000000")
+    sel_arm = g.objs[p0.text("generator")]
+    pr = dodge_selector_problems(g, sel_arm)
+    check(tag + " ArmLayer child0 = its OWN dodge selector (not shared with the outer one)", not pr and sel_arm.name != sel_main.name and not (reachable(g, sel_arm.name) & reachable(g, sel_main.name)), "; ".join(pr[:3]))
+    stance = g.objs[p1.text("generator")]
+    check(tag + " StanceBlender: plain blend, 2 children", stance.cls == "hkbBlenderGenerator" and stance.text("flags") == "0" and len(children_of(g, stance)) == 2)
+    sr, sl = children_of(g, stance)
+    for side, ch_ in (("R", sr), ("L", sl)):
+        want_prop, _ = G.CHAR_PROP[side]
+        check(tag + " stance %s: boneWeights <- character property %s (vanilla binding pattern), weight 1, worldFromModel 0" % (side, want_prop),
+              bind_list(g, ch_) == [("boneWeights", ("prop", want_prop), "BINDING_TYPE_CHARACTER_PROPERTY")] and ch_.text("boneWeights") == "null"
+              and ch_.text("weight") == "1.000000" and ch_.text("worldFromModelWeight") == "0.000000", str(bind_list(g, ch_)))
+        sel = g.objs[ch_.text("generator")]
+        check(tag + " stance %s selector bound to %s, 13 entries" % (side, G.HAND_VARS[side]),
+              sel.cls == "hkbManualSelectorGenerator" and bind_list(g, sel) == [("selectedGeneratorIndex", G.HAND_VARS[side], "BINDING_TYPE_VARIABLE")]
+              and len(sel.text("generators").split()) == 13, str(bind_list(g, sel)))
+        table = G.STANCE_RIGHT if side == "R" else G.STANCE_LEFT
+        got = [stance_entry(g, e) for e in sel.text("generators").split()]
+        exp = []
+        for key in table:
+            if key == "1H":
+                exp.append(("sel", G.HAND_VARS["L"], [G.STANCE_CLIP_FILES[k] for k in G.STANCE_NESTED_LEFT]))
+            else:
+                exp.append(G.STANCE_CLIP_FILES[key])
+        check(tag + " stance %s entries match the stance table" % side, got == exp, "")
+        files = {x for x in got if isinstance(x, str)} | {f for x in got if isinstance(x, tuple) for f in x[2]}
+        for cname, ch_file in (("DefaultMale", male), ("DefaultFemale", female)):
+            have = {a.lower() for a in ch_file.animation_names}
+            miss = sorted(f for f in files if f.lower() not in have)
+            check(tag + " stance %s: all %d stance clips exist in %s animationNames" % (side, len(files), cname), not miss, str(miss))
+    # every binding of the whole generator tree resolves (no -1)
+    bad = []
+    for ptr in reachable(g, outer.name):
+        o = g.objs[ptr]
+        if o.cls == "hkbVariableBindingSet":
+            for b in o.params["bindings"].findall("hkobject"):
+                if int(b.find("hkparam[@name='variableIndex']").text) < 0:
+                    bad.append(ptr)
+    check(tag + " no binding with index -1 anywhere below the state (%d nodes)" % len(reachable(g, outer.name)), not bad, str(bad[:3]))
+
+
 def main():
     base_x, rdf_x = to_xml("baseline"), to_xml("rdf")
     # ---- A
@@ -154,6 +310,8 @@ def main():
     tl = [infos[g.var_index[v][0]].find("hkparam[@name='type']").text for v, _, _ in G.VARIABLES]
     check("C  variable types", tl == [t for _, t, _ in G.VARIABLES], str(tl))
 
+    masks_real = char_masks(male)
+    check("H  DefaultFemale RightArm/LeftArm masks identical to DefaultMale", {k: v for k, v in char_masks(female).items() if k in ("RightArm", "LeftArm")} == {k: v for k, v in masks_real.items() if k in ("RightArm", "LeftArm")})
     # ---- D
     root = [s for s in H.state_machines(g) if s.text("name") == "RootBehaviorGraph"][0]
     states = {}
@@ -172,32 +330,12 @@ def main():
               [e.split("(")[0] for e in ent] == ["RDF_DodgeEntered"] and [e.split("(")[0] for e in ext] == ["RDF_DodgeLeft"], "%s / %s" % (ent, ext))
         mg = g.objs[so.text("generator")]
         mod = g.objs[mg.text("modifier")]
-        sel = g.objs[mg.text("generator")]
-        check("D  %d generator = ModifierGenerator{BSIsActiveModifier, ManualSelector}" % sid,
-              mg.cls == "hkbModifierGenerator" and mod.cls == "BSIsActiveModifier" and sel.cls == "hkbManualSelectorGenerator")
-        bs = g.objs[mod.text("variableBindingSet")]
-        binds = [(b.find("hkparam[@name='memberPath']").text, g.var_name(int(b.find("hkparam[@name='variableIndex']").text)))
-                 for b in bs.params["bindings"].findall("hkobject")]
+        outer = g.objs[mg.text("generator")]
+        check("D  %d generator = ModifierGenerator{BSIsActiveModifier, Blender}" % sid,
+              mg.cls == "hkbModifierGenerator" and mod.cls == "BSIsActiveModifier" and outer.cls == "hkbBlenderGenerator")
+        binds = [(m, v) for m, v, _t in bind_list(g, mod)]
         check("D  %d IsActive bindings" % sid, binds == [("bIsActive0", "bAnimationDriven"), ("bIsActive1", "RDF_IsDodging")], str(binds))
-        sbs = g.objs[sel.text("variableBindingSet")]
-        sb = [(b.find("hkparam[@name='memberPath']").text, g.var_name(int(b.find("hkparam[@name='variableIndex']").text)))
-              for b in sbs.params["bindings"].findall("hkobject")]
-        check("D  %d selector binds selectedGeneratorIndex<-RDF_DodgeClip" % sid, sb == [("selectedGeneratorIndex", "RDF_DodgeClip")], str(sb))
-        clips = sel.text("generators").split()
-        ok = len(clips) == 16
-        problems = []
-        for i, cp in enumerate(clips):
-            c = g.objs[cp]
-            exp = "%s\\%s.hkx" % (G.ANIM_DIR, G.CLIPS[i])
-            if c.cls != "hkbClipGenerator" or c.text("animationName") != exp or c.text("mode") != "MODE_SINGLE_PLAY":
-                problems.append("clip %d %s" % (i, c.text("animationName")))
-            cb = g.objs[c.text("variableBindingSet")]
-            b = cb.params["bindings"].findall("hkobject")
-            if len(b) != 1 or b[0].find("hkparam[@name='memberPath']").text != "playbackSpeed" or g.var_name(int(b[0].find("hkparam[@name='variableIndex']").text)) != "RDF_DodgeSpeed":
-                problems.append("clip %d speed binding" % i)
-            if c.text("triggers") not in ("null", None):
-                problems.append("clip %d has triggers (no clip-end exit by design)" % i)
-        check("D  %d: 16 clips in order, SINGLE_PLAY, speed<-RDF_DodgeSpeed, no triggers" % sid, ok and not problems, "; ".join(problems[:4]))
+        check_arm_layer(g, male, female, masks_real, sid, outer)
 
     # ---- E
     def fxdesc(ptr):

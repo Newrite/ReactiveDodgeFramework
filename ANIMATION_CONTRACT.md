@@ -69,10 +69,11 @@ Variables (appended to 0_master):
 | `RDF_DodgeClip` | int | 0 | selects one of the 16 clips; read when the state is entered |
 | `RDF_DodgeSpeed` | float | 1.0 | clip playback speed multiplier |
 | `RDF_IsDodging` | bool | false | bound to the state's BSIsActiveModifier; the plugin sets it true before `RDF_DodgeStart` and false after `RDF_DodgeLeft` |
+| `RDF_ArmBlend` | float | 0.0 | arm stance layer weight: 0 = arms follow the dodge clip, 1 = arms hold the current weapon stance (iRightHandType / iLeftHandType), linear in between. Write it before the dodge starts. 1 for side/back steps, 0 for rolls. See BEHAVIOR_INTEGRATION.md section 5 |
 | `bAnimationDriven` | bool (vanilla, index 81) | - | bound to bIsActive0 |
 | `DF_IsDodging` | - | - | TDM's variable. It does NOT exist in this modlist's 0_master, so it is neither created nor bound. If it ever exists, generate with `--with-df` and it is bound to bIsActive2. |
 
-Order for a dodge from C++: set `RDF_DodgeClip`, set `RDF_DodgeSpeed`, set `RDF_IsDodging` true, send `RDF_DodgeStart`.
+Order for a dodge from C++: set `RDF_DodgeClip`, set `RDF_DodgeSpeed`, set `RDF_ArmBlend` (0 or 1), set `RDF_IsDodging` true, send `RDF_DodgeStart`.
 Chained dodge: set clip/speed, send `RDF_DodgeChain`. End: wait for `RDF_DodgeLeft` (or send `RDF_DodgeExit`), set
 `RDF_IsDodging` false.
 
@@ -118,3 +119,14 @@ up to 5e-7.
 3. `python tools/gen_rdf_patch.py && python tools/install_fixtures.py`, re-run Pandora, then validate:
    `python tools/stage_pandora.py --label rdf --rdf behavior/Pandora_Engine/mod/rdf` and `python tools/validate_rdf.py`.
    (`validate_rdf.py` takes the clip list and expected node count from the generator, so it follows the change.)
+
+## 7. Arm stance layer (what clip authors need to know)
+
+With `RDF_ArmBlend` > 0 the arm bones (right: clavicle, upper arm, forearm, hand, fingers, weapon bone, pauldron, magic node, twist
+bones; left: the same plus the shield bone) are replaced by the vanilla weapon-ready idle pose of the player's current weapon
+types, looping, while the rest of the body plays the dodge clip. Consequences for authoring:
+- a dodge clip meant for `RDF_ArmBlend = 1` (side steps, back steps) may leave the arms at a neutral pose; they are overridden;
+- a clip meant for `RDF_ArmBlend = 0` (rolls) must animate the arms itself (it keeps full control of them);
+- root motion always comes from the dodge clip, never from the stance layer.
+The stance clips are vanilla files (`H2H_Idle`, `1HM_Idle`, `DW1HM1HMIdle`, `2HM_Idle`, `2HW_Idle`, `Bow_IdleHeld`, `StaffRight_Idle`,
+`Staff_Idle`, `MRh_Idle`, `MLh_Idle`, `Tor_1HMPose`, `DLC01\CrossBow_IdleHeld`); a clip set does not have to provide them.

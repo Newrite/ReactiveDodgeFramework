@@ -30,7 +30,8 @@ EVENTS += ANNOTATION_EVENTS
 # (name, type, initial value)
 VARIABLES = [("RDF_DodgeClip", "VARIABLE_TYPE_INT32", 0),
              ("RDF_DodgeSpeed", "VARIABLE_TYPE_REAL", 1.0),
-             ("RDF_IsDodging", "VARIABLE_TYPE_BOOL", 0)]
+             ("RDF_IsDodging", "VARIABLE_TYPE_BOOL", 0),
+             ("RDF_ArmBlend", "VARIABLE_TYPE_REAL", 0.0)]    # 0 = arms follow the dodge clip, 1 = arms hold the weapon stance
 # variables that are only bound if they already exist in the CURRENT output 0_master (checked by the caller)
 OPTIONAL_BIND_VARS = ["DF_IsDodging"]          # TDM; not present in this modlist -> not created, not bound
 EXISTING_VARS = {"bAnimationDriven"}           # must already exist in vanilla 0_master (index 81)
@@ -60,6 +61,41 @@ RETURN_MODE = "vanilla"
 # and a relative-to-end trigger fires at once, which dropped the dodge on entry. The plugin ends every
 # dodge itself (RDF_DodgeExit); IdleForceDefaultState is the engine's own safety exit.
 EXIT_EVENTS = ["RDF_DodgeExit", "IdleForceDefaultState"]   # IdleForceDefaultState exists in 0_master (496)
+
+
+# ------------------------------------------------------------------------- arm stance layer (see BEHAVIOR_INTEGRATION.md 5)
+# State generator = ModifierGenerator{ BSIsActiveModifier,
+#   Blender(flags 0)  child0 = dodge clip selector       mask = NOT(arms)   weight 1  worldFromModel 1
+#                     child1 = ArmLayer                  mask = arms        weight 1  worldFromModel 0
+#   ArmLayer = Blender(PARAMETRIC, flags 16, blendParameter <- RDF_ArmBlend)
+#                     p0 (weight 0) = a second dodge clip selector        p1 (weight 1) = StanceBlender
+#   StanceBlender = Blender(flags 0)  right selector (iRightHandType) mask RightArm / left selector (iLeftHandType) mask LeftArm }
+# The masks of the outer blender are complementary (vanilla pattern, e.g. 1HM_Readied blends), so the result does not
+# depend on how Havok normalises weights; the parametric inner blender is a plain lerp (vanilla 'Tor_1stP_Locomotion_Blend').
+BLEND_FLAGS_PLAIN = 0
+BLEND_FLAGS_PARAMETRIC = 16
+ARM_BLEND_VAR = "RDF_ArmBlend"
+HAND_VARS = {"R": "iRightHandType", "L": "iLeftHandType"}
+# graph-local indices into 0_master's characterPropertyNames (verified by --verify-ids against the vanilla dump)
+CHAR_PROP = {"R": ("RightArm", 8), "L": ("LeftArm", 5)}
+N_BONES = 126                                  # XPMSE skeleton (99 vanilla bones + 27 extra); masks are full length
+# Bone indices of the vanilla character-property masks RightArm / LeftArm in the CURRENT character files
+# (XPMSE-extended: LeftArm also lists the extra bones 99..125). validate_rdf.py re-reads the real masks.
+RIGHT_ARM_BONES = [30, 31, 32, 39, 41, 43, 45, 48, 56, 57, 58, 59] + list(range(82, 97))
+LEFT_ARM_BONES = [27, 28, 29, 38, 40, 42, 44, 47, 52, 53, 54, 55] + list(range(67, 82)) + list(range(99, 126))
+STANCE_CLIP_FILES = {k: "\\".join(v.split("/")) for k, v in {
+    "H2H": "Animations/H2H_Idle.hkx", "1HM": "Animations/1HM_Idle.hkx", "DW": "Animations/DW1HM1HMIdle.hkx",
+    "2HM": "Animations/2HM_Idle.HKX", "2HW": "Animations/2HW_Idle.HKX", "BOW": "Animations/Bow_IdleHeld.hkx",
+    "STAFFR": "Animations/StaffRight_Idle.hkx", "STAFFL": "Animations/Staff_Idle.hkx",
+    "MRH": "Animations/MRh_Idle.hkx", "MLH": "Animations/MLh_Idle.hkx", "TORCH": "Animations/Tor_1HMPose.hkx",
+    "XBOW": "Animations/DLC01/CrossBow_IdleHeld.hkx"}.items()}
+# hand-type value -> stance clip key. Values from how vanilla compares them (1hm_locomotion Melee_Direction_Behavior,
+# 1hm_behavior Weap_Idle_Behavior, magicbehavior MagicReady_*): 0 none/H2H, 1 sword, 2 dagger, 3 axe, 4 mace, 5 2H sword,
+# 6 2H axe/hammer, 7 bow, 8 staff, 9 spell, 10 shield, 11 torch, 12 crossbow.
+# "1H*" in the right table = nested selector on iLeftHandType (vanilla 'Weap_1HM_Idle_MSG': left 1..4 -> dual-wield pose).
+STANCE_RIGHT = ["H2H", "1H", "1H", "1H", "1H", "2HM", "2HW", "BOW", "STAFFR", "MRH", "1HM", "1HM", "XBOW"]
+STANCE_LEFT = ["1HM", "DW", "DW", "DW", "DW", "2HM", "2HW", "BOW", "STAFFL", "MLH", "1HM", "TORCH", "XBOW"]
+STANCE_NESTED_LEFT = ["1HM", "DW", "DW", "DW", "DW", "1HM", "1HM", "1HM", "1HM", "1HM", "1HM", "1HM", "1HM"]
 
 # vanilla 0_master (Nemesis ids)
 V = dict(
@@ -149,11 +185,101 @@ def event_array(name, ev_name):
                 % (p("id", ev(ev_name)), p("payload", "null")))
 
 
-def build_state(nm, state_id, other_id, N, fx, bind_extra):
+def char_prop_binding_set(name, member, index):
+    return node(name, "hkbVariableBindingSet", "0x338ad4ff",
+                '<hkparam name="bindings" numelements="1"><hkobject>%s%s%s%s</hkobject></hkparam>%s'
+                % (p("memberPath", member), p("variableIndex", index), p("bitIndex", "-1"),
+                   p("bindingType", "BINDING_TYPE_CHARACTER_PROPERTY"), p("indexOfBindingToEnable", "-1")))
+
+
+def bone_weight_array(name, weights):
+    return node(name, "hkbBoneWeightArray", "0xcd902b77",
+                p("variableBindingSet", "null") + '\n<hkparam name="boneWeights" numelements="%d">%s</hkparam>'
+                % (len(weights), " ".join(fl(w) for w in weights)))
+
+
+def blender_child(name, generator, bone_weights, weight, wfm, bindset="null"):
+    return node(name, "hkbBlenderGeneratorChild", "0xe2b384b0", "\n".join([
+        p("variableBindingSet", bindset), p("generator", generator), p("boneWeights", bone_weights),
+        p("weight", fl(weight)), p("worldFromModelWeight", fl(wfm))]))
+
+
+_names = {}
+
+
+def named(ptr, text):
+    _names[ptr] = text
+    return ptr
+
+
+def blender(ptr, children, flags, bindset="null"):
+    return node(ptr, "hkbBlenderGenerator", "0x22df7147", "\n".join([
+        p("variableBindingSet", bindset), p("userData", "0"), p("name", _names.get(ptr, ptr)),
+        p("referencePoseWeightThreshold", "0.000000"), p("blendParameter", "1.000000"),
+        p("minCyclicBlendParameter", "0.000000"), p("maxCyclicBlendParameter", "1.000000"),
+        p("indexOfSyncMasterChild", "-1"), p("flags", flags), p("subtractLastChild", "false"),
+        '<hkparam name="children" numelements="%d">%s</hkparam>' % (len(children), " ".join(children))]))
+
+
+def selector_node(N, out, label, var_name, entries):
+    ptr, bs = N.new(), N.new()
+    out.append(binding_set(bs, [("selectedGeneratorIndex", var_name)]))
+    out.append(node(ptr, "hkbManualSelectorGenerator", "0xd932fab8", "\n".join([
+        p("variableBindingSet", bs), p("userData", "0"), p("name", label),
+        '<hkparam name="generators" numelements="%d">%s</hkparam>' % (len(entries), " ".join(entries)),
+        p("selectedGeneratorIndex", "0"), p("currentGeneratorIndex", "0")])))
+    return ptr
+
+
+def clip_node(N, out, label, anim, mode, speed_var=None):
+    c = N.new()
+    bs = "null"
+    if speed_var:
+        bs = N.new()
+        out.append(binding_set(bs, [("playbackSpeed", speed_var)]))
+    out.append(node(c, "hkbClipGenerator", "0x333b85b9", "\n".join([
+        p("variableBindingSet", bs), p("userData", "0"), p("name", label), p("animationName", anim),
+        p("triggers", "null"), p("cropStartAmountLocalTime", "0.000000"), p("cropEndAmountLocalTime", "0.000000"),
+        p("startTime", "0.000000"), p("playbackSpeed", "1.000000"), p("enforcedDuration", "0.000000"),
+        p("userControlledTimeFraction", "0.000000"), p("animationBindingIndex", "-1"), p("mode", mode),
+        p("flags", "0")])))
+    return c
+
+
+def dodge_selector(N, out, label):
+    """16 SINGLE_PLAY dodge clips, index = RDF_DodgeClip, speed <- RDF_DodgeSpeed (no triggers: see EXIT_EVENTS)."""
+    clips = [clip_node(N, out, "%s_%s" % (label, cname), "%s\\%s.hkx" % (ANIM_DIR, cname), "MODE_SINGLE_PLAY",
+                       "RDF_DodgeSpeed") for cname in CLIPS]
+    return selector_node(N, out, label + "_ClipSelector", "RDF_DodgeClip", clips)
+
+
+def stance_selector(N, out, label, side):
+    """side 'R'/'L': ManualSelector(iRightHandType / iLeftHandType) over the 13 hand-type values of looping stance clips."""
+    clips = {}
+
+    def clip(key):
+        if key not in clips:
+            clips[key] = clip_node(N, out, "%s_%s" % (label, key), STANCE_CLIP_FILES[key], "MODE_LOOPING")
+        return clips[key]
+    table = STANCE_RIGHT if side == "R" else STANCE_LEFT
+    nested = None
+    entries = []
+    for v, key in enumerate(table):
+        if key == "1H":   # right hand 1H weapon: nested selector on iLeftHandType (dual wield vs single)
+            if nested is None:
+                nested = selector_node(N, out, label + "_1H_LeftSel", HAND_VARS["L"],
+                                       [clip(k) for k in STANCE_NESTED_LEFT])
+            entries.append(nested)
+        else:
+            entries.append(clip(key))
+    return selector_node(N, out, label + "_Sel", HAND_VARS[side], entries)
+
+
+def build_state(nm, state_id, other_id, N, fx, bind_extra, masks):
     """returns (state node name, [xml nodes])."""
     out = []
     st = N.new()
-    enter, exit_, trans, modgen, isact, isact_bs, sel, sel_bs = (N.new() for _ in range(8))
+    enter, exit_, trans, modgen, isact, isact_bs = (N.new() for _ in range(6))
     out.append(event_array(enter, "RDF_DodgeEntered"))
     out.append(event_array(exit_, "RDF_DodgeLeft"))
     # --- transitions
@@ -174,33 +300,40 @@ def build_state(nm, state_id, other_id, N, fx, bind_extra):
         p("variableBindingSet", "null"), '<hkparam name="listeners" numelements="0"></hkparam>',
         p("enterNotifyEvents", enter), p("exitNotifyEvents", exit_), p("transitions", trans), p("generator", modgen),
         p("name", nm), p("stateId", state_id), p("probability", "1.000000"), p("enable", "true")])))
-    # --- generator: ModifierGenerator { BSIsActiveModifier, ManualSelector{16 clips} }
+    # --- ModifierGenerator { BSIsActiveModifier, Blender }
+    outer, outer_c0, outer_c1, arm, arm_bs, arm_p0, arm_p1, stance, st_c0, st_c1 = (N.new() for _ in range(10))
+    named(outer, nm + "_ArmStanceBlend")
+    named(arm, nm + "_ArmLayer")
+    named(stance, nm + "_StanceBlend")
     out.append(node(modgen, "hkbModifierGenerator", "0x1f81fae6", "\n".join([
         p("variableBindingSet", "null"), p("userData", "1"), p("name", nm + "_MG"), p("modifier", isact),
-        p("generator", sel)])))
+        p("generator", outer)])))
     binds = [("bIsActive0", "bAnimationDriven"), ("bIsActive1", "RDF_IsDodging")] + bind_extra
     out.append(binding_set(isact_bs, binds))
     flags = "".join(p("bIsActive%d" % i, "false") + p("bInvertActive%d" % i, "false") for i in range(5))
     out.append(node(isact, "BSIsActiveModifier", "0xb0fde45a", "\n".join([
         p("variableBindingSet", isact_bs), p("userData", "2"), p("name", nm + "_IsActiveMod"), p("enable", "true"),
         flags])))
-    clip_names = []
-    for ci, cname in enumerate(CLIPS):
-        c, cbs = N.new(), N.new()
-        clip_names.append(c)
-        out.append(binding_set(cbs, [("playbackSpeed", "RDF_DodgeSpeed")]))
-        out.append(node(c, "hkbClipGenerator", "0x333b85b9", "\n".join([
-            p("variableBindingSet", cbs), p("userData", "0"), p("name", "%s_%s" % (nm, cname)),
-            p("animationName", "%s\\%s.hkx" % (ANIM_DIR, cname)), p("triggers", "null"),
-            p("cropStartAmountLocalTime", "0.000000"), p("cropEndAmountLocalTime", "0.000000"),
-            p("startTime", "0.000000"), p("playbackSpeed", "1.000000"), p("enforcedDuration", "0.000000"),
-            p("userControlledTimeFraction", "0.000000"), p("animationBindingIndex", "-1"),
-            p("mode", "MODE_SINGLE_PLAY"), p("flags", "0")])))
-    out.append(binding_set(sel_bs, [("selectedGeneratorIndex", "RDF_DodgeClip")]))
-    out.append(node(sel, "hkbManualSelectorGenerator", "0xd932fab8", "\n".join([
-        p("variableBindingSet", sel_bs), p("userData", "0"), p("name", nm + "_ClipSelector"),
-        '<hkparam name="generators" numelements="%d">%s</hkparam>' % (len(clip_names), " ".join(clip_names)),
-        p("selectedGeneratorIndex", "0"), p("currentGeneratorIndex", "0")])))
+    # outer blender: dodge on everything except the arms, ArmLayer on the arms (complementary masks, weight 1 each)
+    main_sel = dodge_selector(N, out, nm + "_Main")
+    out.append(blender_child(outer_c0, main_sel, masks["not_arms"], 1.0, 1.0))
+    out.append(blender_child(outer_c1, arm, masks["arms"], 1.0, 0.0))
+    out.append(blender(outer, [outer_c0, outer_c1], BLEND_FLAGS_PLAIN))
+    # ArmLayer: parametric lerp  RDF_ArmBlend 0 -> dodge copy, 1 -> stance
+    arm_dodge = dodge_selector(N, out, nm + "_ArmDodge")
+    out.append(binding_set(arm_bs, [("blendParameter", ARM_BLEND_VAR)]))
+    out.append(blender_child(arm_p0, arm_dodge, "null", 0.0, 0.0))
+    out.append(blender_child(arm_p1, stance, "null", 1.0, 0.0))
+    out.append(blender(arm, [arm_p0, arm_p1], BLEND_FLAGS_PARAMETRIC, arm_bs))
+    # StanceBlender: right selector on RightArm bones, left selector on LeftArm bones (char-property masks)
+    r_sel = stance_selector(N, out, nm + "_StanceR", "R")
+    l_sel = stance_selector(N, out, nm + "_StanceL", "L")
+    st_c0_bs, st_c1_bs = N.new(), N.new()
+    out.append(char_prop_binding_set(st_c0_bs, "boneWeights", CHAR_PROP["R"][1]))
+    out.append(char_prop_binding_set(st_c1_bs, "boneWeights", CHAR_PROP["L"][1]))
+    out.append(blender_child(st_c0, r_sel, "null", 1.0, 0.0, st_c0_bs))
+    out.append(blender_child(st_c1, l_sel, "null", 1.0, 0.0, st_c1_bs))
+    out.append(blender(stance, [st_c0, st_c1], BLEND_FLAGS_PLAIN))
     return st, out
 
 
@@ -233,8 +366,12 @@ def gen_master(existing_vars):
         nm = N.new()
         fx_nodes[key] = nm
         new_nodes.append(effect_node(nm, spec))
-    st_a, nodes_a = build_state(STATE_A[0], STATE_A[1], STATE_B[1], N, fx_nodes, bind_extra)
-    st_b, nodes_b = build_state(STATE_B[0], STATE_B[1], STATE_A[1], N, fx_nodes, bind_extra)
+    arms = set(RIGHT_ARM_BONES) | set(LEFT_ARM_BONES)
+    masks = {"arms": N.new(), "not_arms": N.new()}
+    new_nodes.append(bone_weight_array(masks["arms"], [1.0 if b in arms else 0.0 for b in range(N_BONES)]))
+    new_nodes.append(bone_weight_array(masks["not_arms"], [0.0 if b in arms else 1.0 for b in range(N_BONES)]))
+    st_a, nodes_a = build_state(STATE_A[0], STATE_A[1], STATE_B[1], N, fx_nodes, bind_extra, masks)
+    st_b, nodes_b = build_state(STATE_B[0], STATE_B[1], STATE_A[1], N, fx_nodes, bind_extra, masks)
     new_nodes += nodes_a + nodes_b
     x.append('  <insert path="">')
     x += ["    " + n.replace("\n", "\n    ") for n in new_nodes]
@@ -290,6 +427,11 @@ def verify_ids(root):
         chk(v in g.var_index, "variable %s exists" % v)
     for e in ["IdleForceDefaultState", "StaggerPlayer"]:
         chk(e in g.ev_index, "event %s exists" % e)
+    for v in HAND_VARS.values():
+        chk(v in g.var_index, "variable %s exists (stance selectors)" % v)
+    for side, (cp, idx) in CHAR_PROP.items():
+        chk(len(g.char_prop_names) > idx and g.char_prop_names[idx] == cp,
+            "characterPropertyNames[%d] == %s (arm mask binding)" % (idx, cp))
     return ok
 
 
