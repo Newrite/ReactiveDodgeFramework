@@ -62,7 +62,7 @@ namespace rdf::game
 		int yawSign{ 1 };
 
 		// [Compat]
-		bool allowFirstPerson{ false };
+		bool allowFirstPerson{ true };
 
 		// [IFrames]
 		bool  iFrames{ true };

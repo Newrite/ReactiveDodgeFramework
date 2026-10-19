@@ -194,3 +194,8 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
 * Arm stance layer with a sheathed weapon / spell pulled the hands toward the centre: iRightHandType / iLeftHandType
   keep reporting the equipped item while sheathed, so the layer forced its ready pose. RDF_ArmBlend is now 0 unless the
   weapon is drawn (and not fists).
+* First person (2026-10-20): the 1P graph got the same two dodge states (behavior agent, 205/205). In 1P the state plays
+  the current weapon's 1P stance (or MT_Idle when sheathed) instead of a roll clip, so 1P is covered by blending; all
+  clips already exist in FirstPerson.hkx, no Blender work needed. Plugin: CommonLib's AddAnimationGraphEventSink only
+  registers on graphs.front(), so 1P dodge events never arrived; the sink is now on every graph and counts events only
+  from the active graph (tracked each tick). In 1P the dodge never turns the player. bAllowFirstPerson now defaults to 1.

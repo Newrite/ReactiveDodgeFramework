@@ -19,6 +19,7 @@ namespace rdf::game::graph
 
 		std::atomic<std::uint32_t> g_entered{ 0 };
 		std::atomic<int>           g_depth{ 0 };
+		std::atomic<const RE::BSTEventSource<RE::BSAnimationGraphEvent>*> g_activeSource{ nullptr };
 		std::atomic<bool>          g_logEvents{ false };  // dev: log every graph event (see LogEvents)
 		std::atomic<bool>          g_window{ false };
 		std::atomic<std::uint32_t> g_clipWindows{ 0 };  // bit per WindowEvent seen since the last drain
@@ -56,9 +57,12 @@ namespace rdf::game::graph
 		class Sink final : public RE::BSTEventSink<RE::BSAnimationGraphEvent>
 		{
 		public:
-			RE::BSEventNotifyControl ProcessEvent(const RE::BSAnimationGraphEvent* event, RE::BSTEventSource<RE::BSAnimationGraphEvent>*) override
+			RE::BSEventNotifyControl ProcessEvent(const RE::BSAnimationGraphEvent* event, RE::BSTEventSource<RE::BSAnimationGraphEvent>* source) override
 			{
-				if (!event) {
+				// Both the third- and the first-person graph run the dodge states; only the one the player
+				// currently uses counts, so a dodge is entered and left once.
+				const auto* active = g_activeSource.load(std::memory_order_acquire);
+				if (!event || (active && source != active)) {
 					return RE::BSEventNotifyControl::kContinue;
 				}
 				if (g_logEvents.load(std::memory_order_relaxed)) {
@@ -114,9 +118,38 @@ namespace rdf::game::graph
 		if (!player) {
 			return;
 		}
-		player->RemoveAnimationGraphEventSink(&g_sink);  // no-op when absent: guards against duplicates
-		const bool added = player->AddAnimationGraphEventSink(&g_sink);
-		logger::info("animation graph sink {}", added ? "registered" : "NOT registered (graph not loaded yet)");
+		// Every graph of the player: the third-person one and the first-person one each send their own
+		// dodge events (CommonLib's AddAnimationGraphEventSink only covers the first graph).
+		RE::BSTSmartPointer<RE::BSAnimationGraphManager> manager;
+		if (!player->GetAnimationGraphManager(manager) || !manager || manager->graphs.empty()) {
+			logger::info("{}", "animation graph sink NOT registered (graph not loaded yet)");
+			return;
+		}
+		std::uint32_t count = 0;
+		for (const auto& graph : manager->graphs) {
+			if (!graph) {
+				continue;
+			}
+			auto* source = graph->GetEventSource<RE::BSAnimationGraphEvent>();
+			source->RemoveEventSink(&g_sink);  // no-op when absent: guards against duplicates
+			source->AddEventSink(&g_sink);
+			++count;
+		}
+		logger::info("animation graph sink registered on {} graph(s)", count);
+	}
+
+	void TrackActiveGraph(RE::PlayerCharacter* player)
+	{
+		RE::BSTSmartPointer<RE::BSAnimationGraphManager> manager;
+		const RE::BSTEventSource<RE::BSAnimationGraphEvent>* source = nullptr;
+		if (player->GetAnimationGraphManager(manager) && manager && manager->activeGraph < manager->graphs.size()) {
+			if (const auto& graph = manager->graphs[manager->activeGraph]) {
+				source = graph->GetEventSource<RE::BSAnimationGraphEvent>();
+			}
+		}
+		if (g_activeSource.exchange(source, std::memory_order_acq_rel) != source) {
+			g_depth = 0;  // a switch between first and third person starts the count afresh
+		}
 	}
 
 	bool TakeEntered() { return Take(g_entered); }

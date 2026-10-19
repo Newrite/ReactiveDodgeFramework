@@ -189,6 +189,7 @@ namespace rdf::game::update
 		}
 
 		Refresh3D(player);
+		graph::TrackActiveGraph(player);
 		MeasureMotion(player, dt);
 		const FrameInput frame = BuildFrame(player, dt);
 		core_->BeginFrame(frame);
