@@ -140,6 +140,8 @@ namespace rdf
 		case EngineBlock::Mounted: return "mounted";
 		case EngineBlock::Swimming: return "swimming";
 		case EngineBlock::Sitting: return "sitting";
+		case EngineBlock::FirstPerson: return "first-person";
+		case EngineBlock::Jumping: return "jumping";
 		}
 		return "?";
 	}

@@ -46,6 +46,7 @@ namespace rdf
 	private:
 		float ExitSpeed(bool moveHeld) const { return moveHeld ? cfg_.motion.runSpeed : 0.0f; }
 		float FacingTarget(const DriverInput& in) const;
+		float YawRate(DodgePhase phase) const;
 		bool  ResolveSteering(const DriverInput& in, float& desired, float& magnitude);
 
 		Config        cfg_;

@@ -60,6 +60,11 @@ namespace rdf
 		float      Heading() const { return driver_.Heading(); }
 		float      Facing() const { return driver_.Facing(); }
 		float      Speed() const { return driver_.Speed(); }
+		// What StartDodge would do, without doing it: lets the caller ask the graph first.
+		float PreviewStartAngleDeg(const Decision& d) const;
+		bool  KeepsFacing() const { return rdf::KeepsFacing(cfg_.steering, frame_.lockOn); }
+		// Marks the command behind an attack/block decision consumed (after a deferred success).
+		void  Consume(const Decision& d);
 		// Heading of the current dodge relative to the actor's yaw when it began, degrees, +right.
 		float      StartAngleDeg() const { return startAngleDeg_; }
 		bool       InWindow(float from, float to) const { return action_.Running() && action_.Time() >= from && action_.Time() < to; }
@@ -68,6 +73,7 @@ namespace rdf
 
 	private:
 		void     StartDodge(const Decision& d, bool chain);
+		float    StartHeading(const Decision& d, bool chain) const;
 		DriverInput MakeDriverInput() const;
 		bool     MoveHeld() const;
 

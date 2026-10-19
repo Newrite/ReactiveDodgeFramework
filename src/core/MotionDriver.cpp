@@ -45,12 +45,15 @@ namespace rdf
 
 	float MotionDriver::FacingTarget(const DriverInput& in) const
 	{
-		const bool keep = cfg_.steering.orientation == OrientationMode::KeepFacing ||
-		                  (cfg_.steering.orientation == OrientationMode::Auto && in.lockOn);
-		if (!keep) {
+		if (!KeepsFacing(cfg_.steering, in.lockOn)) {
 			return steering_.Heading();
 		}
 		return in.lockOn ? in.lockOnYaw : facingAtStart_;
+	}
+
+	float MotionDriver::YawRate(DodgePhase phase) const
+	{
+		return (phase == DodgePhase::Startup ? cfg_.steering.startupYawRate : cfg_.steering.faceYawRate) * kDegToRad;
 	}
 
 	MotionCommand MotionDriver::Step(float t0, float t1, float dt, DodgePhase phase, const DriverInput& in)
@@ -70,7 +73,7 @@ namespace rdf
 		const float v = dt > 0.0f ? distance / dt : 0.0f;
 		speed_ = profile_.Speed(t1);
 
-		const float newFacing = MoveToward(facing_, FacingTarget(in), cfg_.steering.faceYawRate * kDegToRad * dt);
+		const float newFacing = MoveToward(facing_, FacingTarget(in), YawRate(phase) * dt);
 		const float yawRate = dt > 0.0f ? AngleDelta(facing_, newFacing) / dt : 0.0f;
 		facing_ = newFacing;
 

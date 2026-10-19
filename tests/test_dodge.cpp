@@ -486,7 +486,9 @@ TEST(reversal_is_never_instantaneous)
 
 TEST(face_motion_yaw_is_rate_limited)
 {
-	Sim s(ExactConfig());
+	auto cfg = ExactConfig();
+	cfg.steering.startupYawRate = 720.0f;
+	Sim s(cfg);
 	s.Frame(kDt64, Dir(90), { CommandKind::Dodge });
 	float previous = s.yaw;
 	for (int n = 1; n < 40; ++n) {

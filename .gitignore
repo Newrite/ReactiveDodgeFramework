@@ -2,3 +2,6 @@ _work/
 _ext/
 build/
 .xmake/
+behavior/**/*.hkx
+behavior/fixtures/
+*.hkx

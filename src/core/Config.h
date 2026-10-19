@@ -64,8 +64,15 @@ namespace rdf
 		float           deadzone{ 0.2f };
 		float           responseExponent{ 1.0f };  // strength = ((m - dz) / (1 - dz)) ^ exponent
 		float           faceYawRate{ 720.0f };     // deg/s: actor yaw follows its target at most this fast
+		float           startupYawRate{ 3600.0f };  // deg/s during Startup: effectively a snap-turn
 		OrientationMode orientation{ OrientationMode::Auto };
 	};
+
+	// True when the actor keeps its facing (lock-on strafing) instead of turning to the trajectory.
+	inline bool KeepsFacing(const SteeringConfig& cfg, bool lockOn)
+	{
+		return cfg.orientation == OrientationMode::KeepFacing || (cfg.orientation == OrientationMode::Auto && lockOn);
+	}
 
 	struct InputConfig
 	{

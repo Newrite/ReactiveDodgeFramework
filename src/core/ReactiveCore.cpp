@@ -42,6 +42,33 @@ namespace rdf
 		return arbiter_.Arbitrate(s, buffer_, clock_.Now());
 	}
 
+	float ReactiveCore::StartHeading(const Decision& d, bool chain) const
+	{
+		if (Length(d.dir) > 1e-3f) {
+			return HeadingOf(d.dir);
+		}
+		if (chain) {
+			return driver_.Heading();
+		}
+		return cfg_.motion.backstepWithoutInput ? WrapAngle(frame_.actorYaw + kPi) : frame_.actorYaw;
+	}
+
+	float ReactiveCore::PreviewStartAngleDeg(const Decision& d) const
+	{
+		return AngleDelta(frame_.actorYaw, StartHeading(d, d.kind == DecisionKind::ChainDodge)) * kRadToDeg;
+	}
+
+	void ReactiveCore::Consume(const Decision& d)
+	{
+		const double now = clock_.Now();
+		buffer_.Consume(d.seq);
+		const auto kind = d.kind == DecisionKind::Block ? CommandKind::Block : CommandKind::Attack;
+		buffer_.ConsumeKindUpTo(kind, now);
+		if (kind == CommandKind::Attack) {
+			buffer_.ConsumeKindUpTo(CommandKind::PowerAttack, now);
+		}
+	}
+
 	void ReactiveCore::StartDodge(const Decision& d, bool chain)
 	{
 		const double now = clock_.Now();
@@ -58,13 +85,7 @@ namespace rdf
 		start.facing = chain ? driver_.Facing() : frame_.actorYaw;
 		start.moveHeld = MoveHeld();
 		start.carrySpeed = chain ? driver_.Speed() : std::min(frame_.locomotionSpeed, cfg_.motion.maxCarrySpeed);
-		if (Length(d.dir) > 1e-3f) {
-			start.heading = HeadingOf(d.dir);
-		} else if (chain) {
-			start.heading = driver_.Heading();
-		} else {
-			start.heading = cfg_.motion.backstepWithoutInput ? WrapAngle(frame_.actorYaw + kPi) : frame_.actorYaw;
-		}
+		start.heading = StartHeading(d, chain);
 
 		const int chainCount = chain ? action_.ChainCount() + 1 : 1;
 		action_.Start(cfg_.timing, chainCount);
@@ -77,7 +98,6 @@ namespace rdf
 		if (!accepted) {
 			return;
 		}
-		const double now = clock_.Now();
 		switch (d.kind) {
 		case DecisionKind::None:
 			break;
@@ -92,14 +112,11 @@ namespace rdf
 			break;
 		case DecisionKind::Attack:
 		case DecisionKind::PowerAttack:
-			buffer_.Consume(d.seq);
-			buffer_.ConsumeKindUpTo(CommandKind::Attack, now);
-			buffer_.ConsumeKindUpTo(CommandKind::PowerAttack, now);
+			Consume(d);
 			action_.Reset();
 			break;
 		case DecisionKind::Block:
-			buffer_.Consume(d.seq);
-			buffer_.ConsumeKindUpTo(CommandKind::Block, now);
+			Consume(d);
 			action_.Reset();
 			break;
 		case DecisionKind::LocomotionExit:

@@ -17,6 +17,8 @@ namespace rdf
 		Mounted,
 		Swimming,
 		Sitting,
+		FirstPerson,
+		Jumping,
 	};
 
 	constexpr bool IsForcedInterruption(EngineBlock b)
