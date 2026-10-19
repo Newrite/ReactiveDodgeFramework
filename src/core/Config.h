@@ -44,7 +44,7 @@ namespace rdf
 		float startup{ 0.08f };
 		float active{ 0.30f };
 		float recovery{ 0.32f };
-		float exitBlend{ 0.15f };  // blend-out length when a dodge is cancelled into locomotion
+		float exitBlend{ 0.25f };  // blend-out length when a dodge is cancelled into locomotion
 		float Total() const { return startup + active + recovery; }
 		// Playback multiplier that makes a clip of `clipLength` seconds (at speed 1) end with the recovery.
 		float PlaybackSpeed(float clipLength, float multiplier) const
