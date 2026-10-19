@@ -172,3 +172,7 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   a frame. The floor now uses the driver's instantaneous speed (the exit speed at the end).
 * Verified: 51/58 hand-overs into running continuous (Speed 316 -> 290 -> 265 -> 260, the engine's own run speed);
   the other 7 had no floor by design (move input released, or sprinting) and show no one-frame dip either.
+* One-frame pose step at dodge START (head 8-27 units in one frame), size tracking how different the clip the same
+  state played last time was: the SE hkbManualSelectorGenerator reactivates on its previous child and switches to the
+  bound index a frame later, unblended. The dodge clip choosers are now state machines with startStateId bound to
+  RDF_DodgeClip (TUDM / vanilla pattern), 128/128. The hand-over end itself showed no pose step (<= 0.4 u/frame).
