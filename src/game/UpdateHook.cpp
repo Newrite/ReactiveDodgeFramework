@@ -119,11 +119,11 @@ namespace rdf::game::update
 		constexpr int kFirstStepClip = 8;  // RDF_DodgeClip 0..7 rolls, 8..15 steps (ANIMATION_CONTRACT.md)
 
 		// The arm layer holds the stance of what is drawn. iRightHandType / iLeftHandType report the
-		// equipped item even while it is sheathed, so a sheathed weapon or spell would pull the arms into
-		// its ready pose; fists have no stance (and the graph's left-hand "none" entry is a one-hander pose).
+		// equipped item even while it is sheathed, so by default a sheathed weapon or spell keeps no stance
+		// (bArmStanceWhenSheathed opts in); fists have none (the graph's left-hand "none" entry is a one-hander pose).
 		bool HasStanceToKeep(RE::PlayerCharacter* player)
 		{
-			if (!player->AsActorState()->IsWeaponDrawn()) {
+			if (!player->AsActorState()->IsWeaponDrawn() && !Settings::Get().armStanceWhenSheathed) {
 				return false;
 			}
 			std::int32_t right = 0;
