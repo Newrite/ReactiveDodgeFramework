@@ -504,10 +504,16 @@ namespace rdf::game::update
 	{
 		const auto& settings = Settings::Get();
 		auto step = core_->Step();
-		if (!step.command.active) {
+		if (step.command.active) {
+			// During a hand-over into running the floor already follows the hand-over speed: the engine
+			// takes the movement back in the frame the out-blend ends, before this tick sees the dodge
+			// finish, and one frame without the floor dropped its speed to ~70 (a one-frame stance jerk).
+			const bool handingOver = core_->Exiting() && moveHeld_ && !core_->CancelledIntoAction();
+			carry_ = handingOver ? step.command.speed : 0.0f;
+		} else {
 			carry_ = moveHeld_ ? std::max(0.0f, carry_ - settings.carryDecay * dt) : 0.0f;
-			step.command.speedFloor = carry_;
 		}
+		step.command.speedFloor = carry_;
 		motion::Publish(step.command, player->GetFormID());
 		requestedDistance_ = step.command.speed * dt;
 		requestedHeading_ = core_->Heading();
@@ -528,7 +534,9 @@ namespace rdf::game::update
 	void Controller::OnStopped()
 	{
 		// Only a dodge that ran its course into running carries its speed; an interrupted one does not.
-		carry_ = core_->Phase() == DodgePhase::Done && moveHeld_ && !core_->CancelledIntoAction() ? core_->Speed() : 0.0f;
+		if (core_->Phase() != DodgePhase::Done || !moveHeld_ || core_->CancelledIntoAction()) {
+			carry_ = 0.0f;  // only a dodge that ran its course into running keeps its speed floor
+		}
 		tailFrames_ = 30;  // follow the hand-over into locomotion in the dev trace
 		lockon::ReleaseYaw();
 		effects::SetInvulnerable(false);

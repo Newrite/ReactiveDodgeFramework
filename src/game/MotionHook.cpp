@@ -97,7 +97,9 @@ namespace rdf::game::motion
 		{
 			const auto result = g_originalPayload(self, dt, payload);
 			MotionCommand cmd;
-			if (!payload || !self->actor || !g_box.TryRead(cmd) || cmd.active || !(cmd.speedFloor > 0.0f) ||
+			// The payload is only built for controls-driven movement, so the floor can be published while the
+			// dodge still owns the animation-driven motion: it is in place on the first engine-driven frame.
+			if (!payload || !self->actor || !g_box.TryRead(cmd) || !(cmd.speedFloor > 0.0f) ||
 				cmd.ownerFormId != self->actor->GetFormID() || cmd.generation != g_generation.load(std::memory_order_acquire)) {
 				return result;
 			}

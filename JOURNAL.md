@@ -161,3 +161,8 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
 * Greatsword set in game: 134/134 dodges played the set's clips (their own SDS dodge sound / MCO_InputBuffer
   annotations fire), windows arrive at the computed clip times / playback speed (e.g. forward step attack 0.28 s,
   chain 0.35 s), 0 rollbacks, 0 dropped dodges.
+* Stance jerk for 1-2 frames when a dodge hands over into running (seen with every clip set, and in other dodge
+  mods): on the first frame after animation-driven mode ends the engine's speed fell to ~70 (Speed 319 -> 70 -> 284);
+  the speed floor was published only once the dodge had finished, one frame after the engine took the movement back.
+  The floor is now published from the hand-over on (following its speed), and the payload hook applies it whenever
+  set (the payload exists only in controls-driven mode). Attack -> dodge before the end of the attack: user-verified.
