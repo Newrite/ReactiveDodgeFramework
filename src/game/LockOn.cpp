@@ -23,10 +23,15 @@ namespace rdf::game::lockon
 		class TdmProvider final : public Provider
 		{
 		public:
-			explicit TdmProvider(TDM_API::IVTDM2* api) :
+			explicit TdmProvider(TDM_API::IVTDM3* api) :
 				api_(api) {}
 
-			bool FreeRotation() override { return api_->GetDirectionalMovementState(); }
+			// GetDirectionalMovementState() is true in "Vanilla Style" too; only kDirectional lets the
+			// player face the way it moves.
+			bool FreeRotation() override
+			{
+				return api_->GetDirectionalMovementMode() == TDM_API::DirectionalMovementMode::kDirectional;
+			}
 
 			void AcquireYaw() override
 			{
@@ -64,7 +69,7 @@ namespace rdf::game::lockon
 			}
 
 		private:
-			TDM_API::IVTDM2* api_;
+			TDM_API::IVTDM3* api_;
 			bool             owned_{ false };
 		};
 
@@ -83,7 +88,7 @@ namespace rdf::game::lockon
 			logger::info("lock-on: True Directional Movement not loaded");
 			return;
 		}
-		auto* api = static_cast<TDM_API::IVTDM2*>(TDM_API::RequestPluginAPI(TDM_API::InterfaceVersion::V2));
+		auto* api = static_cast<TDM_API::IVTDM3*>(TDM_API::RequestPluginAPI(TDM_API::InterfaceVersion::V3));
 		if (!api) {
 			logger::warn("lock-on: True Directional Movement is loaded but gave no API");
 			return;

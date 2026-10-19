@@ -50,7 +50,8 @@ namespace rdf::game::update
 			void       StepAndPublish(RE::PlayerCharacter* player, float dt);
 			void       OnStopped();
 			void       Trace(RE::PlayerCharacter* player);
-			void       ResumeLocomotion(RE::PlayerCharacter* player) const;
+			void       ResumeLocomotion();
+			void       SendPendingMoveStart(RE::PlayerCharacter* player);
 			void       LogRejection(const Decision& d);
 			void       LogCost(RE::PlayerCharacter* player, float current) const;
 			int        ClipIndex(float angleDeg) const;
@@ -70,6 +71,7 @@ namespace rdf::game::update
 			float           charged_{ 0.0f };
 			RejectReason    lastReject_{ RejectReason::None };
 			bool            moveHeld_{ false };
+			bool            moveStartPending_{ false };
 
 			// measured motion (previous frame's displacement, seen at the start of this tick)
 			bool  havePos_{ false };
@@ -140,6 +142,7 @@ namespace rdf::game::update
 		awaitingEnter_ = false;
 		exitSent_ = true;
 		wasRunning_ = false;
+		moveStartPending_ = false;
 		prevDepth_ = 0;
 		retry_ = {};
 		havePos_ = false;
@@ -249,6 +252,9 @@ namespace rdf::game::update
 		const int  depth = graph::Depth();
 		const int  previousDepth = prevDepth_;
 		prevDepth_ = depth;
+		if (previousDepth > 0 && depth == 0) {
+			SendPendingMoveStart(player);
+		}
 		if (!core_->DodgeRunning()) {
 			awaitingEnter_ = false;
 			return;
@@ -273,7 +279,7 @@ namespace rdf::game::update
 			DevLog("{}", "clip ended: starting locomotion handover");
 			exitSent_ = true;
 			core_->Apply(Decision{ DecisionKind::LocomotionExit }, true);
-			ResumeLocomotion(player);
+			ResumeLocomotion();
 		}
 	}
 
@@ -316,9 +322,19 @@ namespace rdf::game::update
 
 	// The engine sends moveStart only when movement input begins. Input held through the dodge never
 	// "begins", so the locomotion graph would sit in its idle state until the player let go and
-	// pressed again; tell it the move is already under way.
-	void Controller::ResumeLocomotion(RE::PlayerCharacter* player) const
+	// pressed again; tell it the move is already under way. The dodge state itself does not handle
+	// moveStart, so the event waits until the graph has left every dodge state.
+	void Controller::ResumeLocomotion()
 	{
+		moveStartPending_ = moveHeld_;
+	}
+
+	void Controller::SendPendingMoveStart(RE::PlayerCharacter* player)
+	{
+		if (!moveStartPending_) {
+			return;
+		}
+		moveStartPending_ = false;
 		if (moveHeld_) {
 			const bool accepted = player->NotifyAnimationGraph("moveStart"sv);
 			DevLog("resume locomotion: moveStart {}", accepted ? "accepted" : "refused");
@@ -363,7 +379,7 @@ namespace rdf::game::update
 			graph::SendExit(player);
 			exitSent_ = true;
 			core_->Apply(d, true);
-			ResumeLocomotion(player);
+			ResumeLocomotion();
 			break;
 		}
 	}
@@ -385,6 +401,7 @@ namespace rdf::game::update
 		awaitingEnter_ = true;
 		enterFrames_ = 0;
 		exitSent_ = false;
+		moveStartPending_ = false;
 		if (!core_->KeepsFacing()) {
 			lockon::AcquireYaw();  // TDM would otherwise turn the player back toward its own target yaw
 		}

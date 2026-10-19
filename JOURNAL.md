@@ -70,3 +70,9 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   picks the directional clip unless TDM reports free (360) movement; no yaw is commanded in that mode.
 * Pause after a dodge with input held: the engine only sends `moveStart` when input begins, so locomotion sat idle.
   The plugin sends `moveStart` on the locomotion handover when move input is held.
+* Second in-game run: yaw tracking holds (mean heading error 0.3-7 deg, actor ends facing its path). But TDM's
+  `GetDirectionalMovementState()` is true in "Vanilla Style" as well, so every dodge took the FaceMotion path and
+  snapped the character around before backward dodges. Free rotation now means
+  `GetDirectionalMovementMode() == kDirectional` (API V3).
+* `moveStart` sent in the exit tick was refused: the dodge state is still active then. It is now sent when the graph
+  has left every dodge state (depth 1 -> 0) and move input is still held.
