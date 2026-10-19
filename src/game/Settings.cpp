@@ -164,6 +164,16 @@ namespace rdf::game
 			return OrientationMode::Auto;
 		}
 
+		std::optional<RE::ActorValue> ParseResource(const std::string& text)
+		{
+			if (_stricmp(text.c_str(), "None") == 0) return std::nullopt;
+			if (_stricmp(text.c_str(), "Magicka") == 0) return RE::ActorValue::kMagicka;
+			if (_stricmp(text.c_str(), "Stamina") != 0) {
+				logger::warn("[Cost] sResource: unknown resource '{}', using Stamina", text);
+			}
+			return RE::ActorValue::kStamina;
+		}
+
 		void LoadTiming(Settings& s)
 		{
 			auto& t = s.core.timing;
@@ -217,8 +227,9 @@ namespace rdf::game
 			s.core.input.debounce = ReadFloat("Input", "fDebounce", s.core.input.debounce, 0.0f, 1.0f);
 			s.powerAttackHold = ReadFloat("Input", "fPowerAttackHold", s.powerAttackHold, 0.05f, 2.0f);
 
-			s.staminaCost = ReadFloat("Cost", "fStaminaCost", s.staminaCost, 0.0f, 1000.0f);
-			s.minStamina = ReadFloat("Cost", "fMinStamina", s.minStamina, 0.0f, 1000.0f);
+			s.costResource = ParseResource(ReadString("Cost", "sResource", "Stamina"));
+			s.cost = ReadFloat("Cost", "fCost", s.cost, 0.0f, 1000.0f);
+			s.minimum = ReadFloat("Cost", "fMinimum", s.minimum, 0.0f, 1000.0f);
 
 			auto& g = s.graph;
 			g.start = ReadString("Graph", "sEventStart", g.start);

@@ -51,7 +51,7 @@ namespace rdf::game::update
 			void       OnStopped();
 			void       Trace(RE::PlayerCharacter* player);
 			void       LogRejection(const Decision& d);
-			void       LogStamina(RE::PlayerCharacter* player, float current) const;
+			void       LogCost(RE::PlayerCharacter* player, float current) const;
 			int        ClipIndex(float angleDeg) const;
 
 			std::unique_ptr<ReactiveCore> core_;
@@ -167,10 +167,10 @@ namespace rdf::game::update
 		view.engine = state.block;
 		view.attackState = state.attackState;
 		view.dodgeWindowOpen = graph::DodgeWindowOpen();
-		view.staminaOk = state.stamina >= settings.minStamina;
+		view.staminaOk = !settings.costResource || state.resource >= settings.minimum;
 		const Decision decision = core_->Evaluate(view);
 		if (decision.reject == RejectReason::StaminaLow) {
-			LogStamina(player, state.stamina);
+			LogCost(player, state.resource);
 		}
 		Execute(player, decision);
 
@@ -275,7 +275,7 @@ namespace rdf::game::update
 	{
 		logger::warn("graph did not report {} within {} frames, rolling back (is the behavior patch installed?)",
 			Settings::Get().graph.entered, Settings::Get().enterTimeoutFrames);
-		effects::RefundStamina(player, charged_);
+		effects::RefundCost(player, charged_);
 		charged_ = 0.0f;
 		awaitingEnter_ = false;
 		exitSent_ = true;
@@ -299,12 +299,13 @@ namespace rdf::game::update
 		return index + (Settings::Get().sidestepWhenKeepFacing ? 8 : 0);
 	}
 
-	void Controller::LogStamina(RE::PlayerCharacter* player, float current) const
+	void Controller::LogCost(RE::PlayerCharacter* player, float current) const
 	{
-		auto* owner = player->AsActorValueOwner();
-		DevLog("stamina current={:.1f} permanent={:.1f} base={:.1f} min={:.1f}", current,
-			owner->GetPermanentActorValue(RE::ActorValue::kStamina), owner->GetBaseActorValue(RE::ActorValue::kStamina),
-			Settings::Get().minStamina);
+		const auto& settings = Settings::Get();
+		auto*       owner = player->AsActorValueOwner();
+		const auto  resource = *settings.costResource;  // only called after a cost rejection
+		DevLog("cost resource {} current={:.1f} permanent={:.1f} minimum={:.1f}", static_cast<int>(resource), current,
+			owner->GetPermanentActorValue(resource), settings.minimum);
 	}
 
 	void Controller::LogRejection(const Decision& d)
@@ -360,8 +361,8 @@ namespace rdf::game::update
 			core_->Apply(d, false);
 			return;
 		}
-		effects::ChargeStamina(player, settings.staminaCost);
-		charged_ = settings.staminaCost;
+		effects::ChargeCost(player, settings.cost);
+		charged_ = settings.cost;
 		core_->Apply(d, true);
 		awaitingEnter_ = true;
 		enterFrames_ = 0;

@@ -47,7 +47,8 @@ namespace rdf::game::engine
 		Snapshot    s;
 		s.block = Classify(player, state);
 		s.attackState = static_cast<std::uint8_t>(state->GetAttackState());
-		s.stamina = player->AsActorValueOwner()->GetActorValue(RE::ActorValue::kStamina);
+		const auto resource = Settings::Get().costResource;
+		s.resource = resource ? player->AsActorValueOwner()->GetActorValue(*resource) : 0.0f;
 		return s;
 	}
 }

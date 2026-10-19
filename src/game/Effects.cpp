@@ -1,5 +1,7 @@
 #include "Effects.h"
 
+#include "Settings.h"
+
 #include <atomic>
 #include <cstring>
 
@@ -24,17 +26,19 @@ namespace rdf::game::effects
 		}
 	}
 
-	void ChargeStamina(RE::PlayerCharacter* player, float cost)
+	void ChargeCost(RE::PlayerCharacter* player, float cost)
 	{
-		if (cost > 0.0f) {
-			player->AsActorValueOwner()->DamageActorValue(RE::ActorValue::kStamina, cost);
+		const auto resource = Settings::Get().costResource;
+		if (resource && cost > 0.0f) {
+			player->AsActorValueOwner()->DamageActorValue(*resource, cost);
 		}
 	}
 
-	void RefundStamina(RE::PlayerCharacter* player, float cost)
+	void RefundCost(RE::PlayerCharacter* player, float cost)
 	{
-		if (cost > 0.0f) {
-			player->AsActorValueOwner()->RestoreActorValue(RE::ActorValue::kStamina, cost);
+		const auto resource = Settings::Get().costResource;
+		if (resource && cost > 0.0f) {
+			player->AsActorValueOwner()->RestoreActorValue(*resource, cost);
 		}
 	}
 

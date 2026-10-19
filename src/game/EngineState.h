@@ -8,7 +8,7 @@ namespace rdf::game::engine
 	{
 		EngineBlock  block{ EngineBlock::None };
 		std::uint8_t attackState{ 0 };
-		float        stamina{ 0.0f };
+		float        resource{ 0.0f };  // current value of the configured cost resource
 	};
 
 	// Read-only queries on the player; the first matching block wins, strongest first.

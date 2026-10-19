@@ -2,6 +2,7 @@
 
 #include "core/Config.h"
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -30,14 +31,16 @@ namespace rdf::game
 		Config core;
 
 		// [Input]: raw device scan codes, -1 = unbound
-		int   dodgeKeyboard{ 0x38 };  // Left Alt
+		int   dodgeKeyboard{ 0x2F };  // V
 		int   dodgeMouse{ -1 };
 		int   dodgeGamepad{ 0x80 };  // right stick click
 		float powerAttackHold{ 0.30f };
 
 		// [Cost]
-		float staminaCost{ 20.0f };
-		float minStamina{ 10.0f };
+		// Resource a dodge costs; nullopt = free.
+		std::optional<RE::ActorValue> costResource{ RE::ActorValue::kStamina };
+		float                         cost{ 20.0f };
+		float                         minimum{ 10.0f };  // refuse below this much of costResource
 
 		// [Graph]
 		GraphNames graph;
