@@ -147,17 +147,30 @@ def char_masks(ch):
     return out
 
 
-def dodge_selector_problems(g, sel):
+def dodge_selector_problems(g, sm):
+    """The dodge clip chooser must be a state machine (not a ManualSelector): startStateId <- RDF_DodgeClip, 16 states."""
     problems = []
-    if sel.cls != "hkbManualSelectorGenerator":
-        return ["not a ManualSelector"]
-    if bind_list(g, sel) != [("selectedGeneratorIndex", "RDF_DodgeClip", "BINDING_TYPE_VARIABLE")]:
-        problems.append("selector binding %s" % bind_list(g, sel))
-    clips = sel.text("generators").split()
-    if len(clips) != len(G.CLIPS):
-        problems.append("%d clips" % len(clips))
-    for i, cp in enumerate(clips):
-        c = g.objs[cp]
+    if sm.cls != "hkbStateMachine":
+        return ["not a state machine (%s)" % sm.cls]
+    if bind_list(g, sm) != [("startStateId", "RDF_DodgeClip", "BINDING_TYPE_VARIABLE")]:
+        problems.append("binding %s" % bind_list(g, sm))
+    want = {"startStateMode": "START_STATE_MODE_DEFAULT", "selfTransitionMode": "SELF_TRANSITION_MODE_NO_TRANSITION",
+            "wildcardTransitions": "null", "startStateChooser": "null", "syncVariableIndex": "-1", "startStateId": "0",
+            "maxSimultaneousTransitions": "32"}
+    for k, v in want.items():
+        if sm.text(k) != v:
+            problems.append("%s=%s" % (k, sm.text(k)))
+    states = sm.text("states").split()
+    if len(states) != len(G.CLIPS):
+        problems.append("%d states" % len(states))
+    for i, sp in enumerate(states):
+        so = g.objs[sp]
+        if so.cls != "hkbStateMachineStateInfo" or so.intval("stateId") != i:
+            problems.append("state %d stateId %s" % (i, so.text("stateId")))
+        for k in ("enterNotifyEvents", "exitNotifyEvents", "transitions", "variableBindingSet"):
+            if so.text(k) != "null":
+                problems.append("state %d %s not null" % (i, k))
+        c = g.objs[so.text("generator")]
         exp = "%s\\%s.hkx" % (G.ANIM_DIR, G.CLIPS[i])
         if c.cls != "hkbClipGenerator" or c.text("animationName") != exp or c.text("mode") != "MODE_SINGLE_PLAY":
             problems.append("clip %d %s" % (i, c.text("animationName")))
@@ -216,7 +229,7 @@ def check_arm_layer(g, male, female, masks_real, sid, outer):
           (float(c0.text("weight")), float(c0.text("worldFromModelWeight")), float(c1.text("weight")), float(c1.text("worldFromModelWeight"))) == (1.0, 1.0, 1.0, 0.0))
     sel_main = g.objs[c0.text("generator")]
     pr = dodge_selector_problems(g, sel_main)
-    check(tag + " child0 generator = dodge selector (16 clips, speed binding, no triggers)", not pr, "; ".join(pr[:3]))
+    check(tag + " child0 generator = dodge state machine (startStateId <- RDF_DodgeClip, 16 states in order, speed binding, no triggers)", not pr, "; ".join(pr[:3]))
     arm = g.objs[c1.text("generator")]
     check(tag + " ArmLayer = parametric blender (flags 16), blendParameter <- RDF_ArmBlend",
           arm.cls == "hkbBlenderGenerator" and arm.text("flags") == "16" and bind_list(g, arm) == [("blendParameter", "RDF_ArmBlend", "BINDING_TYPE_VARIABLE")], str(bind_list(g, arm)))
@@ -226,7 +239,7 @@ def check_arm_layer(g, male, female, masks_real, sid, outer):
           and p0.text("worldFromModelWeight") == p1.text("worldFromModelWeight") == "0.000000")
     sel_arm = g.objs[p0.text("generator")]
     pr = dodge_selector_problems(g, sel_arm)
-    check(tag + " ArmLayer child0 = its OWN dodge selector (not shared with the outer one)", not pr and sel_arm.name != sel_main.name and not (reachable(g, sel_arm.name) & reachable(g, sel_main.name)), "; ".join(pr[:3]))
+    check(tag + " ArmLayer child0 = its OWN dodge state machine (not shared with the outer one)", not pr and sel_arm.name != sel_main.name and not (reachable(g, sel_arm.name) & reachable(g, sel_main.name)), "; ".join(pr[:3]))
     stance = g.objs[p1.text("generator")]
     check(tag + " StanceBlender: plain blend, 2 children", stance.cls == "hkbBlenderGenerator" and stance.text("flags") == "0" and len(children_of(g, stance)) == 2)
     sr, sl = children_of(g, stance)
@@ -311,6 +324,8 @@ def main():
     check("C  variable types", tl == [t for _, t, _ in G.VARIABLES], str(tl))
 
     masks_real = char_masks(male)
+    stale = [o.name for o in g.by_class.get("hkbManualSelectorGenerator", []) if ("selectedGeneratorIndex", "RDF_DodgeClip", "BINDING_TYPE_VARIABLE") in bind_list(g, o)]
+    check("H  no hkbManualSelectorGenerator bound to RDF_DodgeClip remains (stale-child pose step)", not stale, str(stale))
     check("H  DefaultFemale RightArm/LeftArm masks identical to DefaultMale", {k: v for k, v in char_masks(female).items() if k in ("RightArm", "LeftArm")} == {k: v for k, v in masks_real.items() if k in ("RightArm", "LeftArm")})
     # ---- D
     root = [s for s in H.state_machines(g) if s.text("name") == "RootBehaviorGraph"][0]

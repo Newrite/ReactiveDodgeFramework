@@ -21,7 +21,7 @@ weapon / sheathed / magic sub-graphs, so it works with every weapon type and fro
   `#0355 #0354 #0353 #0350`); `RETURN_MODE = "simple"` in the generator gives one plain transition instead.
   `StaggerPlayer` -> `PlayerStagger_State` (48): the player's stagger event is per-state in vanilla (not a wildcard), so our
   states need their own copy.
-- 227 new nodes (`#rdf$0 ..`); all other nodes are untouched.
+- 291 new nodes (`#rdf$0 ..`); all other nodes are untouched.
 
 `defaultmale` / `defaultfemale`: 16 names `Animations\RDF\rdf_{roll,step}_{f,fr,r,br,b,bl,l,fl}.hkx` appended to `animationNames` (`#0029`).
 
@@ -57,7 +57,7 @@ python tools/dump_pandora_out.py --vanilla                                   # v
 python tools/gen_rdf_patch.py --verify-ids                                   # vanilla ids used by the generator
 python tools/stage_pandora.py --label baseline                               # same modlist, no rdf
 python tools/stage_pandora.py --label rdf --rdf behavior/Pandora_Engine/mod/rdf
-python tools/validate_rdf.py                                                 # 127 checks, exit 0 = pass
+python tools/validate_rdf.py                                                 # 128 checks, exit 0 = pass
 python tools/test_hkxcheck.py
 ```
 
@@ -94,10 +94,10 @@ the player's current weapon stance, layered over the dodge clip. The plugin cont
 ```
 ModifierGenerator { BSIsActiveModifier(bAnimationDriven, RDF_IsDodging),
   ArmStanceBlend  hkbBlenderGenerator flags 0                       (vanilla pattern: complementary masks, weights 1)
-    child0  weight 1  worldFromModel 1  mask NOT_ARMS    generator = dodge ClipSelector (RDF_DodgeClip, 16 clips)
+    child0  weight 1  worldFromModel 1  mask NOT_ARMS    generator = dodge clip state machine (startStateId <- RDF_DodgeClip, 16 states = 16 clips)
     child1  weight 1  worldFromModel 0  mask ARMS        generator = ArmLayer
   ArmLayer        hkbBlenderGenerator flags 16 (PARAMETRIC), blendParameter <- RDF_ArmBlend
-    p0  weight 0  generator = a SECOND dodge ClipSelector (own clip nodes, same variables)
+    p0  weight 0  generator = a SECOND dodge clip state machine (own clip nodes, same variables)
     p1  weight 1  generator = StanceBlender
   StanceBlender   hkbBlenderGenerator flags 0
     right  boneWeights <- character property RightArm   generator = ManualSelector(iRightHandType) over 13 stance clips
@@ -170,3 +170,13 @@ ready idles (`MRh_Ready_MSG`, `MLh_Ready_MSG`).
 ### 5.5 Not tested in game
 Whether Skyrim's runtime renders the parametric ArmLayer exactly as the vanilla locomotion blends do with these masks (same
 node classes and flag values as vanilla, validated structurally), and the visual quality of idle poses over a roll.
+
+### 5.6 Why the dodge clip chooser is a state machine, not a selector
+An in-game pose trace showed a one-frame whole-body pose step on the 2nd/3rd frame of every dodge whose state played a different clip
+last time (head 8-27 units in one frame, size tracking how different the previous clip was). Cause: the SE `hkbManualSelectorGenerator`
+has no change effect; it reactivates on its previous child and switches to the bound index a frame later, unblended. Both dodge
+choosers are now `hkbStateMachine`s (the TUDM `*DodgeStyle` pattern and vanilla's `startStateId <- iRightHandType` machines):
+`startStateId` bound to `RDF_DodgeClip`, DEFAULT start mode, NO_TRANSITION self mode, no transitions/wildcards, one state per
+clip (stateId = clip index). The stance selectors are unchanged (they are not switched mid-dodge, but they are a selector on
+`iRightHandType`/`iLeftHandType` and could show the same step if the hand type changes between two dodges of one state;
+validate in game before converting them too).

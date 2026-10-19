@@ -247,10 +247,37 @@ def clip_node(N, out, label, anim, mode, speed_var=None):
 
 
 def dodge_selector(N, out, label):
-    """16 SINGLE_PLAY dodge clips, index = RDF_DodgeClip, speed <- RDF_DodgeSpeed (no triggers: see EXIT_EVENTS)."""
-    clips = [clip_node(N, out, "%s_%s" % (label, cname), "%s\\%s.hkx" % (ANIM_DIR, cname), "MODE_SINGLE_PLAY",
-                       "RDF_DodgeSpeed") for cname in CLIPS]
-    return selector_node(N, out, label + "_ClipSelector", "RDF_DodgeClip", clips)
+    """Dodge clip chooser: hkbStateMachine, startStateId <- RDF_DodgeClip, one state per clip (stateId = clip index).
+
+    Not an hkbManualSelectorGenerator: the SE selector (no change effect) reactivates on its previous child and
+    only switches to the bound index a frame later, unblended - a one-frame whole-body pose step whenever the state
+    played a different clip last time (in-game pose trace). A state machine picks its start state from the binding
+    at activation, like TUDM's *DodgeStyle machines and vanilla `startStateId <- iRightHandType` machines."""
+    sm, bs = N.new(), N.new()
+    states = []
+    for i, cname in enumerate(CLIPS):
+        clip = clip_node(N, out, "%s_%s" % (label, cname), "%s\\%s.hkx" % (ANIM_DIR, cname), "MODE_SINGLE_PLAY",
+                         "RDF_DodgeSpeed")
+        st = N.new()
+        out.append(node(st, "hkbStateMachineStateInfo", "0xed7f9d0", "\n".join([
+            p("variableBindingSet", "null"), '<hkparam name="listeners" numelements="0"></hkparam>',
+            p("enterNotifyEvents", "null"), p("exitNotifyEvents", "null"), p("transitions", "null"),
+            p("generator", clip), p("name", "%s_S%d_%s" % (label, i, cname)), p("stateId", i),
+            p("probability", "1.000000"), p("enable", "true")])))
+        states.append(st)
+    out.append(binding_set(bs, [("startStateId", "RDF_DodgeClip")]))
+    out.append(node(sm, "hkbStateMachine", "0x816c1dcb", "\n".join([
+        p("variableBindingSet", bs), p("userData", "0"), p("name", label + "_ClipSM"),
+        '<hkparam name="eventToSendWhenStateOrTransitionChanges"><hkobject>%s%s</hkobject></hkparam>'
+        % (p("id", "-1"), p("payload", "null")),
+        p("startStateChooser", "null"), p("startStateId", "0"), p("returnToPreviousStateEventId", "-1"),
+        p("randomTransitionEventId", "-1"), p("transitionToNextHigherStateEventId", "-1"),
+        p("transitionToNextLowerStateEventId", "-1"), p("syncVariableIndex", "-1"), p("wrapAroundStateId", "false"),
+        p("maxSimultaneousTransitions", "32"), p("startStateMode", "START_STATE_MODE_DEFAULT"),
+        p("selfTransitionMode", "SELF_TRANSITION_MODE_NO_TRANSITION"),
+        '<hkparam name="states" numelements="%d">%s</hkparam>' % (len(states), " ".join(states)),
+        p("wildcardTransitions", "null")])))
+    return sm
 
 
 def stance_selector(N, out, label, side):
