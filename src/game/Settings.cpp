@@ -234,6 +234,7 @@ namespace rdf::game
 
 			auto& g = s.graph;
 			g.start = ReadString("Graph", "sEventStart", g.start);
+			g.startB = ReadString("Graph", "sEventStartB", g.startB);
 			g.chain = ReadString("Graph", "sEventChain", g.chain);
 			g.exit = ReadString("Graph", "sEventExit", g.exit);
 			g.entered = ReadString("Graph", "sEventEntered", g.entered);

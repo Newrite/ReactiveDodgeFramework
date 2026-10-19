@@ -213,14 +213,15 @@ def main():
     exp_chain = (G.FX_CHAIN[0], G.FX_CHAIN[1], G.FX_CHAIN[2], G.FX_CHAIN[3], "BLEND_CURVE_SMOOTH", "END_MODE_NONE")
     exp_out = (G.FX_OUT[0], G.FX_OUT[1], G.FX_OUT[2], G.FX_OUT[3], "BLEND_CURVE_SMOOTH", "END_MODE_NONE")
     wl = H.trans_array(g, root.text("wildcardTransitions"))
-    mine = [d for d in wl if g.event_name(int(d["eventId"])) == "RDF_DodgeStart"]
-    check("E  exactly one root wildcard RDF_DodgeStart", len(mine) == 1)
-    if mine:
-        d = mine[0]
-        check("E  wildcard -> 9701, flags LOCAL_WILDCARD, effect RDF_DodgeInBlend",
-              d["toStateId"] == "9701" and "FLAG_IS_LOCAL_WILDCARD" in d["flags"] and fxdesc(d["transition"]) == exp_in, "%s %s" % (d["flags"], fxdesc(d["transition"])))
-    check("E  root wildcards: baseline %d + 1" % len(H.trans_array(gb, [s for s in H.state_machines(gb) if s.text("name") == "RootBehaviorGraph"][0].text("wildcardTransitions"))),
-          len(wl) == len(H.trans_array(gb, [s for s in H.state_machines(gb) if s.text("name") == "RootBehaviorGraph"][0].text("wildcardTransitions"))) + 1)
+    for event, (_, state_id) in G.START_EVENTS:
+        mine = [d for d in wl if g.event_name(int(d["eventId"])) == event]
+        check("E  exactly one root wildcard %s" % event, len(mine) == 1)
+        if mine:
+            d = mine[0]
+            check("E  %s -> %d, flags LOCAL_WILDCARD, effect RDF_DodgeInBlend" % (event, state_id),
+                  d["toStateId"] == str(state_id) and "FLAG_IS_LOCAL_WILDCARD" in d["flags"] and fxdesc(d["transition"]) == exp_in, "%s %s" % (d["flags"], fxdesc(d["transition"])))
+    n_base_wild = len(H.trans_array(gb, [s for s in H.state_machines(gb) if s.text("name") == "RootBehaviorGraph"][0].text("wildcardTransitions")))
+    check("E  root wildcards: baseline %d + %d" % (n_base_wild, len(G.START_EVENTS)), len(wl) == n_base_wild + len(G.START_EVENTS))
     n_exit = len(G.EXIT_EVENTS) * (len(G.V["RETURN_CONDS"]) if G.RETURN_MODE == "vanilla" else 1)
     for nm, sid, other in ((G.STATE_A[0], 9701, 9702), (G.STATE_B[0], 9702, 9701)):
         ts = H.trans_array(g, states[sid].text("transitions"))
@@ -282,7 +283,7 @@ def main():
             bad.append((k, v, sg.get(k)))
     check("G  every other state machine has identical #states/#transitions (%d machines)" % (len(sb) - 1), not bad, str(bad[:2]))
     kb, kg = sb[("RootBehaviorGraph", "hkbStateMachine")][0], sg[("RootBehaviorGraph", "hkbStateMachine")][0]
-    exp_new_tr = 1 + 2 * (1 + n_exit + 1)
+    exp_new_tr = len(G.START_EVENTS) + 2 * (1 + n_exit + 1)
     check("G  RootBehaviorGraph: states %d -> %d (+2), transitions %d -> %d (+%d)" % (kb[0], kg[0], kb[1], kg[1], exp_new_tr),
           kg[0] == kb[0] + 2 and kg[1] == kb[1] + exp_new_tr)
     cb, eb = canon(gb)

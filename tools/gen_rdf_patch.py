@@ -21,7 +21,7 @@ CODE = "rdf"
 MOD_NAME = "Reactive Dodge Framework"
 AUTHOR = "newrite"
 
-EVENTS = ["RDF_DodgeStart", "RDF_DodgeChain", "RDF_DodgeExit", "RDF_DodgeEntered", "RDF_DodgeLeft",
+EVENTS = ["RDF_DodgeStart", "RDF_DodgeStartB", "RDF_DodgeChain", "RDF_DodgeExit", "RDF_DodgeEntered", "RDF_DodgeLeft",
           "RDF_DodgeClipEnd"]
 # Clip annotations (ANIMATION_CONTRACT.md). An annotation only reaches the plugin as an animation
 # event when its text is a registered event name of the graph that plays the clip.
@@ -38,6 +38,10 @@ EXISTING_VARS = {"bAnimationDriven"}           # must already exist in vanilla 0
 
 STATE_A = ("RDF_Dodge_A", 9701)
 STATE_B = ("RDF_Dodge_B", 9702)
+# A root wildcard into each state. The plugin alternates A and B for every new dodge, so a dodge pressed
+# while the previous one is still blending out never targets the state that is being left (Havok drops
+# that transition: the actor stays animation-driven by the dying blend and the dodge clip never plays).
+START_EVENTS = [("RDF_DodgeStart", STATE_A), ("RDF_DodgeStartB", STATE_B)]
 DEFAULT_STATE_ID = 14                          # RootBehaviorGraph state 'Default_State'
 PLAYER_STAGGER_STATE_ID = 48                   # 'PlayerStagger_State'
 
@@ -242,9 +246,10 @@ def gen_master(existing_vars):
     x.append("  </insert>")
     x.append('  <append path="%s/states">%s</append>' % (V["ROOT_SM"], st_a))
     x.append('  <append path="%s/states">%s</append>' % (V["ROOT_SM"], st_b))
-    x.append('  <append path="%s/transitions">%s</append>'
-             % (V["ROOT_WILDCARD"], transition(fx_nodes["in"], "RDF_DodgeStart", STATE_A[1],
-                                               "FLAG_IS_LOCAL_WILDCARD|FLAG_DISABLE_CONDITION")))
+    for event, (_, state_id) in START_EVENTS:
+        x.append('  <append path="%s/transitions">%s</append>'
+                 % (V["ROOT_WILDCARD"], transition(fx_nodes["in"], event, state_id,
+                                                   "FLAG_IS_LOCAL_WILDCARD|FLAG_DISABLE_CONDITION")))
     x.append("</patch>")
     return "\n".join(x) + "\n", N.n, bind_extra
 

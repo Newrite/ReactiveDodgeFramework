@@ -11,7 +11,8 @@ namespace rdf::game
 	struct GraphNames
 	{
 		// events sent to the graph
-		std::string start{ "RDF_DodgeStart" };
+		std::string start{ "RDF_DodgeStart" };    // root wildcard into dodge state A
+		std::string startB{ "RDF_DodgeStartB" };  // root wildcard into dodge state B
 		std::string chain{ "RDF_DodgeChain" };
 		std::string exit{ "RDF_DodgeExit" };
 		// events reported by the graph

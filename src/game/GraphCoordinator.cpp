@@ -12,7 +12,7 @@ namespace rdf::game::graph
 	{
 		struct Names
 		{
-			RE::BSFixedString start, chain, exit, entered, left, clipEnd, clip, speed, isDodging;
+			RE::BSFixedString start, startB, chain, exit, entered, left, clipEnd, clip, speed, isDodging;
 			std::vector<RE::BSFixedString> windowOpen, windowClose;
 		};
 		Names g_names;
@@ -87,6 +87,7 @@ namespace rdf::game::graph
 	{
 		const auto& g = Settings::Get().graph;
 		g_names.start = g.start;
+		g_names.startB = g.startB;
 		g_names.chain = g.chain;
 		g_names.exit = g.exit;
 		g_names.entered = g.entered;
@@ -140,11 +141,15 @@ namespace rdf::game::graph
 		g_clipWindows = 0;
 	}
 
-	bool SendStart(RE::PlayerCharacter* player, bool chain, int clip, float animSpeed)
+	bool SendStart(RE::PlayerCharacter* player, DodgeEntry entry, int clip, float animSpeed)
 	{
 		player->SetGraphVariableInt(g_names.clip, clip);
 		player->SetGraphVariableFloat(g_names.speed, animSpeed);
-		return player->NotifyAnimationGraph(chain ? g_names.chain : g_names.start);
+		switch (entry) {
+		case DodgeEntry::Chain: return player->NotifyAnimationGraph(g_names.chain);
+		case DodgeEntry::StartB: return player->NotifyAnimationGraph(g_names.startB);
+		default: return player->NotifyAnimationGraph(g_names.start);
+		}
 	}
 
 	void SendExit(RE::PlayerCharacter* player)

@@ -106,3 +106,9 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   with the clip's zero end motion -> ~13 frames planted. Then locomotion `Speed` restarts at 0 and ramps to 292 in
   ~0.17 s. Fix 1: an exit we/clip-end started keeps driving the hand-over through the blend. The ramp is logged
   (graph Speed vs process currentMovementSpeed / pathingCurrentMovementSpeed) before deciding what to seed.
+* "Press -> twitch, no dodge" (rare since the start): a dodge pressed during the previous dodge's 0.25 s out-blend sent
+  RDF_DodgeStart into RDF_Dodge_A, the state being left. Havok reported Entered, the dying blend kept the actor
+  animation-driven for ~0.28 s (plugin moved it), then the graph settled in Default_State: the clip never played.
+  Fix: a second root wildcard `RDF_DodgeStartB` -> RDF_Dodge_B; the plugin alternates A/B for every new dodge, and a
+  chain decided after the graph already left the dodge states enters as a start into the other state (4 chains were
+  refused for that reason in the same log). validate_rdf: 90/90.

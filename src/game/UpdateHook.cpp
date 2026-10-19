@@ -41,6 +41,7 @@ namespace rdf::game::update
 			void       DrainInput(const FrameInput& frame);
 			void       HandleGraphEvents(RE::PlayerCharacter* player);
 			void       Execute(RE::PlayerCharacter* player, const Decision& d);
+			graph::DodgeEntry EntryFor(bool chain) const;
 			void       TryStart(RE::PlayerCharacter* player, const Decision& d);
 			void       CancelInto(RE::PlayerCharacter* player, const Decision& d);
 			void       RetryDeferred(RE::PlayerCharacter* player);
@@ -68,7 +69,8 @@ namespace rdf::game::update
 			RE::NiAVObject* last3D_{ nullptr };
 			float           charged_{ 0.0f };
 			RejectReason    lastReject_{ RejectReason::None };
-			int             tailFrames_{ 0 };  // dev trace keeps running this many ticks after a dodge
+			int             tailFrames_{ 0 };
+			bool            inStateB_{ true };  // dodge state used last; the first dodge goes to A  // dev trace keeps running this many ticks after a dodge
 
 			// measured motion (previous frame's displacement, seen at the start of this tick)
 			bool  havePos_{ false };
@@ -363,17 +365,30 @@ namespace rdf::game::update
 		}
 	}
 
+	// A chain only works while the graph is in a dodge state; after it has left (a hand-over in
+	// progress) the chained dodge enters like a new one. A new dodge always targets the state not
+	// used last, which may still be blending out.
+	graph::DodgeEntry Controller::EntryFor(bool chain) const
+	{
+		if (chain && graph::Depth() > 0) {
+			return graph::DodgeEntry::Chain;
+		}
+		return inStateB_ ? graph::DodgeEntry::StartA : graph::DodgeEntry::StartB;
+	}
+
 	void Controller::TryStart(RE::PlayerCharacter* player, const Decision& d)
 	{
 		const auto& settings = Settings::Get();
 		const bool  chain = d.kind == DecisionKind::ChainDodge;
 		const float angle = core_->PreviewStartAngleDeg(d);
 		const int   clip = ClipIndex(angle, core_->PreviewKeepsFacing(d));
-		if (!graph::SendStart(player, chain, clip, settings.core.timing.PlaybackSpeed(settings.clipLength, settings.animSpeed))) {
+		const auto  entry = EntryFor(chain);
+		if (!graph::SendStart(player, entry, clip, settings.core.timing.PlaybackSpeed(settings.clipLength, settings.animSpeed))) {
 			DevLog("graph refused {} (clip {}); press stays buffered", chain ? "chain" : "start", clip);
 			core_->Apply(d, false);
 			return;
 		}
+		inStateB_ = entry == graph::DodgeEntry::Chain ? !inStateB_ : entry == graph::DodgeEntry::StartB;
 		effects::ChargeCost(player, settings.cost);
 		charged_ = settings.cost;
 		core_->Apply(d, true);
