@@ -1,10 +1,11 @@
 # Verification report (2026-10-19)
 
-Three levels, kept separate. **Nothing below level 3 has been run inside Skyrim.**
+Three levels, kept separate. Level 3 lists what was actually run in Skyrim (user play-tests + dev-log traces) and
+what is still waiting.
 
 ## 1. Automated (passing)
 
-`build\windows\x64\releasedbg\rdf_tests.exe` — 46 cases, 0 failures. Deterministic traces at
+`build\windows\x64\releasedbg\rdf_tests.exe` — 51 cases, 0 failures. Deterministic traces at
 30/60/64/144/240 fps and with 0.25 s frame spikes:
 
 * input buffer: press before a window opens executes when it opens; presses at window start/end;
@@ -32,31 +33,24 @@ Three levels, kept separate. **Nothing below level 3 has been run inside Skyrim.
   Pandora log failures. A mistyped-name control patch fails 5 checks.
 * Build: no warnings from project code (only CommonLib's bundled minhook C4701).
 
-## 3. In game — NOT YET RUN (needs the user)
+## 3. In game (user play-tests with `bDevLog=1`, traces in `ReactiveDodgeFramework.log`)
 
-Enable the mod, tick `rdf` in Pandora, set `bDevLog=1`, then check `ReactiveDodgeFramework.log`
-(`Documents\My Games\Skyrim Special Edition\SKSE`). First confirm the four open assumptions:
+### Verified
+| What | Evidence |
+|---|---|
+| Hooks install; root-motion hook owns displacement | `motion hook installed`; overrides grow every dodge frame |
+| Local axes and yaw sign | requested vs measured displacement equal per frame; heading error 0.3-7 deg |
+| Hook thread | several job threads (snapshot design holds) |
+| 8 directions, steering, diagonals, TDM 360 / Vanilla Style | user + start-angle/clip statistics |
+| Backward dodges in 360 mode keep facing | user |
+| Chaining, mashing, buffer | 45 chains in one run; 40/47 unused presses were mashing, 7 were > 0.2 s before the chain window |
+| Clip annotations reach the plugin | `RDF_Windows` on 72/72 dodges |
+| Hand-over into running without planted frames | trace: motion driven through the out-blend |
+| No dropped dodges | 0/72 entered-and-left after the clip-end fix (was: Entered -> ClipEnd -> Left in one ms) |
 
-| # | Check | How to read it |
-|---|---|---|
-| A | motion hook installed and called | log `motion hook installed`; trace `hook calls/overrides` grow during a dodge |
-| B | local axes (x right, y forward) and yaw sign | trace `requested` ≈ `actual`, `err` near 0°; if the character turns the wrong way set `iYawSign=-1` |
-| C | `bAnimationDriven` stays on through the dodge | `overrides` keep growing until the dodge ends |
-| D | hook thread | `thread=first/last` (informational; the snapshot is thread-safe either way) |
-
-Then the scenario list:
-
-* Directional: dodge in 8 directions; change input mid-dodge (right → forward-right should curve);
-  rapid changes; release input mid-dodge (keeps heading); analog half-tilt (weaker steering); rotate
-  camera during dodge; with TDM lock-on (sidestep clips, keeps facing target).
-* Transitions: idle→dodge→idle; run→dodge→run (no stop at the end while input held);
-  dodge→attack at ≥0.30 s; attack follow-through→dodge; dodge→dodge (3 chained, then refused);
-  dodge→block; hit/stagger during dodge.
-* Buffering: press dodge during an attack swing → dodge fires at follow-through; press attack early in a
-  dodge → attack fires at 0.30 s; mash dodge → exactly one dodge (+ chain if pressed in the chain window);
-  a press 0.3 s before eligibility is dropped.
-* Physics: dodge into a wall (stops, no jitter), up/down a slope and stairs, off a ledge (falls), near NPCs.
-* Lifecycle: save/load mid-dodge, cell change through a door, death mid-dodge, open a menu mid-dodge,
-  sheathe/draw during a dodge, first person (refused).
-* Visual: blend quality of every transition — this needs real dodge animations; the TUDM fixture clips
-  have their own baked direction poses, so FaceMotion (forward roll + turning) is the representative mode.
+### Waiting
+* Post-dodge speed floor (`carry` / `floorHits` in the trace).
+* Projectile i-frames (`i-frames: projectile ... passed through` lines).
+* Dodge -> attack / power attack / block, attack -> dodge, MCO-style windows.
+* Gamepad, slopes/stairs/walls, save/load and cell change mid-dodge, death, menus.
+* Visual blend quality with a proper animation set (fixtures are TUDM clips).

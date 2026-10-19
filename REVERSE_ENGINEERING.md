@@ -36,6 +36,39 @@ Details (O unless marked):
 Implication used by the design: owning this call = owning the actor's animation-driven
 displacement, with the character controller still doing collision (I).
 
+## Controls-driven movement and the post-dodge speed
+
+| What | ID | Address | Conf. |
+|---|---|---|---|
+| `Character::ApplyMovementDeltaAndFeedback` (player movement delta, feeds the speed graph vars) | — | `0x1405D87F0` | O |
+| call of `MovementControllerAI::BuildAggregateStatePayload` (MovementControllerNPC vfunc 7, `call [rax+38h]`) | — | `0x1405D8A49` | O |
+| payload layout: direction NiPoint3 at +0x00, **speed float at +0x0C** (read at `0x1405D8AC0`), vector at +0x10 | — | — | O |
+| `AIProcess::SetCurrentMovementSpeed` (middleHigh +0x2A8) | 38841 | `0x14067CF60` | O |
+| `PlayerControls` speed update: target from input, only deceleration limited | — | `0x1407072D0` | O |
+
+In controls-driven mode the player moves by direction * speed * dt from that payload; after animation-driven mode
+ends the speed restarts low and climbs back (traced 317 -> 127 -> 292 u/s over ~8 frames). RDF floors it right after
+a dodge (vfunc 7 hook).
+
+## Projectiles
+
+`Projectile::Func190` (`0x1407521F0`, vfunc 190) takes `(Projectile*, hkpAllCdPointCollector*)` and turns contacts
+into hits (O; CommonLib's `HandleHits(hkpCollidable*)` name has the wrong argument). Shared by ArrowProjectile
+(vtable ID 263776), MissileProjectile (263942) and three other projectile vtables.
+
+## Behavior graph behaviour observed in game
+
+* A state's exit notify fires when its out-transition **starts**; the out-blend keeps the state's modifiers (and so
+  `bAnimationDriven`) active until it ends (O, traces).
+* A wildcard into the state that is currently blending out is entered and then lost: the actor stays
+  animation-driven by the dying blend and the clip never plays (O). RDF alternates two identical states.
+* A clip played for the first time after a load is still streaming: zero length, so a relative-to-end clip trigger
+  fires on entry (O). RDF has no clip-end exit.
+* Clip annotations reach `BSAnimationGraphEvent` sinks only when their text is a registered graph event (O).
+* TDM: `GetDirectionalMovementState()` is true in Vanilla Style too; `GetDirectionalMovementMode()` distinguishes;
+  `GetActualMovementInput()` holds only the last input event's axis; in 360 mode TDM rewrites
+  `PlayerControls::moveInputVec` to character-forward (O, traces).
+
 ## Hook sites used by other installed mods (from their sources, not yet re-checked here)
 
 | Mod | Site | Purpose |

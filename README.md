@@ -20,7 +20,7 @@ player-controlled movement action instead of an animation the player waits out:
    `Pandora` mod.
 4. Optionally set `bDevLog=1` in `SKSE\Plugins\ReactiveDodgeFramework.ini` for the first sessions.
 
-Dodge key: Left Alt / right-stick click (ini `[Input]`). With `bSuppressLegacyDodge=1` (default) the
+Dodge key: V / right-stick click (ini `[Input]`). With `bSuppressLegacyDodge=1` (default) the
 plugin sets STB's legacy dodge globals `UDDodgeKey`/`UDSprintDodge` to 0 on load so only RDF reacts.
 This value is stored in saves; to go back, disable RDF and run `set UDDodgeKey to 56` in the console.
 
@@ -35,10 +35,11 @@ replaces them. RDF ignores clip root motion — direction and distance come from
 
 ```
 xmake build -y                                   # DLL + tests (CommonLib: S:/Programming/CommonLibSSE-NG)
-build\windows\x64\releasedbg\rdf_tests.exe       # 46 deterministic core tests
+build\windows\x64\releasedbg\rdf_tests.exe       # 51 deterministic core tests
 python tools\gen_rdf_patch.py                    # regenerate the Pandora patch
 python tools\stage_pandora.py --label rdf --rdf behavior/Pandora_Engine/mod/rdf
-python tools\validate_rdf.py                     # 80 checks on the generated graphs
+python tools\validate_rdf.py                     # 87 checks on the generated graphs
+python toolsnnotate_clips.py                   # write RDF_* window annotations into the clips
 ```
 
 ## Documents
@@ -49,6 +50,6 @@ python tools\validate_rdf.py                     # 80 checks on the generated gr
 | `REVERSE_ENGINEERING.md` | engine addresses/IDs with evidence and confidence |
 | `BEHAVIOR_INTEGRATION.md` | what the Pandora patch adds, validation, conflicts |
 | `ANIMATION_CONTRACT.md` | clip files, index order, events/variables, timing |
-| `TESTING.md` | verification report: automated / static / in-game (pending) |
+| `TESTING.md` | verification report: automated / static / in-game (what was verified, what is waiting) |
 | `STATUS.md`, `JOURNAL.md` | current state and decision log |
 | `docs/research/` | modlist audit, public implementations + Elden Ring notes, behavior pipeline |
