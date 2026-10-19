@@ -35,7 +35,16 @@ FILES = [("Behaviors", "0_Master.hkx"), ("Behaviors", "mt_behavior.hkx"), ("Beha
          ("Behaviors", "1hm_locomotion.hkx"), ("Behaviors", "blockbehavior.hkx"), ("Behaviors", "bashbehavior.hkx"),
          ("Behaviors", "sprintbehavior.hkx"), ("Behaviors", "staggerbehavior.hkx"), ("Behaviors", "idlebehavior.hkx"),
          ("Behaviors", "weapequip.hkx"), ("Behaviors", "magicbehavior.hkx"), ("Behaviors", "shout_behavior.hkx"),
-         ("Characters", "DefaultMale.hkx"), ("Characters Female", "DefaultFemale.hkx")]
+         ("Characters", "DefaultMale.hkx"), ("Characters Female", "DefaultFemale.hkx"),
+         ("_1stperson\\Behaviors", "0_Master.hkx"), ("_1stperson\\Behaviors", "mt_behavior.hkx"),
+         ("_1stperson\\Behaviors", "1hm_behavior.hkx"), ("_1stperson\\Behaviors", "magicbehavior.hkx"),
+         ("_1stperson\\Characters", "FirstPerson.hkx")]
+
+
+def xstem(sub, f):
+    """xml file stem of a dumped file (first-person files are prefixed fp_)."""
+    stem = os.path.splitext(f)[0]
+    return "fp_" + stem if sub.startswith("_1stperson") else stem
 
 results = []
 
@@ -50,7 +59,7 @@ def to_xml(label):
     os.makedirs(d, exist_ok=True)
     for sub, f in FILES:
         src = os.path.join(OUT, label, CHAR, sub, f)
-        dst = os.path.join(d, os.path.splitext(f)[0] + ".xml")
+        dst = os.path.join(d, xstem(sub, f) + ".xml")
         r = subprocess.run([HKXC, "convert", "-i", src, "-o", dst, "-v", "xml"], capture_output=True, text=True)
         if r.returncode or not os.path.exists(dst):
             print("hkxc failed for", src, r.stdout[-200:], r.stderr[-200:])
@@ -277,6 +286,157 @@ def check_arm_layer(g, male, female, masks_real, sid, outer):
     check(tag + " no binding with index -1 anywhere below the state (%d nodes)" % len(reachable(g, outer.name)), not bad, str(bad[:3]))
 
 
+def check_fp(rdf_x, base_x):
+    """P: first-person graph (firstperson~0_master)."""
+    g = H.Graph(os.path.join(rdf_x, "fp_0_Master.xml"))
+    gb = H.Graph(os.path.join(base_x, "fp_0_Master.xml"))
+    fpc = H.Graph(os.path.join(rdf_x, "fp_FirstPerson.xml"))
+    fpb = H.Graph(os.path.join(base_x, "fp_FirstPerson.xml"))
+    tag = "P  "
+    for e in G.EVENTS:
+        check(tag + "1P event %s present once" % e, e in g.ev_index and len(g.ev_index[e]) == 1 and e not in gb.ev_index)
+    for v, typ, init in G.VARIABLES:
+        check(tag + "1P variable %s present once" % v, v in g.var_index and len(g.var_index[v]) == 1 and v not in gb.var_index)
+    check(tag + "1P eventNames/eventInfos grew by %d" % len(G.EVENTS), len(g.event_names) == len(gb.event_names) + len(G.EVENTS) and g.n_event_infos == len(g.event_names))
+    check(tag + "1P variableNames/variableInfos/wordVariableValues grew by %d" % len(G.VARIABLES),
+          len(g.variable_names) == len(gb.variable_names) + len(G.VARIABLES) and g.n_var_infos == len(g.variable_names) and g.n_word == len(g.variable_names))
+    vv = g.by_class["hkbVariableValueSet"][0].params["wordVariableValues"].findall("hkobject")
+    infos = g.by_class["hkbBehaviorGraphData"][0].params["variableInfos"].findall("hkobject")
+    ok = True
+    for v, typ, init in G.VARIABLES:
+        i = g.var_index[v][0]
+        want = G.f2i(init) if typ == "VARIABLE_TYPE_REAL" else int(init)
+        ok &= int(vv[i].find("hkparam[@name='value']").text) == want and infos[i].find("hkparam[@name='type']").text == typ
+    check(tag + "1P variable initial values and types", ok)
+    for v in ("bAnimationDriven", "iRightHandType", "iLeftHandType", "currentDefaultState", "bAttached"):
+        check(tag + "1P graph has vanilla variable %s (not created by RDF)" % v, v in g.var_index and v in gb.var_index)
+    root = [x for x in H.state_machines(g) if x.text("name") == "RootBehaviorGraph"][0]
+    rootb = [x for x in H.state_machines(gb) if x.text("name") == "RootBehaviorGraph"][0]
+    states = {g.objs[x].intval("stateId"): g.objs[x] for x in H.sm_states(g, root)}
+    check(tag + "1P root RootBehaviorGraph: states %d -> %d (+2)" % (len(H.sm_states(gb, rootb)), len(states)), len(states) == len(H.sm_states(gb, rootb)) + 2)
+    have = {a.lower() for a in fpc.animation_names}
+    for nm, sid in (G.STATE_A, G.STATE_B):
+        so = states.get(sid)
+        check(tag + "1P state %d exists" % sid, so is not None)
+        if so is None:
+            continue
+        ent = [e.split("(")[0] for e in H.notify_events(g, so.text("enterNotifyEvents"))]
+        ext = [e.split("(")[0] for e in H.notify_events(g, so.text("exitNotifyEvents"))]
+        check(tag + "1P %d name/enable/enter/exit" % sid, so.text("name") == nm and so.text("enable") == "true" and ent == ["RDF_DodgeEntered"] and ext == ["RDF_DodgeLeft"])
+        mg = g.objs[so.text("generator")]
+        mod = g.objs[mg.text("modifier")]
+        drawn = g.objs[mg.text("generator")]
+        check(tag + "1P %d generator = ModifierGenerator{BSIsActiveModifier(bAnimationDriven, RDF_IsDodging), state-machine chooser}" % sid,
+              mg.cls == "hkbModifierGenerator" and mod.cls == "BSIsActiveModifier" and drawn.cls == "hkbStateMachine"
+              and [(m, v) for m, v, _t in bind_list(g, mod)] == [("bIsActive0", "bAnimationDriven"), ("bIsActive1", "RDF_IsDodging")])
+        # outer chooser: startStateId <- currentDefaultState, states = Default_Behavior ids; sheathed ids -> MT_Idle, drawn ids -> stance chooser
+        ids = [g.objs[x].intval("stateId") for x in drawn.text("states").split()]
+        kinds, stance_ptrs, bad_d = {}, set(), []
+        for x in drawn.text("states").split():
+            st = g.objs[x]
+            gen = g.objs[st.text("generator")]
+            if gen.cls == "hkbClipGenerator":
+                kinds[st.intval("stateId")] = "MT"
+                if gen.text("animationName") != G.STANCE_CLIP_FILES["MT"] or gen.text("mode") != "MODE_LOOPING":
+                    bad_d.append(gen.text("animationName"))
+            else:
+                kinds[st.intval("stateId")] = "STANCE"
+                stance_ptrs.add(gen.name)
+        check(tag + "1P %d drawn chooser: startStateId <- currentDefaultState, stateIds %s, sheathed ids -> looping MT_Idle, drawn ids -> ONE stance chooser" % (sid, sorted(G.FP_DRAWN)),
+              bind_list(g, drawn) == [("startStateId", G.FP_DRAWN_VAR, "BINDING_TYPE_VARIABLE")] and ids == sorted(G.FP_DRAWN)
+              and kinds == G.FP_DRAWN and not bad_d and len(stance_ptrs) == 1 and drawn.text("wildcardTransitions") == "null"
+              and drawn.text("startStateMode") == "START_STATE_MODE_DEFAULT", str((bind_list(g, drawn), ids, kinds, bad_d)))
+        choose = g.objs[next(iter(stance_ptrs))] if stance_ptrs else drawn
+        mt_file = G.STANCE_CLIP_FILES["MT"]
+        check(tag + "1P %d MT_Idle is in FirstPerson animationNames" % sid, mt_file.lower() in have)
+
+        def sm_entries(sm, var):
+            assert sm.cls == "hkbStateMachine", sm.cls
+            assert bind_list(g, sm) == [("startStateId", var, "BINDING_TYPE_VARIABLE")], bind_list(g, sm)
+            assert sm.text("startStateMode") == "START_STATE_MODE_DEFAULT" and sm.text("selfTransitionMode") == "SELF_TRANSITION_MODE_NO_TRANSITION"
+            assert sm.text("wildcardTransitions") == "null"
+            out = []
+            for i, sp in enumerate(sm.text("states").split()):
+                st = g.objs[sp]
+                assert st.intval("stateId") == i and st.text("transitions") == "null" and st.text("enterNotifyEvents") == "null"
+                gen = g.objs[st.text("generator")]
+                if gen.cls == "hkbClipGenerator":
+                    assert gen.text("mode") == "MODE_LOOPING" and gen.text("triggers") == "null"
+                    out.append(gen.text("animationName"))
+                else:
+                    out.append(("sm", [x for x in sm_entries(gen, "iLeftHandType")]))
+            return out
+        try:
+            got = sm_entries(choose, "iRightHandType")
+            exp = []
+            for key in G.FP_STANCE_RIGHT:
+                if key in G.FP_NESTED:
+                    exp.append(("sm", [G.STANCE_CLIP_FILES[k] for k in G.FP_NESTED[key]]))
+                else:
+                    exp.append(G.STANCE_CLIP_FILES[key])
+            check(tag + "1P %d stance chooser: startStateId<-iRightHandType, 13 states = hand types, nested iLeftHandType machines, looping clips, table matches" % sid, got == exp and len(got) == 13)
+            files = {x for x in got if isinstance(x, str)} | {f for x in got if isinstance(x, tuple) for f in x[1]}
+            miss = sorted(f for f in files if f.lower() not in have)
+            check(tag + "1P %d all %d stance clips are in FirstPerson animationNames (%d names)" % (sid, len(files), len(fpc.animation_names)), not miss, str(miss))
+        except AssertionError as e:
+            check(tag + "1P %d stance chooser structure" % sid, False, str(e))
+        bad = []
+        for ptr in reachable(g, so.name):
+            o = g.objs[ptr]
+            if o.cls == "hkbVariableBindingSet":
+                for b in o.params["bindings"].findall("hkobject"):
+                    if int(b.find("hkparam[@name='variableIndex']").text) < 0:
+                        bad.append(ptr)
+        check(tag + "1P %d no binding with index -1 below the state (%d nodes)" % (sid, len(reachable(g, so.name))), not bad)
+
+    def fxdesc(ptr):
+        o = g.objs[ptr]
+        return (o.text("name"), round(float(o.text("duration")), 6), o.text("flags"), o.text("selfTransitionMode"))
+    exp_in, exp_chain, exp_out = G.FX_IN, G.FX_CHAIN, G.FX_OUT
+    wl = H.trans_array(g, root.text("wildcardTransitions"))
+    n_base_wild = len(H.trans_array(gb, rootb.text("wildcardTransitions")))
+    for event, (_, state_id) in G.START_EVENTS:
+        mine = [d for d in wl if g.event_name(int(d["eventId"])) == event]
+        check(tag + "1P wildcard %s -> %d LOCAL_WILDCARD RDF_DodgeInBlend" % (event, state_id),
+              len(mine) == 1 and mine[0]["toStateId"] == str(state_id) and "FLAG_IS_LOCAL_WILDCARD" in mine[0]["flags"] and fxdesc(mine[0]["transition"]) == exp_in)
+    check(tag + "1P root wildcards %d + %d" % (n_base_wild, len(G.START_EVENTS)), len(wl) == n_base_wild + len(G.START_EVENTS))
+    n_exit = len(G.EXIT_EVENTS) * (len(G.V_FP["RETURN_CONDS"]) if G.RETURN_MODE == "vanilla" else 1)
+    for nm, sid, other in ((G.STATE_A[0], 9701, 9702), (G.STATE_B[0], 9702, 9701)):
+        ts = H.trans_array(g, states[sid].text("transitions"))
+        check(tag + "1P %d transition count 1 chain + %d exit + 1 stagger" % (sid, n_exit), len(ts) == 1 + n_exit + 1, str(len(ts)))
+        ch = [d for d in ts if g.event_name(int(d["eventId"])) == "RDF_DodgeChain"]
+        check(tag + "1P %d RDF_DodgeChain -> %d RDF_DodgeChainBlend" % (sid, other), len(ch) == 1 and ch[0]["toStateId"] == str(other) and fxdesc(ch[0]["transition"]) == exp_chain)
+        for e in G.EXIT_EVENTS:
+            xs = [d for d in ts if g.event_name(int(d["eventId"])) == e]
+            check(tag + "1P %d %s -> Default_State(14) x%d RDF_DodgeOutBlend" % (sid, e, len(xs)), len(xs) == 4 and all(d["toStateId"] == "14" and fxdesc(d["transition"]) == exp_out for d in xs))
+        xs = [d for d in ts if g.event_name(int(d["eventId"])) == "RDF_DodgeExit"]
+        conds = [g.objs[d["condition"]].text("expression") for d in xs]
+        check(tag + "1P %d return conditions = the 4 vanilla 1P Stagger_State expressions" % sid, conds == [c[3] for c in G.V_FP["RETURN_CONDS"]], str(conds))
+        sp = [d for d in ts if g.event_name(int(d["eventId"])) == "StaggerPlayer"]
+        check(tag + "1P %d StaggerPlayer -> PlayerStagger_State(48), vanilla effect" % sid, len(sp) == 1 and sp[0]["toStateId"] == "48" and g.objs[sp[0]["transition"]].text("name") == "FastBlendResetTransition")
+        check(tag + "1P %d no eventId -1 / unresolved effect" % sid, all(int(d["eventId"]) >= 0 and d["transition"] in g.objs for d in ts))
+    wl_names = {g.event_name(int(d["eventId"])) for d in wl}
+    for e in ("staggerStart", "WardBreak", "Ragdoll", "JumpStandingStart", "JumpDirectionalStart", "SwimStart", "bleedOutStart", "JumpFall"):
+        check(tag + "1P vanilla root wildcard %s still present" % e, e in wl_names)
+    # nothing lost
+    sb, sg = sm_stats(gb), sm_stats(g)
+    bad = [(k, v, sg.get(k)) for k, v in sb.items() if k != ("RootBehaviorGraph", "hkbStateMachine") and sg.get(k) != v]
+    check(tag + "1P every other state machine has identical #states/#transitions (%d machines)" % (len(sb) - 1), not bad, str(bad[:2]))
+    kb, kg = sb[("RootBehaviorGraph", "hkbStateMachine")][0], sg[("RootBehaviorGraph", "hkbStateMachine")][0]
+    check(tag + "1P RootBehaviorGraph transitions %d -> %d (+%d)" % (kb[1], kg[1], len(G.START_EVENTS) + 2 * (1 + n_exit + 1)), kg[0] == kb[0] + 2 and kg[1] == kb[1] + len(G.START_EVENTS) + 2 * (1 + n_exit + 1))
+    cb, _ = canon(gb)
+    cg, _ = canon(g)
+    lost = sorted(k[0] for k in (cb - cg).elements())
+    n_new = G.gen_master(set(), fp=True)[1]
+    check(tag + "1P objects lost vs baseline = only the 5 modified nodes", lost == sorted(["hkbBehaviorGraphData", "hkbBehaviorGraphStringData", "hkbVariableValueSet", "hkbStateMachine", "hkbStateMachineTransitionInfoArray"]), str(lost))
+    check(tag + "1P objects added = %d new + 5 modified" % n_new, sum((cg - cb).values()) == n_new + 5, str(sum((cg - cb).values())))
+    r, rb = H.Report(), H.Report()
+    H.check(g, r)
+    H.check(gb, rb)
+    check(tag + "1P hkxcheck 0_Master: no new errors/warnings vs baseline", len(r.errors) == len(rb.errors) and len(r.warns) == len(rb.warns), "%d/%d errors" % (len(r.errors), len(rb.errors)))
+    check(tag + "1P FirstPerson character file unchanged (animationNames %d)" % len(fpc.animation_names), fpc.animation_names == fpb.animation_names)
+
+
 def main():
     base_x, rdf_x = to_xml("baseline"), to_xml("rdf")
     # ---- A
@@ -292,8 +452,9 @@ def main():
     for sub, f in FILES:
         a, b = os.path.join(OUT, "baseline", CHAR, sub, f), os.path.join(OUT, "rdf", CHAR, sub, f)
         if md5(a) != md5(b):
-            diffs.append(f)
-    check("B  hkx changed only in 0_Master/DefaultMale/DefaultFemale", sorted(diffs) == ["0_Master.hkx", "DefaultFemale.hkx", "DefaultMale.hkx"], str(diffs))
+            diffs.append(xstem(sub, f))
+    check("B  hkx changed only in 0_Master/DefaultMale/DefaultFemale and first-person 0_Master",
+          sorted(diffs) == ["0_Master", "DefaultFemale", "DefaultMale", "fp_0_Master"], str(diffs))
 
     g = H.Graph(os.path.join(rdf_x, "0_Master.xml"))
     gb = H.Graph(os.path.join(base_x, "0_Master.xml"))
@@ -404,8 +565,8 @@ def main():
     base_m = H.Graph(os.path.join(base_x, "DefaultMale.xml"))
     check("F  DefaultMale grew by exactly 16", len(male.animation_names) == len(base_m.animation_names) + 16, "%d -> %d" % (len(base_m.animation_names), len(male.animation_names)))
     for sub, f in FILES:
-        stem = os.path.splitext(f)[0]
-        if stem.startswith("Default"):
+        stem = xstem(sub, f)
+        if stem.startswith("Default") or stem.endswith("FirstPerson"):
             continue
         gg = H.Graph(os.path.join(rdf_x, stem + ".xml"))
         bgg = H.Graph(os.path.join(base_x, stem + ".xml"))
@@ -443,6 +604,7 @@ def main():
     check("G  objects added = %d new + 5 modified" % n_new, sum(added.values()) == n_new + 5, str(sum(added.values())))
     sm_changed = [k for k in lost if k[0] == "hkbStateMachine"]
     check("G  the lost hkbStateMachine is RootBehaviorGraph", len(sm_changed) == 1 and dict(sm_changed[0][1]).get("name") == "RootBehaviorGraph")
+    check_fp(rdf_x, base_x)
     print()
     print("%d/%d checks passed" % (sum(results), len(results)))
     return 0 if all(results) else 1

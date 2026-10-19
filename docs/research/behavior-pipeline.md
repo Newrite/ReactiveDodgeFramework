@@ -508,3 +508,10 @@ python tools\hkxcheck.py X.xml --tree "#5085" --depth 8       # generator subtre
 python tools\hkxcheck.py X.xml --character DefaultMale.xml --require-event RDF_Dodge --require-var RDF_Id
 python tools\test_hkxcheck.py                                 # self-test (synthetic XML, mutation cases)
 ```
+
+## 9. First-person graph (added for RDF)
+See BEHAVIOR_INTEGRATION.md section 6.1 for the map: project `firstperson`, patch file `firstperson~0_master.xml`, vanilla Nemesis ids
+(`#0095/#0096/#0097` tables, `RootBehaviorGraph #0167`, wildcard `#0168`), same stateIds as 3P, 901-name FirstPerson character that already
+holds every weapon-idle clip, and TUDM's 1P dodge states (25/26 in the 1P 1hm/mt/magic graphs). `tools/dump_pandora_out.py` does not dump
+the 1P files; `tools/validate_rdf.py` does (`fp_*.xml` under `_work/pandora_test_out/<label>_xml`), and the vanilla 1P dump used for the ids is
+`_work/fp_nem_xml` (hkxcmd on `cached_behaviors\_1stperson`).

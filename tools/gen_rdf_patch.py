@@ -88,7 +88,7 @@ STANCE_CLIP_FILES = {k: "\\".join(v.split("/")) for k, v in {
     "2HM": "Animations/2HM_Idle.HKX", "2HW": "Animations/2HW_Idle.HKX", "BOW": "Animations/Bow_IdleHeld.hkx",
     "STAFFR": "Animations/StaffRight_Idle.hkx", "STAFFL": "Animations/Staff_Idle.hkx",
     "MRH": "Animations/MRh_Idle.hkx", "MLH": "Animations/MLh_Idle.hkx", "TORCH": "Animations/Tor_1HMPose.hkx",
-    "XBOW": "Animations/DLC01/CrossBow_IdleHeld.hkx"}.items()}
+    "XBOW": "Animations/DLC01/CrossBow_IdleHeld.hkx", "MT": "Animations/MT_Idle.hkx"}.items()}
 # hand-type value -> stance clip key. Values from how vanilla compares them (1hm_locomotion Melee_Direction_Behavior,
 # 1hm_behavior Weap_Idle_Behavior, magicbehavior MagicReady_*): 0 none/H2H, 1 sword, 2 dagger, 3 axe, 4 mace, 5 2H sword,
 # 6 2H axe/hammer, 7 bow, 8 staff, 9 spell, 10 shield, 11 torch, 12 crossbow.
@@ -109,6 +109,37 @@ V = dict(
                   (True, 2, "#0353", "(currentDefaultState == 11) && (bAttached == 1)"),
                   (True, 0, "#0350", "(currentDefaultState >= 12) && (bAttached == 1)")],
 )
+
+
+# ------------------------------------------------------------------------- first person (firstperson~0_master)
+# The 1P graph (project `firstperson`, Pandora file name `firstperson~0_master`) mirrors the 3P 0_master: same event/variable
+# tables (1217 events / 230 variables), RootBehaviorGraph with the same stateIds (14 Default_State, 48 PlayerStagger_State,
+# 7 Stagger_State), but its own Nemesis ids. 1P renders ARMS ONLY, so there is no roll clip and no bone mask: a state plays
+# the 1P weapon-ready idle (full 1P pose = both arms) of the current hand types, looping.
+V_FP = dict(
+    STRING="#0095", VALUES="#0096", DATA="#0097",
+    ROOT_SM="#0167", ROOT_WILDCARD="#0168",
+    FX_STAGGER_PLAYER="#0245",                 # 'FastBlendResetTransition' on the 1P StaggerPlayer transitions
+    RETURN_CONDS=[(False, 0, "#0181", "(currentDefaultState < 10) || (bAttached == 0)"),
+                  (True, 1, "#0180", "(currentDefaultState == 10) && (bAttached == 1)"),
+                  (True, 2, "#0179", "(currentDefaultState == 11) && (bAttached == 1)"),
+                  (True, 0, "#0176", "(currentDefaultState >= 12) && (bAttached == 1)")],
+)
+FP_PATCH_NAME = "firstperson~0_master.xml"
+# Outer 1P chooser: hkbStateMachine startStateId <- currentDefaultState (the vanilla sync variable that holds the stateId of
+# Default_Behavior: 0 MT/sheathed, 1 weapon readied, 2 magic readied, 10/11 equip, 12/13 unequip, 14 kill move, 20 paired).
+# Weapon pose only while a weapon/spell is out; sheathed (or being sheathed) -> neutral 1P idle `MT_Idle`.
+FP_DRAWN = {0: "MT", 1: "STANCE", 2: "STANCE", 10: "STANCE", 11: "STANCE", 12: "MT", 13: "MT", 14: "MT", 20: "MT"}
+FP_DRAWN_VAR = "currentDefaultState"
+# 1P stance chooser: hkbStateMachine startStateId <- iRightHandType, stateId = hand-type value 0..12. Entries "L0"/"L1" are
+# nested machines on iLeftHandType (vanilla `1HM_1stP_BodyBehavior`/`WeapIdleMSG`: left 1-4 = dual wield pose, 8-11 = 1HM pose).
+# State machines instead of ManualSelectors: the SE selector has no change effect and shows a one-frame pose step when it
+# reactivates on a different child (3P pose trace), a state machine applies the bound start state at activation.
+FP_STANCE_RIGHT = ["L0", "L1", "L1", "L1", "L1", "2HM", "2HW", "BOW", "STAFFR", "MRH", "1HM", "1HM", "XBOW"]
+FP_NESTED = {
+    "L0": ["H2H", "H2H", "H2H", "H2H", "H2H", "H2H", "H2H", "H2H", "H2H", "H2H", "1HM", "H2H", "H2H"],   # right hand empty
+    "L1": ["1HM", "DW", "DW", "DW", "DW", "2HM", "2HW", "BOW", "1HM", "1HM", "1HM", "1HM", "1HM"],       # right 1H weapon
+}
 
 
 # ----------------------------------------------------------------------------------------------- helpers
@@ -302,8 +333,60 @@ def stance_selector(N, out, label, side):
     return selector_node(N, out, label + "_Sel", HAND_VARS[side], entries)
 
 
-def build_state(nm, state_id, other_id, N, fx, bind_extra, masks):
+def chooser_sm(N, out, label, var_name, gens, ids=None):
+    """hkbStateMachine, startStateId <- var_name, one state per generator, stateId = index (no transitions)."""
+    sm, bs = N.new(), N.new()
+    states = []
+    ids = ids if ids is not None else list(range(len(gens)))
+    for i, g_ in zip(ids, gens):
+        st = N.new()
+        out.append(node(st, "hkbStateMachineStateInfo", "0xed7f9d0", "\n".join([
+            p("variableBindingSet", "null"), '<hkparam name="listeners" numelements="0"></hkparam>',
+            p("enterNotifyEvents", "null"), p("exitNotifyEvents", "null"), p("transitions", "null"),
+            p("generator", g_), p("name", "%s_S%d" % (label, i)), p("stateId", i),
+            p("probability", "1.000000"), p("enable", "true")])))
+        states.append(st)
+    out.append(binding_set(bs, [("startStateId", var_name)]))
+    out.append(node(sm, "hkbStateMachine", "0x816c1dcb", "\n".join([
+        p("variableBindingSet", bs), p("userData", "0"), p("name", label),
+        '<hkparam name="eventToSendWhenStateOrTransitionChanges"><hkobject>%s%s</hkobject></hkparam>'
+        % (p("id", "-1"), p("payload", "null")),
+        p("startStateChooser", "null"), p("startStateId", "0"), p("returnToPreviousStateEventId", "-1"),
+        p("randomTransitionEventId", "-1"), p("transitionToNextHigherStateEventId", "-1"),
+        p("transitionToNextLowerStateEventId", "-1"), p("syncVariableIndex", "-1"), p("wrapAroundStateId", "false"),
+        p("maxSimultaneousTransitions", "32"), p("startStateMode", "START_STATE_MODE_DEFAULT"),
+        p("selfTransitionMode", "SELF_TRANSITION_MODE_NO_TRANSITION"),
+        '<hkparam name="states" numelements="%d">%s</hkparam>' % (len(states), " ".join(states)),
+        p("wildcardTransitions", "null")])))
+    return sm
+
+
+def stance_chooser_fp(N, out, label):
+    clips = {}
+
+    def clip(key):
+        if key not in clips:
+            clips[key] = clip_node(N, out, "%s_%s" % (label, key), STANCE_CLIP_FILES[key], "MODE_LOOPING")
+        return clips[key]
+    nested = {}
+    entries = []
+    for key in FP_STANCE_RIGHT:
+        if key in FP_NESTED:
+            if key not in nested:
+                nested[key] = chooser_sm(N, out, "%s_Left_%s" % (label, key), HAND_VARS["L"],
+                                         [clip(k) for k in FP_NESTED[key]])
+            entries.append(nested[key])
+        else:
+            entries.append(clip(key))
+    stance = chooser_sm(N, out, label + "_StanceSM", HAND_VARS["R"], entries)
+    mt = clip("MT")
+    ids = sorted(FP_DRAWN)
+    return chooser_sm(N, out, label + "_DrawnSM", FP_DRAWN_VAR, [stance if FP_DRAWN[i] == "STANCE" else mt for i in ids], ids)
+
+
+def build_state(nm, state_id, other_id, N, fx, bind_extra, masks, v=None, fp=False):
     """returns (state node name, [xml nodes])."""
+    v = v or V
     out = []
     st = N.new()
     enter, exit_, trans, modgen, isact, isact_bs = (N.new() for _ in range(6))
@@ -314,12 +397,12 @@ def build_state(nm, state_id, other_id, N, fx, bind_extra, masks):
     ts.append(transition(fx["chain"], "RDF_DodgeChain", other_id))
     for e in EXIT_EVENTS:
         if RETURN_MODE == "vanilla":
-            for nested_flag, to_nested, cond, _expr in V["RETURN_CONDS"]:
+            for nested_flag, to_nested, cond, _expr in v["RETURN_CONDS"]:
                 flags = "FLAG_TO_NESTED_STATE_ID_IS_VALID" if nested_flag else "0"
                 ts.append(transition(fx["out"], e, DEFAULT_STATE_ID, flags, cond, to_nested))
         else:
             ts.append(transition(fx["out"], e, DEFAULT_STATE_ID))
-    ts.append(transition(V["FX_STAGGER_PLAYER"], "StaggerPlayer", PLAYER_STAGGER_STATE_ID))
+    ts.append(transition(v["FX_STAGGER_PLAYER"], "StaggerPlayer", PLAYER_STAGGER_STATE_ID))
     out.append(node(trans, "hkbStateMachineTransitionInfoArray", "0xe397b11e",
                     '<hkparam name="transitions" numelements="%d">%s</hkparam>' % (len(ts), "".join(ts))))
     # --- state
@@ -328,6 +411,17 @@ def build_state(nm, state_id, other_id, N, fx, bind_extra, masks):
         p("enterNotifyEvents", enter), p("exitNotifyEvents", exit_), p("transitions", trans), p("generator", modgen),
         p("name", nm), p("stateId", state_id), p("probability", "1.000000"), p("enable", "true")])))
     # --- ModifierGenerator { BSIsActiveModifier, Blender }
+    if fp:   # first person: ModifierGenerator{ BSIsActiveModifier, stance chooser }
+        gen_ptr = stance_chooser_fp(N, out, nm)
+        out.append(node(modgen, "hkbModifierGenerator", "0x1f81fae6", "\n".join([
+            p("variableBindingSet", "null"), p("userData", "1"), p("name", nm + "_MG"), p("modifier", isact),
+            p("generator", gen_ptr)])))
+        out.append(binding_set(isact_bs, [("bIsActive0", "bAnimationDriven"), ("bIsActive1", "RDF_IsDodging")]))
+        fl_ = "".join(p("bIsActive%d" % i, "false") + p("bInvertActive%d" % i, "false") for i in range(5))
+        out.append(node(isact, "BSIsActiveModifier", "0xb0fde45a", "\n".join([
+            p("variableBindingSet", isact_bs), p("userData", "2"), p("name", nm + "_IsActiveMod"), p("enable", "true"),
+            fl_])))
+        return st, out
     outer, outer_c0, outer_c1, arm, arm_bs, arm_p0, arm_p1, stance, st_c0, st_c1 = (N.new() for _ in range(10))
     named(outer, nm + "_ArmStanceBlend")
     named(arm, nm + "_ArmLayer")
@@ -365,23 +459,24 @@ def build_state(nm, state_id, other_id, N, fx, bind_extra, masks):
 
 
 # ----------------------------------------------------------------------------------------------- generation
-def gen_master(existing_vars):
+def gen_master(existing_vars, fp=False):
     N = Names()
+    V_ = V_FP if fp else V
     x = ["<patch>"]
     # events
     for e in EVENTS:
-        x.append('  <append path="%s/eventNames"><hkcstring>%s</hkcstring></append>' % (V["STRING"], e))
+        x.append('  <append path="%s/eventNames"><hkcstring>%s</hkcstring></append>' % (V_["STRING"], e))
         x.append('  <append path="%s/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>'
-                 % V["DATA"])
+                 % V_["DATA"])
     # variables: three parallel lists
     for name, typ, init in VARIABLES:
         val = f2i(init) if typ == "VARIABLE_TYPE_REAL" else int(init)
-        x.append('  <append path="%s/variableNames"><hkcstring>%s</hkcstring></append>' % (V["STRING"], name))
+        x.append('  <append path="%s/variableNames"><hkcstring>%s</hkcstring></append>' % (V_["STRING"], name))
         x.append('  <append path="%s/wordVariableValues"><hkobject><hkparam name="value">%d</hkparam></hkobject></append>'
-                 % (V["VALUES"], val))
+                 % (V_["VALUES"], val))
         x.append('  <append path="%s/variableInfos"><hkobject><hkparam name="role"><hkobject>'
                  '<hkparam name="role">ROLE_DEFAULT</hkparam><hkparam name="flags">0</hkparam></hkobject></hkparam>'
-                 '<hkparam name="type">%s</hkparam></hkobject></append>' % (V["DATA"], typ))
+                 '<hkparam name="type">%s</hkparam></hkobject></append>' % (V_["DATA"], typ))
     bind_extra = []
     for i, v in enumerate(OPTIONAL_BIND_VARS):
         if v in existing_vars:
@@ -393,21 +488,26 @@ def gen_master(existing_vars):
         nm = N.new()
         fx_nodes[key] = nm
         new_nodes.append(effect_node(nm, spec))
-    arms = set(RIGHT_ARM_BONES) | set(LEFT_ARM_BONES)
-    masks = {"arms": N.new(), "not_arms": N.new()}
-    new_nodes.append(bone_weight_array(masks["arms"], [1.0 if b in arms else 0.0 for b in range(N_BONES)]))
-    new_nodes.append(bone_weight_array(masks["not_arms"], [0.0 if b in arms else 1.0 for b in range(N_BONES)]))
-    st_a, nodes_a = build_state(STATE_A[0], STATE_A[1], STATE_B[1], N, fx_nodes, bind_extra, masks)
-    st_b, nodes_b = build_state(STATE_B[0], STATE_B[1], STATE_A[1], N, fx_nodes, bind_extra, masks)
+    if fp:
+        masks = None
+        st_a, nodes_a = build_state(STATE_A[0], STATE_A[1], STATE_B[1], N, fx_nodes, bind_extra, None, V_, True)
+        st_b, nodes_b = build_state(STATE_B[0], STATE_B[1], STATE_A[1], N, fx_nodes, bind_extra, None, V_, True)
+    else:
+        arms = set(RIGHT_ARM_BONES) | set(LEFT_ARM_BONES)
+        masks = {"arms": N.new(), "not_arms": N.new()}
+        new_nodes.append(bone_weight_array(masks["arms"], [1.0 if b in arms else 0.0 for b in range(N_BONES)]))
+        new_nodes.append(bone_weight_array(masks["not_arms"], [0.0 if b in arms else 1.0 for b in range(N_BONES)]))
+        st_a, nodes_a = build_state(STATE_A[0], STATE_A[1], STATE_B[1], N, fx_nodes, bind_extra, masks)
+        st_b, nodes_b = build_state(STATE_B[0], STATE_B[1], STATE_A[1], N, fx_nodes, bind_extra, masks)
     new_nodes += nodes_a + nodes_b
     x.append('  <insert path="">')
     x += ["    " + n.replace("\n", "\n    ") for n in new_nodes]
     x.append("  </insert>")
-    x.append('  <append path="%s/states">%s</append>' % (V["ROOT_SM"], st_a))
-    x.append('  <append path="%s/states">%s</append>' % (V["ROOT_SM"], st_b))
+    x.append('  <append path="%s/states">%s</append>' % (V_["ROOT_SM"], st_a))
+    x.append('  <append path="%s/states">%s</append>' % (V_["ROOT_SM"], st_b))
     for event, (_, state_id) in START_EVENTS:
         x.append('  <append path="%s/transitions">%s</append>'
-                 % (V["ROOT_WILDCARD"], transition(fx_nodes["in"], event, state_id,
+                 % (V_["ROOT_WILDCARD"], transition(fx_nodes["in"], event, state_id,
                                                    "FLAG_IS_LOCAL_WILDCARD|FLAG_DISABLE_CONDITION")))
     x.append("</patch>")
     return "\n".join(x) + "\n", N.n, bind_extra
@@ -462,11 +562,45 @@ def verify_ids(root):
     return ok
 
 
+def verify_ids_fp(root):
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import hkxcheck as H
+    g = H.Graph(os.path.join(root, "_work", "fp_nem_xml", "0_master_nem.xml"))
+    ok = True
+
+    def chk(cond, msg):
+        nonlocal ok
+        print(("ok   " if cond else "FAIL ") + "[1P] " + msg)
+        ok &= bool(cond)
+    V1 = V_FP
+    chk(g.objs[V1["STRING"]].cls == "hkbBehaviorGraphStringData", V1["STRING"] + " StringData")
+    chk(g.objs[V1["VALUES"]].cls == "hkbVariableValueSet", V1["VALUES"] + " VariableValueSet")
+    chk(g.objs[V1["DATA"]].cls == "hkbBehaviorGraphData", V1["DATA"] + " GraphData")
+    chk(g.objs[V1["ROOT_SM"]].text("name") == "RootBehaviorGraph", V1["ROOT_SM"] + " RootBehaviorGraph")
+    chk(g.objs[V1["ROOT_SM"]].text("wildcardTransitions") == V1["ROOT_WILDCARD"], V1["ROOT_WILDCARD"] + " wildcard array")
+    chk(g.objs[V1["FX_STAGGER_PLAYER"]].text("name") == "FastBlendResetTransition", V1["FX_STAGGER_PLAYER"])
+    for _f, _n, cid, expr in V1["RETURN_CONDS"]:
+        chk(g.objs[cid].text("expression") == expr, cid + " " + expr)
+    sm = g.objs[V1["ROOT_SM"]]
+    sids = {g.objs[x].intval("stateId"): g.objs[x].text("name") for x in H.sm_states(g, sm)}
+    chk(sids.get(DEFAULT_STATE_ID) == "Default_State", "stateId 14 Default_State")
+    chk(sids.get(PLAYER_STAGGER_STATE_ID) == "PlayerStagger_State", "stateId 48 PlayerStagger_State")
+    chk(STATE_A[1] not in sids and STATE_B[1] not in sids, "9701/9702 free")
+    for v_ in list(EXISTING_VARS) + list(HAND_VARS.values()) + [FP_DRAWN_VAR]:
+        chk(v_ in g.var_index, "variable %s exists" % v_)
+    for e in ["IdleForceDefaultState", "StaggerPlayer"]:
+        chk(e in g.ev_index, "event %s exists" % e)
+    dsm = [x for x in H.state_machines(g) if x.text("name") == "Default_Behavior"][0]
+    dids = sorted(g.objs[x].intval("stateId") for x in H.sm_states(g, dsm))
+    chk(dids == sorted(FP_DRAWN), "Default_Behavior stateIds %s == FP_DRAWN keys" % dids)
+    return ok
+
+
 def main():
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     if "--verify-ids" in sys.argv:
-        return 0 if verify_ids(root) else 1
+        return 0 if (verify_ids(root) & verify_ids_fp(root)) else 1
     out = args[0] if args else os.path.join(root, "behavior", "Pandora_Engine", "mod", CODE)
     # DF_IsDodging is NOT in this modlist's 0_master -> do not bind. Pass --with-df to force when it exists.
     existing = set(OPTIONAL_BIND_VARS) if "--with-df" in sys.argv else set()
@@ -475,6 +609,9 @@ def main():
           '<?xml version="1.0" encoding="utf-8"?>\n<mod code="%s">\n  <name>%s</name>\n  <author>%s</author>\n'
           '  <site>null</site>\n</mod>\n' % (CODE, MOD_NAME, AUTHOR))
     write(os.path.join(out, "patches", "0_master.xml"), master)
+    fp_master, fp_nodes, _ = gen_master(set(), fp=True)
+    write(os.path.join(out, "patches", FP_PATCH_NAME), fp_master)
+    print("first person: %d new nodes -> patches/%s" % (fp_nodes, FP_PATCH_NAME))
     ch = gen_character()
     write(os.path.join(out, "patches", "defaultmale_character.xml"), ch)
     write(os.path.join(out, "patches", "defaultfemale_character.xml"), ch)

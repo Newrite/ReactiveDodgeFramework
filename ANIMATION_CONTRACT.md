@@ -150,3 +150,10 @@ types, looping, while the rest of the body plays the dodge clip. Consequences fo
 - root motion always comes from the dodge clip, never from the stance layer.
 The stance clips are vanilla files (`H2H_Idle`, `1HM_Idle`, `DW1HM1HMIdle`, `2HM_Idle`, `2HW_Idle`, `Bow_IdleHeld`, `StaffRight_Idle`,
 `Staff_Idle`, `MRh_Idle`, `MLh_Idle`, `Tor_1HMPose`, `DLC01\CrossBow_IdleHeld`); a clip set does not have to provide them.
+
+## 8. First person
+
+The same events/variables work in first person: send `RDF_DodgeStart`/`StartB`/`Chain`/`Exit` to the 1P graph; the 1P state plays the
+current weapon-ready 1P idle (no dodge clips), sets `bAnimationDriven` while `RDF_IsDodging` is true, sends `RDF_DodgeEntered` /
+`RDF_DodgeLeft`. `RDF_DodgeClip`, `RDF_DodgeSpeed`, `RDF_ArmBlend` exist in the 1P graph but are not used. The clip-set files in
+section 1 are 3P only. See BEHAVIOR_INTEGRATION.md section 6.

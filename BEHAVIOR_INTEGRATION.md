@@ -25,7 +25,7 @@ weapon / sheathed / magic sub-graphs, so it works with every weapon type and fro
 
 `defaultmale` / `defaultfemale`: 16 names `Animations\RDF\rdf_{roll,step}_{f,fr,r,br,b,bl,l,fl}.hkx` appended to `animationNames` (`#0029`).
 
-Not touched: first person (C++ blocks dodge there), creatures, every other behavior file, animation data (root motion is
+First person is patched separately (section 6). Not touched: creatures, every other behavior file, animation data (root motion is
 ignored, see ANIMATION_CONTRACT.md).
 
 ## 2. Install (the manual steps are yours)
@@ -57,7 +57,7 @@ python tools/dump_pandora_out.py --vanilla                                   # v
 python tools/gen_rdf_patch.py --verify-ids                                   # vanilla ids used by the generator
 python tools/stage_pandora.py --label baseline                               # same modlist, no rdf
 python tools/stage_pandora.py --label rdf --rdf behavior/Pandora_Engine/mod/rdf
-python tools/validate_rdf.py                                                 # 128 checks, exit 0 = pass
+python tools/validate_rdf.py                                                 # 205 checks (3P + first person), exit 0 = pass
 python tools/test_hkxcheck.py
 ```
 
@@ -180,3 +180,74 @@ choosers are now `hkbStateMachine`s (the TUDM `*DodgeStyle` pattern and vanilla'
 clip (stateId = clip index). The stance selectors are unchanged (they are not switched mid-dodge, but they are a selector on
 `iRightHandType`/`iLeftHandType` and could show the same step if the hand type changes between two dodges of one state;
 validate in game before converting them too).
+
+## 6. First person (`firstperson~0_master`)
+
+### 6.1 Findings (current Pandora output, dumped with serde-hkx; vanilla ids from the Nemesis `_1stperson` cache via hkxcmd)
+- Pandora project `firstperson` (project file `actors\character\_1stperson\FirstPerson.hkx`, character `Characters\FirstPerson.hkx`,
+  skeleton `CharacterAssets\skeletonFirst.hkx`, behavior `Behaviors\0_Master.hkx`). Pandora file name for patches:
+  `firstperson~0_master.xml` (the log uses the same `firstperson~0_master` form). A bare `0_master.xml` hits the 3P graph.
+- The 1P `0_master` is a twin of the 3P one: same 1217 events and 230 variables in vanilla (so `bAnimationDriven` [81],
+  `iRightHandType` [35], `iLeftHandType` [60], `currentDefaultState`, `bAttached`, and the events `IdleForceDefaultState` [496],
+  `StaggerPlayer` [1072], `staggerStart`, `Ragdoll`, `JumpStandingStart`, `SwimStart`, `bleedOutStart` all exist; the graph lacks
+  nothing RDF needs). Current output: 1240 events / 241 variables before RDF.
+- Nemesis ids (vanilla 1P `0_master`): StringData `#0095`, VariableValueSet `#0096`, GraphData `#0097`, root `Master_Behavior #1995`
+  (8 states, no ragdoll/death wildcards: only the 1P cinematics), `RootBehaviorGraph #0167` (20 vanilla states, startStateId 14,
+  wildcard array `#0168`). TUDM's 1P patch touches `#0095`/`#0097` and `#1877 #1880 #1886 #1894`, which agrees with these ids.
+- `RootBehaviorGraph` has the same stateIds as 3P: 14 `Default_State` (`Default_Behavior #0363`, START_STATE_MODE_SYNC on
+  `currentDefaultState`), 7 `Stagger_State`, 48 `PlayerStagger_State`, 0-5 jump states, 8 bleed-out, 38 swim, 9 `FullBodyPlayerIdles`
+  (1P-specific id), 21 horse. Wildcards (`#0168`, 22 in the current output): `staggerStart` -> 7 (conditioned), `WardBreak`, `bleedOutStart`
+  -> 8, jump starts/lands, `JumpLandEnd` -> 14 (4 conditioned), `SwimStart`, `Ragdoll` -> 14, `HorseEnterInstant`, idle events -> 9,
+  `pa_KillMoveDLC02RipHeartOut`. `StaggerPlayer` is per-state exactly as in 3P (jump states, `Default_State`, ritual spell), so RDF
+  states carry their own copy. 9701/9702 are free.
+- 1P `Stagger_State` return uses the same 4 conditional transitions as 3P with 1P ids: conditions `#0181 #0180 #0179 #0176`, effect
+  `DefaultBlend_FromAnimDriven #0351`; `StaggerPlayer` effect `FastBlendResetTransition #0245`. The patch reuses the conditions.
+- TUDM in first person (reference only): events and 1P copies of its `DodgeState` 25 / `Post_DodgeState` 26 machines in the 1P
+  `1hm_behavior`, `mt_behavior`, `magicbehavior`, playing `Animations\Roll_*.hkx` / `Sidestep_*.hkx` (1P files); nothing in 1P `0_master`.
+- The 1P character `FirstPerson` lists 901 animationNames and ALREADY contains every stance clip below (`H2H_Idle`, `1HM_Idle`,
+  `DW1HM1HMIdle`, `2HM_Idle`, `2HW_Idle`, `Bow_IdleHeld`, `StaffRight_Idle`, `MRh_Idle`, `DLC01\CrossBow_IdleHeld`, ...). No
+  animationName is added and no 1P character patch is shipped. The 1P skeleton is arms/camera only, so there are no bone masks.
+- Vanilla 1P weapon idle (1P `1hm_behavior`: `1stP_WeapIdle_MSG` on iRightHandType, `1HM_1stP_BodyBehavior` -> `WeapIdleMSG` on
+  iLeftHandType): right 0 `H2H_Idle` (left shield: 1HM_Idle blend), right 1-4 -> by left hand: 0 `1HM_Idle`, 1-4 `DW1HM1HMIdle`,
+  5 `2HM_Idle`, 6 `2HW_Idle`, 7 `Bow_IdleHeld`, 8-11 `1HM_Idle`; right 5 `2HM_Idle`, 6 `2HW_Idle`, 7 `Bow_IdleHeld`, 8-11 1HM pose,
+  12 `CrossBow_IdleHeld`. Spells/staffs are drawn by `magicbehavior` (`MRh_Idle`, `MLh_Idle`, `StaffRight_Idle`, `Staff_Idle`).
+
+### 6.2 What the patch adds (149 new nodes)
+Same events (13), variables (4: `RDF_DodgeClip/DodgeSpeed/IsDodging/ArmBlend`, so the plugin's SetGraphVariable calls succeed; in 1P
+`RDF_DodgeClip`/`RDF_DodgeSpeed`/`RDF_ArmBlend` are not read by the graph), blends, wildcards, exit/stagger transitions and conditional
+return as 3P (with the 1P ids above). Per state:
+`ModifierGenerator{ BSIsActiveModifier(bAnimationDriven, RDF_IsDodging), StanceSM }` with
+`DrawnSM = hkbStateMachine, startStateId <- currentDefaultState` (the vanilla sync variable holding Default_Behavior's stateId; states 0, 1, 2,
+10-14, 20): sheathed/unequipping/killmove ids play the looping neutral 1P idle `MT_Idle` (vanilla 1P sheathed idle), weapon/spell ids (1, 2, 10, 11)
+use `StanceSM = hkbStateMachine, startStateId <- iRightHandType, 13 states (stateId = hand type)`; entries are looping `hkbClipGenerator`s
+or nested `hkbStateMachine`s on `iLeftHandType`. There is no roll clip and no bone mask: the 1P pose during a dodge is simply the
+current weapon-ready idle (blended in/out by the 0.12 s / 0.25 s transitions), the plugin does the movement.
+The chooser is a state machine rather than a ManualSelector for the reason in 5.6 (a selector shows a one-frame step when it reactivates
+on a different child; a state machine applies the bound start state at activation).
+
+| hand type | 1P pose (iRightHandType) |
+|---|---|
+| 0 (fists) | nested on iLeftHandType: 10 (shield) `1HM_Idle`, else `H2H_Idle` |
+| 1-4 (one-hander) | nested on iLeftHandType: 0 `1HM_Idle`, 1-4 `DW1HM1HMIdle`, 5 `2HM_Idle`, 6 `2HW_Idle`, 7 `Bow_IdleHeld`, 8-12 `1HM_Idle` |
+| 5 | `2HM_Idle` |
+| 6 | `2HW_Idle` |
+| 7 | `Bow_IdleHeld` |
+| 8 staff | `StaffRight_Idle` |
+| 9 spell | `MRh_Idle` |
+| 10, 11 | `1HM_Idle` |
+| 12 | `DLC01\CrossBow_IdleHeld` |
+Sheathed: `iRightHandType` keeps the equipped weapon type while sheathed, so the drawn state decides: `currentDefaultState` 0 (MT) -> `MT_Idle`
+(neutral), never a weapon pose with the weapon on the hip. Unarmed and drawn -> `H2H_Idle`. The same caveat exists for the 3P arm stance:
+the 3P stance selectors only look at the hand types, so the plugin should write `RDF_ArmBlend = 0` when the weapon is sheathed. Left-hand
+spell/torch with a right weapon uses the right weapon's pose (the 1P graph has no separate left-arm layer; vanilla 1P also uses one
+whole-arms clip).
+
+### 6.3 Validation
+`python tools/validate_rdf.py` now also dumps the 1P files (`fp_*.xml`) and runs the P group (77 checks): events/variables present once
+and typed, vanilla variables present, root machine +2 states, both states (enter/exit events, generator chain, `bAnimationDriven` /
+`RDF_IsDodging` bindings, stance chooser structure and full table, every stance clip in the FirstPerson character, no -1 binding),
+wildcards and transitions as 3P with the 1P conditions/effects, vanilla 1P wildcards intact, every other state machine unchanged,
+objects lost = only the five modified nodes, hkxcheck equal to baseline, FirstPerson character unchanged, and all other 1P hkx
+byte-identical to the baseline run.
+Not tested in game: how the 1P arms look when entering/leaving the dodge pose, and whether the game reads the hand-type variables in
+the 1P graph as it does in 3P (they are vanilla variables used by the 1P graph itself).
