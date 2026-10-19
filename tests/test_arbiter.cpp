@@ -168,3 +168,20 @@ TEST(playback_speed_fits_clip_to_timeline)
 	CHECK_NEAR(t.PlaybackSpeed(0.667f, 1.5f), 1.5 * 0.667 / 0.70, 1e-6);
 	CHECK_NEAR(t.PlaybackSpeed(t.Total(), 1.0f), 1.0, 1e-6);
 }
+
+TEST(arbiter_annotated_windows_replace_timers)
+{
+	// A clip that announced its windows decides by events alone: late in time but not yet
+	// announced stays closed, early in time but announced is open.
+	ActionArbiter arb{ ActionPolicy{} };
+	InputBuffer   b(5.0f, 0.0f);
+	b.Push(CommandKind::Dodge, 0.9);
+
+	auto s = Running(0.9f);
+	s.annotated = OpenWindows{};
+	CHECK(arb.Arbitrate(s, b, 1.0).reject == RejectReason::TooEarly);
+
+	s.actionTime = 0.05f;
+	s.annotated->chain = true;
+	CHECK(arb.Arbitrate(s, b, 1.0).kind == DecisionKind::ChainDodge);
+}

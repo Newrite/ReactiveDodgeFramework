@@ -68,7 +68,11 @@ namespace rdf
 		void  Consume(const Decision& d);
 		// Heading of the current dodge relative to the actor's yaw when it began, degrees, +right.
 		float      StartAngleDeg() const { return startAngleDeg_; }
-		bool       InWindow(float from, float to) const { return action_.Running() && action_.Time() >= from && action_.Time() < to; }
+		// An annotated clip's own i-frame window, else [from, to) of the ini timers.
+		bool       Invulnerable(float from, float to) const;
+		// RDF_* annotation events of the clip playing the current dodge.
+		void       OnWindowEvent(WindowEvent e);
+		bool       ClipAnnotated() const { return windows_.Annotated().has_value(); }
 		double     Now() const { return clock_.Now(); }
 		const InputBuffer& Buffer() const { return buffer_; }
 
@@ -86,5 +90,6 @@ namespace rdf
 		MotionDriver  driver_;
 		FrameInput    frame_{};
 		float         startAngleDeg_{ 0.0f };
+		WindowTracker windows_;
 	};
 }

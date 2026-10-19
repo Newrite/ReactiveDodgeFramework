@@ -241,6 +241,10 @@ namespace rdf::game::update
 
 	void Controller::HandleGraphEvents(RE::PlayerCharacter* player)
 	{
+		graph::DrainClipWindows([this](WindowEvent e) {
+			core_->OnWindowEvent(e);
+			DevLog("clip window event {} at t={:.3f}", static_cast<int>(e), core_->ActionTime());
+		});
 		const bool entered = graph::TakeEntered();
 		const bool clipEnd = graph::TakeClipEnd();
 		const int  depth = graph::Depth();
@@ -431,7 +435,7 @@ namespace rdf::game::update
 		requestedDistance_ = step.command.speed * dt;
 		requestedHeading_ = core_->Heading();
 
-		effects::SetInvulnerable(settings.iFrames && core_->InWindow(settings.iFrameStart, settings.iFrameEnd));
+		effects::SetInvulnerable(settings.iFrames && core_->Invulnerable(settings.iFrameStart, settings.iFrameEnd));
 
 		if (step.completed && !exitSent_) {
 			graph::SendExit(player);

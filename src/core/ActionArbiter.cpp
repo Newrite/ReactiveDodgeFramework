@@ -56,13 +56,22 @@ namespace rdf
 		return d;
 	}
 
+	OpenWindows ActionArbiter::WindowsFor(const ArbiterState& state) const
+	{
+		if (state.annotated) {
+			return *state.annotated;
+		}
+		const float t = state.actionTime;
+		return { t >= policy_.chainFrom, t >= policy_.attackFrom, t >= policy_.blockFrom, t >= policy_.exitFrom };
+	}
+
 	Decision ActionArbiter::ArbitrateRunning(const ArbiterState& state, const InputBuffer& buffer, double now) const
 	{
-		Decision d;
-		const float t = state.actionTime;
+		Decision          d;
+		const OpenWindows open = WindowsFor(state);
 
 		if (const auto* dodge = buffer.Peek(CommandKind::Dodge, now)) {
-			if (t < policy_.chainFrom) {
+			if (!open.chain) {
 				NoteReject(d, RejectReason::TooEarly, dodge->kind);
 			} else if (policy_.maxChain > 0 && state.chainCount >= policy_.maxChain) {
 				NoteReject(d, RejectReason::ChainLimit, dodge->kind);
@@ -77,7 +86,7 @@ namespace rdf
 		}
 
 		if (const auto* attack = OldestAttack(buffer, now)) {
-			if (t >= policy_.attackFrom) {
+			if (open.attack) {
 				d.kind = attack->kind == CommandKind::PowerAttack ? DecisionKind::PowerAttack : DecisionKind::Attack;
 				d.seq = attack->seq;
 				return d;
@@ -86,7 +95,7 @@ namespace rdf
 		}
 
 		if (const auto* block = buffer.Peek(CommandKind::Block, now)) {
-			if (t >= policy_.blockFrom) {
+			if (open.block) {
 				d.kind = DecisionKind::Block;
 				d.seq = block->seq;
 				return d;
@@ -94,7 +103,7 @@ namespace rdf
 			NoteReject(d, RejectReason::TooEarly, block->kind);
 		}
 
-		if (state.moveHeld && !state.exiting && t >= policy_.exitFrom) {
+		if (state.moveHeld && !state.exiting && open.exit) {
 			d.kind = DecisionKind::LocomotionExit;
 		}
 		return d;

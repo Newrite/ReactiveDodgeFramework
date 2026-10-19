@@ -3,6 +3,7 @@
 #include "Config.h"
 #include "DodgeAction.h"
 #include "InputBuffer.h"
+#include "Windows.h"
 
 namespace rdf
 {
@@ -69,6 +70,7 @@ namespace rdf
 		bool          dodgeWindowOpen{ false };  // anim-event driven attack->dodge window
 		bool          staminaOk{ true };
 		bool          moveHeld{ false };
+		std::optional<OpenWindows> annotated;  // windows announced by the clip; empty = ini timers
 	};
 
 	// Picks at most one action per call. Priority: forced interruption > dodge/chain > attack >
@@ -82,6 +84,7 @@ namespace rdf
 		Decision Arbitrate(const ArbiterState& state, const InputBuffer& buffer, double now) const;
 
 	private:
+		OpenWindows WindowsFor(const ArbiterState& state) const;
 		Decision ArbitrateRunning(const ArbiterState& state, const InputBuffer& buffer, double now) const;
 		Decision ArbitrateIdle(const ArbiterState& state, const InputBuffer& buffer, double now) const;
 

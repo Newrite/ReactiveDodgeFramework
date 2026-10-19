@@ -62,17 +62,33 @@ def md5(p):
     return hashlib.md5(open(p, "rb").read()).hexdigest()
 
 
+EVENT_ID_PARAMS = {"eventId", "id"}
+VARIABLE_ID_PARAMS = {"variableIndex"}
+
+
+def param_text(g, elem):
+    """Text of a param with event / variable ids replaced by their names: another mod appending its
+    events after ours renumbers them, which must not count as a change to its objects."""
+    parts = []
+    for e in elem.iter():
+        name = e.get("name")
+        text = (e.text or "").strip()
+        if name in EVENT_ID_PARAMS and re.fullmatch(r"-?\d+", text):
+            parts.append("E:" + str(g.event_name(int(text))))
+        elif name in VARIABLE_ID_PARAMS and re.fullmatch(r"-?\d+", text):
+            i = int(text)
+            parts.append("V:" + (g.variable_names[i] if 0 <= i < len(g.variable_names) else text))
+        elif text:
+            parts.append(text)
+    t = re.sub(r"#\d+", "#", " ".join(parts))
+    return re.sub(r"\s+", " ", t).strip()
+
+
 def canon(g):
     c = collections.Counter()
     ex = {}
     for o in g.order:
-        txt = []
-        for k, p in o.params.items():
-            t = "".join(p.itertext())
-            t = re.sub(r"#\d+", "#", t)
-            t = re.sub(r"\s+", " ", t).strip()
-            txt.append((k, t))
-        key = (o.cls, tuple(txt))
+        key = (o.cls, tuple((k, param_text(g, p)) for k, p in o.params.items()))
         c[key] += 1
         ex.setdefault(key, o)
     return c, ex
@@ -116,7 +132,8 @@ def main():
     female = H.Graph(os.path.join(rdf_x, "DefaultFemale.xml"))
     # ---- C
     for e in G.EVENTS:
-        check("C  event %s present" % e, e in g.ev_index and g.ev_index[e][0] >= len(gb.event_names), "index %s (baseline had %d events)" % (g.ev_index.get(e), len(gb.event_names)))
+        # Position is not checked: mods after ours in Pandora's priority append their events later.
+        check("C  event %s present once" % e, e in g.ev_index and len(g.ev_index[e]) == 1 and e not in gb.ev_index, "index %s" % (g.ev_index.get(e),))
     for v, typ, init in G.VARIABLES:
         check("C  variable %s present" % v, v in g.var_index, "index %s" % g.var_index.get(v))
     check("C  eventNames/eventInfos grew by %d" % len(G.EVENTS), len(g.event_names) == len(gb.event_names) + len(G.EVENTS) and g.n_event_infos == len(g.event_names))

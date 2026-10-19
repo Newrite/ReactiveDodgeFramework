@@ -83,3 +83,12 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
 * 360 mode spun the character 180 deg before backward dodges. New `fFaceMotionMaxAngle` (100): wider dodges keep
   facing and play the backward/diagonal-back clip. The facing decision is made once per dodge (per-frame flags
   could flip it mid-dodge). Lock-on yaw removed from the core: TDM turns toward the target itself.
+
+## 2026-10-19 — clip annotations drive the windows
+* serde-hkx reads the fixture clips: uncompressed (`hkaInterleavedUncompressedAnimation`, 99 tracks x 20 frames), root
+  motion only as `animmotion` annotations. roll_* and step_* are identical; each direction has its own speed curve
+  (forward peaks at 0.40 s, left at 0.10 s), so one ini timeline cannot fit all 8.
+* XML round trip is stable (xml -> hkx -> xml identical); hkx bytes differ only in float low bits (6-decimal text).
+* `RDF_*` annotation events registered in 0_master; plugin switches a dodge to annotation windows on `RDF_Windows`.
+* Validation: once `rdf` has a Pandora priority slot, mods after it append their events after ours and get renumbered.
+  `validate_rdf.py` now compares objects with event/variable ids replaced by names (87/87 against a fresh baseline).

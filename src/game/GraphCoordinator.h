@@ -1,6 +1,9 @@
 #pragma once
 
+#include "core/Windows.h"
+
 #include <cstdint>
+#include <functional>
 
 namespace rdf::game::graph
 {
@@ -17,6 +20,8 @@ namespace rdf::game::graph
 	int  Depth();
 	bool TakeClipEnd();
 	bool DodgeWindowOpen();
+	// RDF_* clip annotations seen since the last call, in WindowEvent order.
+	void DrainClipWindows(const std::function<void(WindowEvent)>& sink);
 	void ClearEvents();
 
 	// Sets RDF_DodgeClip / RDF_DodgeSpeed, then sends RDF_DodgeStart or RDF_DodgeChain.

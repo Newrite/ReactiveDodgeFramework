@@ -2,6 +2,7 @@
 
 #include "Settings.h"
 
+#include <array>
 #include <atomic>
 #include <vector>
 
@@ -20,6 +21,12 @@ namespace rdf::game::graph
 		std::atomic<int>           g_depth{ 0 };
 		std::atomic<std::uint32_t> g_clipEnd{ 0 };
 		std::atomic<bool>          g_window{ false };
+		std::atomic<std::uint32_t> g_clipWindows{ 0 };  // bit per WindowEvent seen since the last drain
+
+		// Clip annotation names (ANIMATION_CONTRACT.md), indexed by WindowEvent.
+		constexpr std::array kWindowEventNames{ "RDF_Windows"sv, "RDF_IFrameStart"sv, "RDF_IFrameEnd"sv,
+			"RDF_ChainOpen"sv, "RDF_AttackOpen"sv, "RDF_BlockOpen"sv, "RDF_ExitOpen"sv };
+		std::array<RE::BSFixedString, kWindowEventNames.size()> g_windowNames;
 
 		bool Contains(const std::vector<RE::BSFixedString>& list, const RE::BSFixedString& tag)
 		{
@@ -29,6 +36,16 @@ namespace rdf::game::graph
 				}
 			}
 			return false;
+		}
+
+		int WindowIndex(const RE::BSFixedString& tag)
+		{
+			for (std::size_t i = 0; i < g_windowNames.size(); ++i) {
+				if (g_windowNames[i] == tag) {
+					return static_cast<int>(i);
+				}
+			}
+			return -1;
 		}
 
 		bool Take(std::atomic<std::uint32_t>& counter)
@@ -53,6 +70,8 @@ namespace rdf::game::graph
 					}
 				} else if (event->tag == g_names.clipEnd) {
 					g_clipEnd.fetch_add(1, std::memory_order_acq_rel);
+				} else if (const int w = WindowIndex(event->tag); w >= 0) {
+					g_clipWindows.fetch_or(1u << w, std::memory_order_acq_rel);
 				} else if (Contains(g_names.windowOpen, event->tag)) {
 					g_window.store(true, std::memory_order_release);
 				} else if (Contains(g_names.windowClose, event->tag)) {
@@ -76,6 +95,9 @@ namespace rdf::game::graph
 		g_names.clip = g.clip;
 		g_names.speed = g.speed;
 		g_names.isDodging = g.isDodging;
+		for (std::size_t i = 0; i < kWindowEventNames.size(); ++i) {
+			g_windowNames[i] = kWindowEventNames[i];
+		}
 		for (const auto& n : g.windowOpen) {
 			g_names.windowOpen.emplace_back(n);
 		}
@@ -99,12 +121,23 @@ namespace rdf::game::graph
 	bool TakeClipEnd() { return Take(g_clipEnd); }
 	bool DodgeWindowOpen() { return g_window.load(std::memory_order_acquire); }
 
+	void DrainClipWindows(const std::function<void(WindowEvent)>& sink)
+	{
+		const auto bits = g_clipWindows.exchange(0, std::memory_order_acq_rel);
+		for (std::uint32_t i = 0; i < kWindowEventNames.size(); ++i) {  // enum order: an end after its start
+			if (bits & (1u << i)) {
+				sink(static_cast<WindowEvent>(i));
+			}
+		}
+	}
+
 	void ClearEvents()
 	{
 		g_entered = 0;
 		g_depth = 0;
 		g_clipEnd = 0;
 		g_window = false;
+		g_clipWindows = 0;
 	}
 
 	bool SendStart(RE::PlayerCharacter* player, bool chain, int clip, float animSpeed)

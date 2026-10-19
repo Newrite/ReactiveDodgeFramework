@@ -23,6 +23,11 @@ AUTHOR = "newrite"
 
 EVENTS = ["RDF_DodgeStart", "RDF_DodgeChain", "RDF_DodgeExit", "RDF_DodgeEntered", "RDF_DodgeLeft",
           "RDF_DodgeClipEnd"]
+# Clip annotations (ANIMATION_CONTRACT.md). An annotation only reaches the plugin as an animation
+# event when its text is a registered event name of the graph that plays the clip.
+ANNOTATION_EVENTS = ["RDF_Windows", "RDF_IFrameStart", "RDF_IFrameEnd", "RDF_ChainOpen",
+                     "RDF_AttackOpen", "RDF_BlockOpen", "RDF_ExitOpen"]
+EVENTS += ANNOTATION_EVENTS
 # (name, type, initial value)
 VARIABLES = [("RDF_DodgeClip", "VARIABLE_TYPE_INT32", 0),
              ("RDF_DodgeSpeed", "VARIABLE_TYPE_REAL", 1.0),

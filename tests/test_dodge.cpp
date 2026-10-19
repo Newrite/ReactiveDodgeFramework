@@ -556,3 +556,31 @@ TEST(free_rotation_backstep_keeps_facing_side_dodge_turns)
 		CHECK_NEAR(f.cmd.yawRate, 0.0, 1e-6);
 	}
 }
+
+TEST(annotation_events_drive_windows_and_iframes_per_dodge)
+{
+	Sim s;
+	s.Frame(kDt64, Dir(0), { CommandKind::Dodge });
+	CHECK(!s.core.ClipAnnotated());
+
+	s.core.OnWindowEvent(WindowEvent::Marker);
+	s.core.OnWindowEvent(WindowEvent::IFrameStart);
+	CHECK(s.core.ClipAnnotated());
+	CHECK(s.core.Invulnerable(10.0f, 11.0f));  // the clip's window, not the ini one
+
+	// Before ChainOpen a chain press waits even when the ini timer would allow it.
+	for (int i = 0; i < 40; ++i) {
+		s.Frame(kDt64, Dir(0));
+	}
+	s.Frame(kDt64, Dir(90), { CommandKind::Dodge });
+	CHECK(s.log.back().decision.kind != DecisionKind::ChainDodge);
+
+	s.core.OnWindowEvent(WindowEvent::IFrameEnd);
+	s.core.OnWindowEvent(WindowEvent::ChainOpen);
+	CHECK(!s.core.Invulnerable(0.0f, 100.0f));
+	s.Frame(kDt64, Dir(90));
+	CHECK(s.log.back().decision.kind == DecisionKind::ChainDodge);
+
+	// The chained dodge starts with its own (not yet announced) windows.
+	CHECK(!s.core.ClipAnnotated());
+}

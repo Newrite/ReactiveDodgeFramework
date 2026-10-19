@@ -38,6 +38,7 @@ namespace rdf
 		s.attackState = engine.attackState;
 		s.dodgeWindowOpen = engine.dodgeWindowOpen;
 		s.staminaOk = engine.staminaOk;
+		s.annotated = windows_.Annotated();
 		s.moveHeld = MoveHeld();
 		return arbiter_.Arbitrate(s, buffer_, clock_.Now());
 	}
@@ -93,10 +94,29 @@ namespace rdf
 		start.heading = StartHeading(d, chain);
 		start.keepFacing = PreviewKeepsFacing(d);
 
+		windows_.Reset();  // the new clip announces its own windows
 		const int chainCount = chain ? action_.ChainCount() + 1 : 1;
 		action_.Start(cfg_.timing, chainCount);
 		driver_.Begin(start);
 		startAngleDeg_ = AngleDelta(frame_.actorYaw, start.heading) * kRadToDeg;
+	}
+
+	bool ReactiveCore::Invulnerable(float from, float to) const
+	{
+		if (!action_.Running()) {
+			return false;
+		}
+		if (windows_.Annotated()) {
+			return windows_.Invulnerable();
+		}
+		return action_.Time() >= from && action_.Time() < to;
+	}
+
+	void ReactiveCore::OnWindowEvent(WindowEvent e)
+	{
+		if (action_.Running()) {
+			windows_.On(e);
+		}
 	}
 
 	void ReactiveCore::Apply(const Decision& d, bool accepted)
@@ -163,5 +183,6 @@ namespace rdf
 	{
 		buffer_.Clear();
 		action_.Reset();
+		windows_.Reset();
 	}
 }
