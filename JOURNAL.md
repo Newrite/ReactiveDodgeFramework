@@ -134,3 +134,9 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   Missile and three other projectile vtables. Hooked on ArrowProjectile and MissileProjectile: while invulnerable and
   a contact root collidable resolves to the player, that step's contacts are dropped and the projectile flies on.
   Beams/flames (continuous) are not covered. `bProjectileIFrames` (default 1). Not yet verified in game.
+* Dodge -> attack / block, first in-game run: both work (attack on the first try, graph straight into the attack;
+  block starts with `blockStartOut` and lasts while the button is held), but only at ~0.54 s of a 0.70 s dodge: the
+  shared 60 % annotation point opened them as late as the chain, and with movement held the exit came first and
+  swallowed the press. Now: attack/block may leave a dodge once its exit window is open or the hand-over began, and
+  the annotation rule has a threshold per window (attack/block 90 %, capped at 0.35 s; chain/exit 75 %; i-frames end
+  60 %). Attack/block now open at 0.20-0.35 s of clip time.

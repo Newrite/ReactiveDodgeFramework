@@ -1,7 +1,10 @@
 {
   "rule": {
     "iframeOn": 0.3,
-    "action": 0.6,
+    "iframeEnd": 0.6,
+    "chain": 0.75,
+    "attack": 0.9,
+    "block": 0.9,
     "exit": 0.75
   },
   "clips": {
@@ -11,9 +14,9 @@
       "RDF_Windows": 0.0,
       "RDF_IFrameStart": 0.0333,
       "RDF_IFrameEnd": 0.4667,
-      "RDF_ChainOpen": 0.4667,
-      "RDF_AttackOpen": 0.4667,
-      "RDF_BlockOpen": 0.4667,
+      "RDF_ChainOpen": 0.4333,
+      "RDF_AttackOpen": 0.35,
+      "RDF_BlockOpen": 0.35,
       "RDF_ExitOpen": 0.4333
     },
     "rdf_roll_bl": {
@@ -22,9 +25,9 @@
       "RDF_Windows": 0.0,
       "RDF_IFrameStart": 0.0333,
       "RDF_IFrameEnd": 0.4333,
-      "RDF_ChainOpen": 0.4333,
-      "RDF_AttackOpen": 0.4333,
-      "RDF_BlockOpen": 0.4333,
+      "RDF_ChainOpen": 0.3667,
+      "RDF_AttackOpen": 0.3333,
+      "RDF_BlockOpen": 0.3333,
       "RDF_ExitOpen": 0.3667
     },
     "rdf_roll_br": {
@@ -33,9 +36,9 @@
       "RDF_Windows": 0.0,
       "RDF_IFrameStart": 0.0333,
       "RDF_IFrameEnd": 0.5333,
-      "RDF_ChainOpen": 0.5333,
-      "RDF_AttackOpen": 0.5333,
-      "RDF_BlockOpen": 0.5333,
+      "RDF_ChainOpen": 0.5,
+      "RDF_AttackOpen": 0.35,
+      "RDF_BlockOpen": 0.35,
       "RDF_ExitOpen": 0.5
     },
     "rdf_roll_f": {
@@ -44,9 +47,9 @@
       "RDF_Windows": 0.0,
       "RDF_IFrameStart": 0.1,
       "RDF_IFrameEnd": 0.5333,
-      "RDF_ChainOpen": 0.5333,
-      "RDF_AttackOpen": 0.5333,
-      "RDF_BlockOpen": 0.5333,
+      "RDF_ChainOpen": 0.5,
+      "RDF_AttackOpen": 0.35,
+      "RDF_BlockOpen": 0.35,
       "RDF_ExitOpen": 0.5
     },
     "rdf_roll_fl": {
@@ -55,9 +58,9 @@
       "RDF_Windows": 0.0,
       "RDF_IFrameStart": 0.0333,
       "RDF_IFrameEnd": 0.4667,
-      "RDF_ChainOpen": 0.4667,
-      "RDF_AttackOpen": 0.4667,
-      "RDF_BlockOpen": 0.4667,
+      "RDF_ChainOpen": 0.4,
+      "RDF_AttackOpen": 0.2,
+      "RDF_BlockOpen": 0.2,
       "RDF_ExitOpen": 0.4
     },
     "rdf_roll_fr": {
@@ -66,9 +69,9 @@
       "RDF_Windows": 0.0,
       "RDF_IFrameStart": 0.0333,
       "RDF_IFrameEnd": 0.5333,
-      "RDF_ChainOpen": 0.5333,
-      "RDF_AttackOpen": 0.5333,
-      "RDF_BlockOpen": 0.5333,
+      "RDF_ChainOpen": 0.5,
+      "RDF_AttackOpen": 0.35,
+      "RDF_BlockOpen": 0.35,
       "RDF_ExitOpen": 0.5
     },
     "rdf_roll_l": {
@@ -77,9 +80,9 @@
       "RDF_Windows": 0.0,
       "RDF_IFrameStart": 0.0333,
       "RDF_IFrameEnd": 0.3,
-      "RDF_ChainOpen": 0.3,
-      "RDF_AttackOpen": 0.3,
-      "RDF_BlockOpen": 0.3,
+      "RDF_ChainOpen": 0.2333,
+      "RDF_AttackOpen": 0.2,
+      "RDF_BlockOpen": 0.2,
       "RDF_ExitOpen": 0.2333
     },
     "rdf_roll_r": {
@@ -88,9 +91,9 @@
       "RDF_Windows": 0.0,
       "RDF_IFrameStart": 0.0333,
       "RDF_IFrameEnd": 0.4333,
-      "RDF_ChainOpen": 0.4333,
-      "RDF_AttackOpen": 0.4333,
-      "RDF_BlockOpen": 0.4333,
+      "RDF_ChainOpen": 0.3667,
+      "RDF_AttackOpen": 0.3,
+      "RDF_BlockOpen": 0.3,
       "RDF_ExitOpen": 0.3667
     },
     "rdf_step_b": {
@@ -99,9 +102,9 @@
       "RDF_Windows": 0.0,
       "RDF_IFrameStart": 0.0333,
       "RDF_IFrameEnd": 0.4667,
-      "RDF_ChainOpen": 0.4667,
-      "RDF_AttackOpen": 0.4667,
-      "RDF_BlockOpen": 0.4667,
+      "RDF_ChainOpen": 0.4333,
+      "RDF_AttackOpen": 0.35,
+      "RDF_BlockOpen": 0.35,
       "RDF_ExitOpen": 0.4333
     },
     "rdf_step_bl": {
@@ -110,9 +113,9 @@
       "RDF_Windows": 0.0,
       "RDF_IFrameStart": 0.0333,
       "RDF_IFrameEnd": 0.4333,
-      "RDF_ChainOpen": 0.4333,
-      "RDF_AttackOpen": 0.4333,
-      "RDF_BlockOpen": 0.4333,
+      "RDF_ChainOpen": 0.3667,
+      "RDF_AttackOpen": 0.3333,
+      "RDF_BlockOpen": 0.3333,
       "RDF_ExitOpen": 0.3667
     },
     "rdf_step_br": {
@@ -121,9 +124,9 @@
       "RDF_Windows": 0.0,
       "RDF_IFrameStart": 0.0333,
       "RDF_IFrameEnd": 0.4333,
-      "RDF_ChainOpen": 0.4333,
-      "RDF_AttackOpen": 0.4333,
-      "RDF_BlockOpen": 0.4333,
+      "RDF_ChainOpen": 0.3667,
+      "RDF_AttackOpen": 0.3333,
+      "RDF_BlockOpen": 0.3333,
       "RDF_ExitOpen": 0.3667
     },
     "rdf_step_f": {
@@ -133,8 +136,8 @@
       "RDF_IFrameStart": 0.1071,
       "RDF_IFrameEnd": 0.5,
       "RDF_ChainOpen": 0.5,
-      "RDF_AttackOpen": 0.5,
-      "RDF_BlockOpen": 0.5,
+      "RDF_AttackOpen": 0.3214,
+      "RDF_BlockOpen": 0.3214,
       "RDF_ExitOpen": 0.5
     },
     "rdf_step_fl": {
@@ -143,9 +146,9 @@
       "RDF_Windows": 0.0,
       "RDF_IFrameStart": 0.0333,
       "RDF_IFrameEnd": 0.4667,
-      "RDF_ChainOpen": 0.4667,
-      "RDF_AttackOpen": 0.4667,
-      "RDF_BlockOpen": 0.4667,
+      "RDF_ChainOpen": 0.4,
+      "RDF_AttackOpen": 0.2,
+      "RDF_BlockOpen": 0.2,
       "RDF_ExitOpen": 0.4
     },
     "rdf_step_fr": {
@@ -154,9 +157,9 @@
       "RDF_Windows": 0.0,
       "RDF_IFrameStart": 0.0333,
       "RDF_IFrameEnd": 0.5333,
-      "RDF_ChainOpen": 0.5333,
-      "RDF_AttackOpen": 0.5333,
-      "RDF_BlockOpen": 0.5333,
+      "RDF_ChainOpen": 0.5,
+      "RDF_AttackOpen": 0.35,
+      "RDF_BlockOpen": 0.35,
       "RDF_ExitOpen": 0.5
     },
     "rdf_step_l": {
@@ -165,9 +168,9 @@
       "RDF_Windows": 0.0,
       "RDF_IFrameStart": 0.0333,
       "RDF_IFrameEnd": 0.3,
-      "RDF_ChainOpen": 0.3,
-      "RDF_AttackOpen": 0.3,
-      "RDF_BlockOpen": 0.3,
+      "RDF_ChainOpen": 0.2333,
+      "RDF_AttackOpen": 0.2,
+      "RDF_BlockOpen": 0.2,
       "RDF_ExitOpen": 0.2333
     },
     "rdf_step_r": {
@@ -176,9 +179,9 @@
       "RDF_Windows": 0.0,
       "RDF_IFrameStart": 0.0333,
       "RDF_IFrameEnd": 0.4333,
-      "RDF_ChainOpen": 0.4333,
-      "RDF_AttackOpen": 0.4333,
-      "RDF_BlockOpen": 0.4333,
+      "RDF_ChainOpen": 0.3667,
+      "RDF_AttackOpen": 0.3,
+      "RDF_BlockOpen": 0.3,
       "RDF_ExitOpen": 0.3667
     }
   }

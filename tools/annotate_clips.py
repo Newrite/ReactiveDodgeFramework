@@ -5,12 +5,13 @@ every direction gets windows that match how that particular animation moves (spe
 across +-2 keys, so a single jerky key cannot become the peak):
 
     RDF_Windows      0                         the clip carries windows (switches the plugin from ini timers)
-    RDF_IFrameStart  speed first >= IFRAME_ON  x peak
-    RDF_IFrameEnd    after the peak, speed <= ACTION x peak
-    RDF_ChainOpen    same moment as RDF_IFrameEnd
-    RDF_AttackOpen   same moment as RDF_IFrameEnd
-    RDF_BlockOpen    same moment as RDF_IFrameEnd
-    RDF_ExitOpen     after the peak, speed <= EXIT x peak (still moving: blends into running)
+    RDF_IFrameStart  speed first >= 30 % of the peak
+    RDF_IFrameEnd    after the peak, speed <= 60 % of the peak     (--iframeEnd)
+    RDF_AttackOpen   after the peak, speed <= 90 %                  (--attack)
+    RDF_BlockOpen    after the peak, speed <= 90 %                  (--block)
+                     attack and block: never later than ACTION_LATEST (0.35 s)
+    RDF_ChainOpen    after the peak, speed <= 75 %                  (--chain)
+    RDF_ExitOpen     after the peak, speed <= 75 % (still moving: blends into running)  (--exit)
 
 Existing RDF_* annotations are replaced, so re-running is idempotent; other annotations
 (animmotion, PIE, ...) are kept. A clip whose root motion is missing is reported and skipped.
@@ -58,20 +59,30 @@ def speed_curve(notes, span=2):
     return curve
 
 
-def windows(curve, action, exit_):
+# Each window opens at the first key after the speed peak where the speed has fallen to this fraction of the peak.
+# Attack and block open right after the peak so the dodge can be cut into an action early; a chain waits a little
+# longer so the roll reads; i-frames end once most of the displacement is done.
+DEFAULT_RULE = {"iframeEnd": 0.60, "chain": 0.75, "attack": 0.90, "block": 0.90, "exit": 0.75}
+# Attack and block open no later than this clip time (s) even when the clip peaks late (the forward roll
+# peaks at 0.40 s): waiting longer reads as "the dodge has to finish first".
+ACTION_LATEST = 0.35
+
+
+def windows(curve, rule, latest=ACTION_LATEST):
     peak_t, peak = max(curve, key=lambda p: p[1])
     after = [p for p in curve if p[0] > peak_t]
-    first_on = next(t for t, v in curve if v >= IFRAME_ON * peak)
-    act = next((t for t, v in after if v <= action * peak), curve[-1][0])
-    out = next((t for t, v in after if v <= exit_ * peak), act)
+
+    def falls_to(fraction):
+        return next((t for t, v in after if v <= fraction * peak), curve[-1][0])
+
     return {
         "RDF_Windows": 0.0,
-        "RDF_IFrameStart": first_on,
-        "RDF_IFrameEnd": act,
-        "RDF_ChainOpen": act,
-        "RDF_AttackOpen": act,
-        "RDF_BlockOpen": act,
-        "RDF_ExitOpen": out,
+        "RDF_IFrameStart": next(t for t, v in curve if v >= IFRAME_ON * peak),
+        "RDF_IFrameEnd": falls_to(rule["iframeEnd"]),
+        "RDF_ChainOpen": falls_to(rule["chain"]),
+        "RDF_AttackOpen": min(falls_to(rule["attack"]), latest),
+        "RDF_BlockOpen": min(falls_to(rule["block"]), latest),
+        "RDF_ExitOpen": falls_to(rule["exit"]),
     }, peak_t, peak
 
 
@@ -80,7 +91,7 @@ def render(notes):
                    f"{INDENT}\t<hkparam name=\"text\">{s}</hkparam>\n{INDENT}</hkobject>" for t, s in notes)
 
 
-def annotate(clip, action, exit_):
+def annotate(clip, rule):
     xml = WORK / (clip.stem + ".xml")
     hkxc(clip, xml, "xml")
     text = xml.read_text(encoding="utf-8")
@@ -92,7 +103,7 @@ def annotate(clip, action, exit_):
     if not curve:
         return None, "no animmotion root motion"
 
-    marks, peak_t, peak = windows(curve, action, exit_)
+    marks, peak_t, peak = windows(curve, rule)
     kept = [(t, s) for t, s in notes if not s.startswith("RDF_")]
     merged = sorted(kept + [(t, s) for s, t in marks.items()], key=lambda n: n[0])
     body = f'<hkparam name="annotations" numelements="{len(merged)}">{render(merged)}\n\t\t\t\t\t</hkparam>'
@@ -113,20 +124,21 @@ def annotate(clip, action, exit_):
 def main(argv):
     ap = argparse.ArgumentParser()
     ap.add_argument("--dir", type=Path, default=DEFAULT_DIR)
-    ap.add_argument("--action", type=float, default=0.60, help="chain/attack/block/i-frame end: speed fraction after the peak")
-    ap.add_argument("--exit", type=float, default=0.75, help="locomotion exit: speed fraction after the peak")
+    for key, value in DEFAULT_RULE.items():
+        ap.add_argument("--" + key, type=float, default=value, help="speed fraction after the peak that opens this window")
     args = ap.parse_args(argv)
 
     WORK.mkdir(parents=True, exist_ok=True)
-    report = {"rule": {"iframeOn": IFRAME_ON, "action": args.action, "exit": args.exit}, "clips": {}}
+    rule = {key: getattr(args, key) for key in DEFAULT_RULE}
+    report = {"rule": {"iframeOn": IFRAME_ON, **rule}, "clips": {}}
     for clip in sorted(args.dir.glob("*.hkx")):
-        marks, problem = annotate(clip, args.action, args.exit)
+        marks, problem = annotate(clip, rule)
         if problem:
             print(f"skip {clip.name}: {problem}")
             continue
         report["clips"][clip.stem] = marks
         print(f"{clip.name}: peak {marks['peakSpeed']:.0f}@{marks['peakTime']:.3f}  iframes "
-              f"{marks['RDF_IFrameStart']:.3f}-{marks['RDF_IFrameEnd']:.3f}  chain/attack {marks['RDF_ChainOpen']:.3f}"
+              f"{marks['RDF_IFrameStart']:.3f}-{marks['RDF_IFrameEnd']:.3f}  attack/block {marks['RDF_AttackOpen']:.3f}  chain {marks['RDF_ChainOpen']:.3f}"
               f"  exit {marks['RDF_ExitOpen']:.3f}")
     REPORT.write_text(json.dumps(report, indent=2), encoding="utf-8")
     print(f"wrote {REPORT}")

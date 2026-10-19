@@ -101,9 +101,11 @@ Times are clip-local; the plugin does not need to know the playback speed. Windo
 chain, so the incoming clip announces its own.
 
 `tools/annotate_clips.py` writes them reproducibly (serde-hkx: hkx -> xml -> hkx; replaces earlier `RDF_*` annotations,
-keeps `animmotion`, PIE and others). It places them from the clip's root-motion speed curve: i-frames from the first
-key at 30 % of peak speed until speed falls back to 60 % after the peak; chain/attack/block at that same point; exit at
-75 % after the peak, while the character is still moving, so the blend lands in running instead of a planted stance.
+keeps `animmotion`, PIE and others). It places them from the clip's root-motion speed curve, as the first key after the
+speed peak where the speed has fallen to a fraction of the peak: attack and block at 90 % (right after the peak, and
+never later than 0.35 s), chain and exit to running at 75 % (still moving, so the blend lands in running instead of a
+planted stance); i-frames run from the first key at 30 % of peak until 60 % after the peak. Every fraction is a
+command-line option (`--attack`, `--block`, `--chain`, `--exit`, `--iframeEnd`).
 `behavior/clip_windows.json` records the times written. `tools/clip_analyze.py` prints the per-frame speed and
 pelvis/head height of a clip for hand tuning. Note: the XML round trip keeps 6 decimals, so animation floats can move by
 up to 5e-7.
