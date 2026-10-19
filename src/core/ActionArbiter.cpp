@@ -58,11 +58,17 @@ namespace rdf
 
 	OpenWindows ActionArbiter::WindowsFor(const ArbiterState& state) const
 	{
-		if (state.annotated) {
-			return *state.annotated;
+		if (state.exiting) {
+			return { true, true, true, true };  // already handing over: nothing is left to protect
 		}
 		const float t = state.actionTime;
-		return { t >= policy_.chainFrom, t >= policy_.attackFrom, t >= policy_.blockFrom, t >= policy_.exitFrom };
+		OpenWindows open = state.annotated ? *state.annotated :
+		                                     OpenWindows{ t >= policy_.chainFrom, t >= policy_.attackFrom, t >= policy_.blockFrom, t >= policy_.exitFrom };
+		// If the dodge may already be left by running, an attack or a block may leave it too;
+		// otherwise a clip that opens its exit first would swallow every buffered attack.
+		open.attack = open.attack || open.exit;
+		open.block = open.block || open.exit;
+		return open;
 	}
 
 	Decision ActionArbiter::ArbitrateRunning(const ArbiterState& state, const InputBuffer& buffer, double now) const

@@ -69,6 +69,7 @@ namespace rdf::game::update
 			RE::NiAVObject* last3D_{ nullptr };
 			float           charged_{ 0.0f };
 			RejectReason    lastReject_{ RejectReason::None };
+			CommandKind     lastRejectCommand_{ CommandKind::Dodge };
 			int             tailFrames_{ 0 };   // dev trace keeps running this many ticks after a dodge
 			bool            inStateB_{ true };  // dodge state used last; the first dodge goes to A
 			bool            moveHeld_{ false };
@@ -321,10 +322,11 @@ namespace rdf::game::update
 
 	void Controller::LogRejection(const Decision& d)
 	{
-		if (d.reject == lastReject_) {
+		if (d.reject == lastReject_ && d.rejectedCommand == lastRejectCommand_) {
 			return;
 		}
 		lastReject_ = d.reject;
+		lastRejectCommand_ = d.rejectedCommand;
 		if (d.reject != RejectReason::None && d.reject != RejectReason::NoCommand) {
 			DevLog("rejected cmd={} reason={}", static_cast<int>(d.rejectedCommand), ToString(d.reject));
 		}

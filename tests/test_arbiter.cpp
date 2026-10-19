@@ -185,3 +185,20 @@ TEST(arbiter_annotated_windows_replace_timers)
 	s.annotated->chain = true;
 	CHECK(arb.Arbitrate(s, b, 1.0).kind == DecisionKind::ChainDodge);
 }
+
+TEST(arbiter_attack_allowed_once_exit_window_or_handover_open)
+{
+	ActionArbiter arb{ ActionPolicy{} };
+	InputBuffer   b(5.0f, 0.0f);
+	b.Push(CommandKind::Attack, 0.9);
+
+	auto s = Running(0.2f);
+	s.annotated = OpenWindows{};
+	s.annotated->exit = true;  // the clip opened its exit before its attack window
+	CHECK(arb.Arbitrate(s, b, 1.0).kind == DecisionKind::Attack);
+
+	auto h = Running(0.05f);
+	h.annotated = OpenWindows{};
+	h.exiting = true;  // hand-over into running already under way
+	CHECK(arb.Arbitrate(h, b, 1.0).kind == DecisionKind::Attack);
+}
