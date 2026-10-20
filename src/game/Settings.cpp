@@ -251,6 +251,8 @@ namespace rdf::game
 			s.animSpeed = ReadFloat("Graph", "fAnimSpeed", s.animSpeed, 0.1f, 5.0f);
 			s.armStanceStep = ReadFloat("Graph", "fArmStanceStep", s.armStanceStep, 0.0f, 1.0f);
 			s.armStanceRoll = ReadFloat("Graph", "fArmStanceRoll", s.armStanceRoll, 0.0f, 1.0f);
+			s.armStanceFirstPerson = ReadFloat("Graph", "fArmStanceFirstPerson", s.armStanceFirstPerson, 0.0f, 1.0f);
+			s.clipLengthFirstPerson = ReadFloat("Graph", "fClipLengthFirstPerson", s.clipLengthFirstPerson, 0.05f, 10.0f);
 			s.armStanceWhenSheathed = ReadBool("Graph", "bArmStanceWhenSheathed", s.armStanceWhenSheathed);
 			s.sidestepWhenKeepFacing = ReadBool("Graph", "bSidestepWhenKeepFacing", s.sidestepWhenKeepFacing);
 			s.enterTimeoutFrames = ReadInt("Graph", "iEnterTimeoutFrames", s.enterTimeoutFrames, 1, 120);

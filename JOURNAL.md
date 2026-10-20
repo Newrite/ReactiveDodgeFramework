@@ -199,3 +199,8 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   clips already exist in FirstPerson.hkx, no Blender work needed. Plugin: CommonLib's AddAnimationGraphEventSink only
   registers on graphs.front(), so 1P dodge events never arrived; the sink is now on every graph and counts events only
   from the active graph (tracked each tick). In 1P the dodge never turns the player. bAllowFirstPerson now defaults to 1.
+* First person, motion (2026-10-20): the stance-only 1P dodge felt static. TUDM's 16 1P clips turned out to be byte-identical copies of
+  the vanilla 1P sneak roll, and Motion Sensitive Fix SE (active) strips camera motion from many 1P clips. Vanilla does ship real 1P
+  dodges (`DodgeLeft/Right/Back`, 0.9 s, already in FirstPerson.hkx). The 1P state now blends them with the stance on RDF_ArmBlend
+  (fArmStanceFirstPerson 0.35); forward uses the sneak roll. Validator 213/213. Camera switch mid-dodge now sends RDF_DodgeExit, plus a
+  0.6 s watchdog for a graph left in a dodge state the plugin does not own.

@@ -114,8 +114,11 @@ V = dict(
 # ------------------------------------------------------------------------- first person (firstperson~0_master)
 # The 1P graph (project `firstperson`, Pandora file name `firstperson~0_master`) mirrors the 3P 0_master: same event/variable
 # tables (1217 events / 230 variables), RootBehaviorGraph with the same stateIds (14 Default_State, 48 PlayerStagger_State,
-# 7 Stagger_State), but its own Nemesis ids. 1P renders ARMS ONLY, so there is no roll clip and no bone mask: a state plays
-# the 1P weapon-ready idle (full 1P pose = both arms) of the current hand types, looping.
+# 7 Stagger_State), but its own Nemesis ids. 1P renders ARMS ONLY, so there is no bone mask: a state plays a parametric blend
+# (RDF_ArmBlend: 0 dodge, 1 stance) of Bethesda's own 1P dodge clip and the 1P weapon-ready idle of the current hand types.
+# The dodge clips are vanilla `Animations\DodgeLeft/Right/Back.hkx`, already in the vanilla FirstPerson character (no copies,
+# and OAR replacers such as Sigma - Magic apply). Forward has no 1P dodge: it plays the vanilla 1P sneak forward roll.
+# TUDM's 1P roll_*/sidestep_* are 16 copies of that same roll, so they add nothing.
 V_FP = dict(
     STRING="#0095", VALUES="#0096", DATA="#0097",
     ROOT_SM="#0167", ROOT_WILDCARD="#0168",
@@ -126,6 +129,8 @@ V_FP = dict(
                   (True, 0, "#0176", "(currentDefaultState >= 12) && (bAttached == 1)")],
 )
 FP_PATCH_NAME = "firstperson~0_master.xml"
+FP_DODGE_CLIPS = {"f": "SneakRun_ForwardRoll", "fr": "DodgeRight", "r": "DodgeRight", "br": "DodgeRight",
+                  "b": "DodgeBack", "bl": "DodgeLeft", "l": "DodgeLeft", "fl": "DodgeLeft"}
 # Outer 1P chooser: hkbStateMachine startStateId <- currentDefaultState (the vanilla sync variable that holds the stateId of
 # Default_Behavior: 0 MT/sheathed, 1 weapon readied, 2 magic readied, 10/11 equip, 12/13 unequip, 14 kill move, 20 paired).
 # Weapon pose only while a weapon/spell is out; sheathed (or being sheathed) -> neutral 1P idle `MT_Idle`.
@@ -277,7 +282,12 @@ def clip_node(N, out, label, anim, mode, speed_var=None):
     return c
 
 
-def dodge_selector(N, out, label):
+def fp_clip_path(cname):
+    """1P animation for a CLIPS name: rdf_roll_fr -> Animations\\DodgeRight.hkx."""
+    return "Animations\\%s.hkx" % FP_DODGE_CLIPS[cname.rsplit("_", 1)[1]]
+
+
+def dodge_selector(N, out, label, path=None):
     """Dodge clip chooser: hkbStateMachine, startStateId <- RDF_DodgeClip, one state per clip (stateId = clip index).
 
     Not an hkbManualSelectorGenerator: the SE selector (no change effect) reactivates on its previous child and
@@ -287,8 +297,8 @@ def dodge_selector(N, out, label):
     sm, bs = N.new(), N.new()
     states = []
     for i, cname in enumerate(CLIPS):
-        clip = clip_node(N, out, "%s_%s" % (label, cname), "%s\\%s.hkx" % (ANIM_DIR, cname), "MODE_SINGLE_PLAY",
-                         "RDF_DodgeSpeed")
+        anim = path(cname) if path else "%s\\%s.hkx" % (ANIM_DIR, cname)
+        clip = clip_node(N, out, "%s_%s" % (label, cname), anim, "MODE_SINGLE_PLAY", "RDF_DodgeSpeed")
         st = N.new()
         out.append(node(st, "hkbStateMachineStateInfo", "0xed7f9d0", "\n".join([
             p("variableBindingSet", "null"), '<hkparam name="listeners" numelements="0"></hkparam>',
@@ -411,8 +421,15 @@ def build_state(nm, state_id, other_id, N, fx, bind_extra, masks, v=None, fp=Fal
         p("enterNotifyEvents", enter), p("exitNotifyEvents", exit_), p("transitions", trans), p("generator", modgen),
         p("name", nm), p("stateId", state_id), p("probability", "1.000000"), p("enable", "true")])))
     # --- ModifierGenerator { BSIsActiveModifier, Blender }
-    if fp:   # first person: ModifierGenerator{ BSIsActiveModifier, stance chooser }
-        gen_ptr = stance_chooser_fp(N, out, nm)
+    if fp:   # first person: ModifierGenerator{ BSIsActiveModifier, Blend(RDF_ArmBlend){ 0 dodge clip, 1 stance } }
+        gen_ptr, blend_bs, c0, c1 = N.new(), N.new(), N.new(), N.new()
+        named(gen_ptr, nm + "_FPStanceBlend")
+        dodge = dodge_selector(N, out, nm + "_FP", fp_clip_path)
+        stance = stance_chooser_fp(N, out, nm)
+        out.append(binding_set(blend_bs, [("blendParameter", ARM_BLEND_VAR)]))
+        out.append(blender_child(c0, dodge, "null", 0.0, 0.0))
+        out.append(blender_child(c1, stance, "null", 1.0, 0.0))
+        out.append(blender(gen_ptr, [c0, c1], BLEND_FLAGS_PARAMETRIC, blend_bs))
         out.append(node(modgen, "hkbModifierGenerator", "0x1f81fae6", "\n".join([
             p("variableBindingSet", "null"), p("userData", "1"), p("name", nm + "_MG"), p("modifier", isact),
             p("generator", gen_ptr)])))

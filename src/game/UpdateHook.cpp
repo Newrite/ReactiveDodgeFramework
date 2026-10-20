@@ -481,8 +481,12 @@ namespace rdf::game::update
 		const float angle = core_->PreviewStartAngleDeg(d);
 		const int   clip = ClipIndex(angle, core_->PreviewKeepsFacing(d));
 		const auto  entry = EntryFor(chain);
-		const float armStance = !HasStanceToKeep(player) ? 0.0f : clip >= kFirstStepClip ? settings.armStanceStep : settings.armStanceRoll;
-		if (!graph::SendStart(player, entry, clip, settings.core.timing.PlaybackSpeed(settings.clipLength, settings.animSpeed), armStance)) {
+		const auto* camera = RE::PlayerCamera::GetSingleton();
+		const bool  firstPerson = camera && camera->IsInFirstPerson();
+		const float stance = firstPerson ? settings.armStanceFirstPerson : clip >= kFirstStepClip ? settings.armStanceStep : settings.armStanceRoll;
+		const float armStance = HasStanceToKeep(player) ? stance : 0.0f;
+		const float clipLength = firstPerson ? settings.clipLengthFirstPerson : settings.clipLength;
+		if (!graph::SendStart(player, entry, clip, settings.core.timing.PlaybackSpeed(clipLength, settings.animSpeed), armStance)) {
 			DevLog("graph refused {} (clip {}); press stays buffered", chain ? "chain" : "start", clip);
 			core_->Apply(d, false);
 			return;

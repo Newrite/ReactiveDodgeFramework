@@ -156,7 +156,7 @@ def char_masks(ch):
     return out
 
 
-def dodge_selector_problems(g, sm):
+def dodge_selector_problems(g, sm, path=None):
     """The dodge clip chooser must be a state machine (not a ManualSelector): startStateId <- RDF_DodgeClip, 16 states."""
     problems = []
     if sm.cls != "hkbStateMachine":
@@ -180,7 +180,7 @@ def dodge_selector_problems(g, sm):
             if so.text(k) != "null":
                 problems.append("state %d %s not null" % (i, k))
         c = g.objs[so.text("generator")]
-        exp = "%s\\%s.hkx" % (G.ANIM_DIR, G.CLIPS[i])
+        exp = path(G.CLIPS[i]) if path else "%s\\%s.hkx" % (G.ANIM_DIR, G.CLIPS[i])
         if c.cls != "hkbClipGenerator" or c.text("animationName") != exp or c.text("mode") != "MODE_SINGLE_PLAY":
             problems.append("clip %d %s" % (i, c.text("animationName")))
         if bind_list(g, c) != [("playbackSpeed", "RDF_DodgeSpeed", "BINDING_TYPE_VARIABLE")]:
@@ -325,10 +325,22 @@ def check_fp(rdf_x, base_x):
         check(tag + "1P %d name/enable/enter/exit" % sid, so.text("name") == nm and so.text("enable") == "true" and ent == ["RDF_DodgeEntered"] and ext == ["RDF_DodgeLeft"])
         mg = g.objs[so.text("generator")]
         mod = g.objs[mg.text("modifier")]
-        drawn = g.objs[mg.text("generator")]
-        check(tag + "1P %d generator = ModifierGenerator{BSIsActiveModifier(bAnimationDriven, RDF_IsDodging), state-machine chooser}" % sid,
-              mg.cls == "hkbModifierGenerator" and mod.cls == "BSIsActiveModifier" and drawn.cls == "hkbStateMachine"
+        blend = g.objs[mg.text("generator")]
+        check(tag + "1P %d generator = ModifierGenerator{BSIsActiveModifier(bAnimationDriven, RDF_IsDodging), parametric blender <- RDF_ArmBlend}" % sid,
+              mg.cls == "hkbModifierGenerator" and mod.cls == "BSIsActiveModifier" and blend.cls == "hkbBlenderGenerator"
+              and blend.text("flags") == "16" and bind_list(g, blend) == [("blendParameter", "RDF_ArmBlend", "BINDING_TYPE_VARIABLE")]
               and [(m, v) for m, v, _t in bind_list(g, mod)] == [("bIsActive0", "bAnimationDriven"), ("bIsActive1", "RDF_IsDodging")])
+        b0, b1 = children_of(g, blend)
+        check(tag + "1P %d blend children: weight 0 = dodge clip, weight 1 = stance; no masks; worldFromModel 0" % sid,
+              float(b0.text("weight")) == 0.0 and float(b1.text("weight")) == 1.0 and b0.text("boneWeights") == "null"
+              and b1.text("boneWeights") == "null" and b0.text("worldFromModelWeight") == b1.text("worldFromModelWeight") == "0.000000")
+        fp_sm = g.objs[b0.text("generator")]
+        pr = dodge_selector_problems(g, fp_sm, G.fp_clip_path)
+        check(tag + "1P %d dodge chooser: startStateId <- RDF_DodgeClip, 16 states -> vanilla 1P dodge clips, speed binding" % sid, not pr, "; ".join(pr[:3]))
+        fp_files = {G.fp_clip_path(c).lower() for c in G.CLIPS}
+        check(tag + "1P %d dodge clips are in FirstPerson animationNames %s" % (sid, sorted(fp_files)), fp_files <= have, str(fp_files - have))
+        drawn = g.objs[b1.text("generator")]
+        check(tag + "1P %d stance child is a state-machine chooser" % sid, drawn.cls == "hkbStateMachine")
         # outer chooser: startStateId <- currentDefaultState, states = Default_Behavior ids; sheathed ids -> MT_Idle, drawn ids -> stance chooser
         ids = [g.objs[x].intval("stateId") for x in drawn.text("states").split()]
         kinds, stance_ptrs, bad_d = {}, set(), []
