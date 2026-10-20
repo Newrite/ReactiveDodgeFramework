@@ -204,3 +204,8 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   dodges (`DodgeLeft/Right/Back`, 0.9 s, already in FirstPerson.hkx). The 1P state now blends them with the stance on RDF_ArmBlend
   (fArmStanceFirstPerson 0.35); forward uses the sneak roll. Validator 213/213. Camera switch mid-dodge now sends RDF_DodgeExit, plus a
   0.6 s watchdog for a graph left in a dodge state the plugin does not own.
+* Cast stuck after a dodge (2026-10-20): dodging out of a charging spell left the cast state on until sheathing. Vanilla states
+  that take over from casting (Stagger_State, jump/land, swim, ragdoll, bleedout...) send the graph event `InterruptCast` on enter;
+  the engine's InterruptCastHandler calls Actor::InterruptCast (37808, verified in IDA: InterruptCast on all 4 casters, a no-op
+  without a current spell). The RDF states did not, so the casters stayed charging. Both dodge states (3P and 1P) now send
+  RDF_DodgeEntered + InterruptCast on enter. Not STB's partial-cast mechanic; vanilla would behave the same.

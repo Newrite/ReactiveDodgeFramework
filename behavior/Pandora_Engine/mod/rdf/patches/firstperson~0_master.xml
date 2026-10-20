@@ -75,7 +75,7 @@
     <hkparam name="blendCurve">BLEND_CURVE_SMOOTH</hkparam>
     </hkobject>
     <hkobject name="#rdf$4" class="hkbStateMachineEventPropertyArray" signature="0xb07b4388">
-    <hkparam name="events" numelements="1"><hkobject><hkparam name="id">$eventID[RDF_DodgeEntered]$</hkparam><hkparam name="payload">null</hkparam></hkobject></hkparam>
+    <hkparam name="events" numelements="2"><hkobject><hkparam name="id">$eventID[RDF_DodgeEntered]$</hkparam><hkparam name="payload">null</hkparam></hkobject><hkobject><hkparam name="id">$eventID[InterruptCast]$</hkparam><hkparam name="payload">null</hkparam></hkobject></hkparam>
     </hkobject>
     <hkobject name="#rdf$5" class="hkbStateMachineEventPropertyArray" signature="0xb07b4388">
     <hkparam name="events" numelements="1"><hkobject><hkparam name="id">$eventID[RDF_DodgeLeft]$</hkparam><hkparam name="payload">null</hkparam></hkobject></hkparam>
@@ -1485,7 +1485,7 @@
     <hkparam name="bIsActive0">false</hkparam><hkparam name="bInvertActive0">false</hkparam><hkparam name="bIsActive1">false</hkparam><hkparam name="bInvertActive1">false</hkparam><hkparam name="bIsActive2">false</hkparam><hkparam name="bInvertActive2">false</hkparam><hkparam name="bIsActive3">false</hkparam><hkparam name="bInvertActive3">false</hkparam><hkparam name="bIsActive4">false</hkparam><hkparam name="bInvertActive4">false</hkparam>
     </hkobject>
     <hkobject name="#rdf$131" class="hkbStateMachineEventPropertyArray" signature="0xb07b4388">
-    <hkparam name="events" numelements="1"><hkobject><hkparam name="id">$eventID[RDF_DodgeEntered]$</hkparam><hkparam name="payload">null</hkparam></hkobject></hkparam>
+    <hkparam name="events" numelements="2"><hkobject><hkparam name="id">$eventID[RDF_DodgeEntered]$</hkparam><hkparam name="payload">null</hkparam></hkobject><hkobject><hkparam name="id">$eventID[InterruptCast]$</hkparam><hkparam name="payload">null</hkparam></hkobject></hkparam>
     </hkobject>
     <hkobject name="#rdf$132" class="hkbStateMachineEventPropertyArray" signature="0xb07b4388">
     <hkparam name="events" numelements="1"><hkobject><hkparam name="id">$eventID[RDF_DodgeLeft]$</hkparam><hkparam name="payload">null</hkparam></hkobject></hkparam>

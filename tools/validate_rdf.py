@@ -322,7 +322,7 @@ def check_fp(rdf_x, base_x):
             continue
         ent = [e.split("(")[0] for e in H.notify_events(g, so.text("enterNotifyEvents"))]
         ext = [e.split("(")[0] for e in H.notify_events(g, so.text("exitNotifyEvents"))]
-        check(tag + "1P %d name/enable/enter/exit" % sid, so.text("name") == nm and so.text("enable") == "true" and ent == ["RDF_DodgeEntered"] and ext == ["RDF_DodgeLeft"])
+        check(tag + "1P %d name/enable/enter/exit" % sid, so.text("name") == nm and so.text("enable") == "true" and ent == ["RDF_DodgeEntered", "InterruptCast"] and ext == ["RDF_DodgeLeft"])
         mg = g.objs[so.text("generator")]
         mod = g.objs[mg.text("modifier")]
         blend = g.objs[mg.text("generator")]
@@ -514,8 +514,8 @@ def main():
         check("D  %d name/enable" % sid, so.text("name") == nm and so.text("enable") == "true", so.text("name"))
         ent = H.notify_events(g, so.text("enterNotifyEvents"))
         ext = H.notify_events(g, so.text("exitNotifyEvents"))
-        check("D  %d enter=RDF_DodgeEntered exit=RDF_DodgeLeft" % sid,
-              [e.split("(")[0] for e in ent] == ["RDF_DodgeEntered"] and [e.split("(")[0] for e in ext] == ["RDF_DodgeLeft"], "%s / %s" % (ent, ext))
+        check("D  %d enter=RDF_DodgeEntered+InterruptCast exit=RDF_DodgeLeft" % sid,
+              [e.split("(")[0] for e in ent] == ["RDF_DodgeEntered", "InterruptCast"] and [e.split("(")[0] for e in ext] == ["RDF_DodgeLeft"], "%s / %s" % (ent, ext))
         mg = g.objs[so.text("generator")]
         mod = g.objs[mg.text("modifier")]
         outer = g.objs[mg.text("generator")]

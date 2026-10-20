@@ -83,7 +83,7 @@
     <hkparam name="boneWeights" numelements="126">1.000000 1.000000 1.000000 1.000000 1.000000 1.000000 1.000000 1.000000 1.000000 1.000000 1.000000 1.000000 1.000000 1.000000 1.000000 1.000000 1.000000 1.000000 1.000000 1.000000 1.000000 1.000000 1.000000 1.000000 1.000000 1.000000 1.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 1.000000 1.000000 1.000000 1.000000 1.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 1.000000 0.000000 0.000000 1.000000 1.000000 1.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 1.000000 1.000000 1.000000 1.000000 1.000000 1.000000 1.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 1.000000 1.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000</hkparam>
     </hkobject>
     <hkobject name="#rdf$6" class="hkbStateMachineEventPropertyArray" signature="0xb07b4388">
-    <hkparam name="events" numelements="1"><hkobject><hkparam name="id">$eventID[RDF_DodgeEntered]$</hkparam><hkparam name="payload">null</hkparam></hkobject></hkparam>
+    <hkparam name="events" numelements="2"><hkobject><hkparam name="id">$eventID[RDF_DodgeEntered]$</hkparam><hkparam name="payload">null</hkparam></hkobject><hkobject><hkparam name="id">$eventID[InterruptCast]$</hkparam><hkparam name="payload">null</hkparam></hkobject></hkparam>
     </hkobject>
     <hkobject name="#rdf$7" class="hkbStateMachineEventPropertyArray" signature="0xb07b4388">
     <hkparam name="events" numelements="1"><hkobject><hkparam name="id">$eventID[RDF_DodgeLeft]$</hkparam><hkparam name="payload">null</hkparam></hkobject></hkparam>
@@ -1568,7 +1568,7 @@
     <hkparam name="children" numelements="2">#rdf$20 #rdf$21</hkparam>
     </hkobject>
     <hkobject name="#rdf$149" class="hkbStateMachineEventPropertyArray" signature="0xb07b4388">
-    <hkparam name="events" numelements="1"><hkobject><hkparam name="id">$eventID[RDF_DodgeEntered]$</hkparam><hkparam name="payload">null</hkparam></hkobject></hkparam>
+    <hkparam name="events" numelements="2"><hkobject><hkparam name="id">$eventID[RDF_DodgeEntered]$</hkparam><hkparam name="payload">null</hkparam></hkobject><hkobject><hkparam name="id">$eventID[InterruptCast]$</hkparam><hkparam name="payload">null</hkparam></hkobject></hkparam>
     </hkobject>
     <hkobject name="#rdf$150" class="hkbStateMachineEventPropertyArray" signature="0xb07b4388">
     <hkparam name="events" numelements="1"><hkobject><hkparam name="id">$eventID[RDF_DodgeLeft]$</hkparam><hkparam name="payload">null</hkparam></hkobject></hkparam>

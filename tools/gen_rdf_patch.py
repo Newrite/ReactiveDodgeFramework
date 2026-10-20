@@ -215,10 +215,10 @@ def effect_node(name, spec, bind_name_ptr="null"):
         p("flags", flags), p("endMode", "END_MODE_NONE"), p("blendCurve", "BLEND_CURVE_SMOOTH")]))
 
 
-def event_array(name, ev_name):
+def event_array(name, *ev_names):
+    items = "".join("<hkobject>%s%s</hkobject>" % (p("id", ev(e)), p("payload", "null")) for e in ev_names)
     return node(name, "hkbStateMachineEventPropertyArray", "0xb07b4388",
-                '<hkparam name="events" numelements="1"><hkobject>%s%s</hkobject></hkparam>'
-                % (p("id", ev(ev_name)), p("payload", "null")))
+                '<hkparam name="events" numelements="%d">%s</hkparam>' % (len(ev_names), items))
 
 
 def char_prop_binding_set(name, member, index):
@@ -400,7 +400,10 @@ def build_state(nm, state_id, other_id, N, fx, bind_extra, masks, v=None, fp=Fal
     out = []
     st = N.new()
     enter, exit_, trans, modgen, isact, isact_bs = (N.new() for _ in range(6))
-    out.append(event_array(enter, "RDF_DodgeEntered"))
+    # InterruptCast: the vanilla event every state that takes over from casting sends on enter (Stagger_State,
+    # jump/land, swim, ragdoll...); the engine's InterruptCastHandler then calls Actor::InterruptCast (ID 37808), which
+    # ends each caster's charge. Without it a dodge out of a cast leaves the caster charging after the return.
+    out.append(event_array(enter, "RDF_DodgeEntered", "InterruptCast"))
     out.append(event_array(exit_, "RDF_DodgeLeft"))
     # --- transitions
     ts = []
