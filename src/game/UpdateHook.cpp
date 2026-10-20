@@ -5,6 +5,7 @@
 #include "EngineState.h"
 #include "GraphCoordinator.h"
 #include "InputCollector.h"
+#include "JumpGate.h"
 #include "LockOn.h"
 #include "MotionHook.h"
 #include "Settings.h"
@@ -74,7 +75,9 @@ namespace rdf::game::update
 			float           charged_{ 0.0f };
 			RejectReason    lastReject_{ RejectReason::None };
 			CommandKind     lastRejectCommand_{ CommandKind::Dodge };
-			float           orphanTime_{ 0.0f };  // graph in a dodge state we do not own, seconds
+			float           orphanTime_{ 0.0f };
+			float           staggerAge_{ 0.0f };       // seconds the player has been staggered
+			bool            escapeStagger_{ false };   // this tick a dodge may cut the stagger short  // graph in a dodge state we do not own, seconds
 			int             tailFrames_{ 0 };   // dev trace keeps running this many ticks after a dodge
 			bool            inStateB_{ true };  // dodge state used last; the first dodge goes to A
 			bool            moveHeld_{ false };
@@ -207,10 +210,18 @@ namespace rdf::game::update
 		ReleaseOrphanedState(player, dt);
 		RetryDeferred(player);
 
-		const auto           state = engine::Read(player);
+		const bool           ownDodge = core_->DodgeRunning() || awaitingEnter_;
+		const auto           state = engine::Read(player, ownDodge);
 		const auto&          settings = Settings::Get();
 		EngineView           view;
 		view.engine = state.block;
+		staggerAge_ = state.block == EngineBlock::Staggered ? staggerAge_ + dt : 0.0f;
+		// [Stagger] bDodgeFromStagger: a dodge may cut the stagger short once fDodgeDelay has passed.
+		escapeStagger_ = !ownDodge && state.block == EngineBlock::Staggered && settings.dodgeFromStagger &&
+		                 staggerAge_ >= settings.staggerDodgeDelay;
+		if (escapeStagger_) {
+			view.engine = EngineBlock::None;
+		}
 		view.attackState = state.attackState;
 		view.dodgeWindowOpen = graph::DodgeWindowOpen();
 		view.staminaOk = !settings.costResource || state.resource >= settings.minimum;
@@ -219,6 +230,8 @@ namespace rdf::game::update
 			LogCost(player, state.resource);
 		}
 		Execute(player, decision);
+		jump::SetLocked(settings.blockJumpDuringDodge &&
+		                (awaitingEnter_ || (core_->DodgeRunning() && !core_->ExitWindowOpen())));
 
 		StepAndPublish(player, dt);
 		Trace(player);
@@ -492,6 +505,12 @@ namespace rdf::game::update
 			return;
 		}
 		inStateB_ = entry == graph::DodgeEntry::Chain ? !inStateB_ : entry == graph::DodgeEntry::StartB;
+		if (escapeStagger_) {
+			// The graph leaves the stagger state through our wildcard, so its staggerStop annotation never
+			// fires; clear the flag the way the engine's handler would.
+			engine::EndStagger(player);
+			DevLog("dodge out of stagger after {:.2f}s", staggerAge_);
+		}
 		graph::LogEvents(settings.devLog);
 		effects::ChargeCost(player, settings.cost);
 		charged_ = settings.cost;

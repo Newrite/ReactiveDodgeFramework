@@ -593,3 +593,21 @@ TEST(annotation_events_drive_windows_and_iframes_per_dodge)
 	// The chained dodge starts with its own (not yet announced) windows.
 	CHECK(!s.core.ClipAnnotated());
 }
+
+// ---- jump gate -------------------------------------------------------------------------------
+
+TEST(exit_window_gates_the_jump_until_exit_from)
+{
+	Sim s(ExactConfig());
+	CHECK(s.core.ExitWindowOpen());  // no dodge: nothing to protect
+	s.Frame(kDt64, Dir(90), { CommandKind::Dodge });
+	int openedAt = -1;
+	for (int n = 1; n < 40 && openedAt < 0; ++n) {
+		s.Frame(kDt64, Dir(90));
+		if (s.core.ExitWindowOpen()) {
+			openedAt = n;
+		}
+	}
+	CHECK(openedAt == 29);  // the start tick is the first 1/64 s, so t reaches exitFrom (30/64 s) here
+	CHECK(s.core.ActionTime() == 0.46875f);
+}

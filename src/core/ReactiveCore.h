@@ -60,6 +60,8 @@ namespace rdf
 		int        ChainCount() const { return action_.ChainCount(); }
 		bool       Exiting() const { return action_.Exiting(); }
 		bool       CancelledIntoAction() const { return intoAction_; }
+		// The current dodge may be left for locomotion (and so for a jump): its exit window is open.
+		bool       ExitWindowOpen() const;
 		float      Heading() const { return driver_.Heading(); }
 		float      Facing() const { return driver_.Facing(); }
 		float      Speed() const { return driver_.Speed(); }

@@ -89,3 +89,10 @@ a dodge owns the actor, so AMR still applies to every other animation. Precision
   (CommonLib), `HighProcessData +0x46D` animation-driven flag / `+0x46F allowRotation` (CommonLib
   field names `unk46D` / `allowRotation`, write site 36910 — O).
 * `Actor::boolFlags` bit 8 = `kShouldAnimGraphUpdate` gates motion processing (O at `0x1407021C1`).
+
+## Jump and stagger (1.5.97, verified in IDA 2026-10-20)
+| What | ID / address | Notes |
+|---|---|---|
+| `JumpHandler` vtable | 263065 = 0x14166F388 | slot 4 `ProcessButton` = 0x1407090A0: mount/sprint/flags checks, then `Actor::Jump` (0x1405D1F80) |
+| `StaggeredStopHandler::Handle` | 0x140721280 | `actor+0xC4 &= ~0x2000` = `actorState2.staggered = 0` (CommonLib bit 13) |
+| `InterruptCastHandler::Handle` | 0x140722440 | graph event `InterruptCast` -> `Actor::InterruptCast` (37808 = 0x140631C80, all 4 casters) |

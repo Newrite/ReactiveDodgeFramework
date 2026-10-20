@@ -68,6 +68,13 @@ namespace rdf::game
 		// [Compat]
 		bool allowFirstPerson{ true };
 
+		// [Jump]
+		bool blockJumpDuringDodge{ true };  // a jump may leave a dodge only once its exit window is open
+
+		// [Stagger]
+		bool  dodgeFromStagger{ false };  // a dodge may cut a stagger short (meant to be unlocked later)
+		float staggerDodgeDelay{ 0.0f };  // seconds of stagger before that dodge is allowed
+
 		// [IFrames]
 		bool  iFrames{ true };
 		bool  projectileIFrames{ true };  // arrows and spell missiles pass through during i-frames

@@ -209,3 +209,10 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   the engine's InterruptCastHandler calls Actor::InterruptCast (37808, verified in IDA: InterruptCast on all 4 casters, a no-op
   without a current spell). The RDF states did not, so the casters stayed charging. Both dodge states (3P and 1P) now send
   RDF_DodgeEntered + InterruptCast on enter. Not STB's partial-cast mechanic; vanilla would behave the same.
+* Jump during a dodge, dodge out of stagger (2026-10-20): the root jump wildcards cut any dodge short. JumpHandler::ProcessButton
+  (vtable 263065 slot 4 = 0x1407090A0, verified in IDA) calls Actor::Jump with no knowledge of a dodge; a vtable hook (JumpGate)
+  swallows the button while a dodge runs and its exit window is closed ([Jump] bBlockDuringDodge=1). Dodge out of stagger:
+  [Stagger] bDodgeFromStagger (default 0, meant to be unlocked later) and fDodgeDelay. While staggered the arbiter sees no engine
+  block; on a successful start the plugin clears actorState2.staggered the way StaggeredStopHandler (0x140721280: bit 0x2000 at
+  +0xC4) does, since the graph leaves the stagger state through our wildcard and its staggerStop never fires. During our own
+  dodge only the actor flag counts as stagger, not the graph's IsStaggering (still true while the stagger blends out).

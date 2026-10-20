@@ -1,6 +1,7 @@
 #include "game/Effects.h"
 #include "game/GraphCoordinator.h"
 #include "game/InputCollector.h"
+#include "game/JumpGate.h"
 #include "game/LegacyDodge.h"
 #include "game/LockOn.h"
 #include "game/MotionHook.h"
@@ -79,6 +80,7 @@ SKSEPluginLoad(const SKSE::LoadInterface* a_skse)
 		}
 	}
 	rdf::game::update::Install();
+	rdf::game::jump::Install();
 
 	SKSE::GetMessagingInterface()->RegisterListener(OnMessage);
 

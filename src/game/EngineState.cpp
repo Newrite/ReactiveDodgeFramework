@@ -6,7 +6,7 @@ namespace rdf::game::engine
 {
 	namespace
 	{
-		EngineBlock Classify(RE::PlayerCharacter* p, const RE::ActorState* state)
+		EngineBlock Classify(RE::PlayerCharacter* p, const RE::ActorState* state, bool ownDodge)
 		{
 			if (p->IsDead() || state->IsBleedingOut() || state->IsUnconscious()) {
 				return EngineBlock::Dead;
@@ -17,7 +17,8 @@ namespace rdf::game::engine
 			if (p->IsInRagdollState() || state->GetKnockState() != RE::KNOCK_STATE_ENUM::kNormal) {
 				return EngineBlock::Ragdoll;
 			}
-			if (state->IsStaggered() || p->IsStaggering()) {
+			bool graphStagger = false;
+			if (state->IsStaggered() || (!ownDodge && p->GetGraphVariableBool("IsStaggering"sv, graphStagger) && graphStagger)) {
 				return EngineBlock::Staggered;
 			}
 			if (p->IsOnMount()) {
@@ -41,14 +42,19 @@ namespace rdf::game::engine
 		}
 	}
 
-	Snapshot Read(RE::PlayerCharacter* player)
+	Snapshot Read(RE::PlayerCharacter* player, bool ownDodge)
 	{
 		const auto* state = player->AsActorState();
 		Snapshot    s;
-		s.block = Classify(player, state);
+		s.block = Classify(player, state, ownDodge);
 		s.attackState = static_cast<std::uint8_t>(state->GetAttackState());
 		const auto resource = Settings::Get().costResource;
 		s.resource = resource ? player->AsActorValueOwner()->GetActorValue(*resource) : 0.0f;
 		return s;
+	}
+
+	void EndStagger(RE::PlayerCharacter* player)
+	{
+		player->AsActorState()->actorState2.staggered = 0;
 	}
 }

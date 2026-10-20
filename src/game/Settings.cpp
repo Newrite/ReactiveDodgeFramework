@@ -275,6 +275,9 @@ namespace rdf::game
 		s.iFrameStart = ReadFloat("IFrames", "fIFrameStart", s.iFrameStart, 0.0f, 5.0f);
 		s.iFrameEnd = ReadFloat("IFrames", "fIFrameEnd", s.iFrameEnd, 0.0f, 5.0f);
 		s.allowFirstPerson = ReadBool("Compat", "bAllowFirstPerson", s.allowFirstPerson);
+		s.blockJumpDuringDodge = ReadBool("Jump", "bBlockDuringDodge", s.blockJumpDuringDodge);
+		s.dodgeFromStagger = ReadBool("Stagger", "bDodgeFromStagger", s.dodgeFromStagger);
+		s.staggerDodgeDelay = ReadFloat("Stagger", "fDodgeDelay", s.staggerDodgeDelay, 0.0f, 10.0f);
 		s.suppressLegacyDodge = ReadBool("Compat", "bSuppressLegacyDodge", s.suppressLegacyDodge);
 		s.useTrueDirectionalMovement = ReadBool("Compat", "bUseTrueDirectionalMovement", s.useTrueDirectionalMovement);
 		s.devLog = ReadBool("Dev", "bDevLog", s.devLog);

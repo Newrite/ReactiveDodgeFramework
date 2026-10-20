@@ -82,9 +82,9 @@ namespace rdf
 			policy_(policy) {}
 
 		Decision Arbitrate(const ArbiterState& state, const InputBuffer& buffer, double now) const;
+		OpenWindows WindowsFor(const ArbiterState& state) const;
 
 	private:
-		OpenWindows WindowsFor(const ArbiterState& state) const;
 		Decision ArbitrateRunning(const ArbiterState& state, const InputBuffer& buffer, double now) const;
 		Decision ArbitrateIdle(const ArbiterState& state, const InputBuffer& buffer, double now) const;
 
