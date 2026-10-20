@@ -138,7 +138,7 @@ namespace rdf::game::graph
 		logger::info("animation graph sink registered on {} graph(s)", count);
 	}
 
-	void TrackActiveGraph(RE::PlayerCharacter* player)
+	bool TrackActiveGraph(RE::PlayerCharacter* player)
 	{
 		RE::BSTSmartPointer<RE::BSAnimationGraphManager> manager;
 		const RE::BSTEventSource<RE::BSAnimationGraphEvent>* source = nullptr;
@@ -149,7 +149,9 @@ namespace rdf::game::graph
 		}
 		if (g_activeSource.exchange(source, std::memory_order_acq_rel) != source) {
 			g_depth = 0;  // a switch between first and third person starts the count afresh
+			return true;
 		}
+		return false;
 	}
 
 	bool TakeEntered() { return Take(g_entered); }

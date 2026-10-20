@@ -48,6 +48,8 @@ namespace rdf::game::update
 			bool       Perform(RE::PlayerCharacter* player, const Decision& d);
 			void       RollbackStart(RE::PlayerCharacter* player);
 			void       EndByGraph(const char* why);
+			void       AbandonGraph(RE::PlayerCharacter* player, const char* why);
+			void       ReleaseOrphanedState(RE::PlayerCharacter* player, float dt);
 			void       StepAndPublish(RE::PlayerCharacter* player, float dt);
 			void       OnStopped();
 			void       Trace(RE::PlayerCharacter* player);
@@ -72,6 +74,7 @@ namespace rdf::game::update
 			float           charged_{ 0.0f };
 			RejectReason    lastReject_{ RejectReason::None };
 			CommandKind     lastRejectCommand_{ CommandKind::Dodge };
+			float           orphanTime_{ 0.0f };  // graph in a dodge state we do not own, seconds
 			int             tailFrames_{ 0 };   // dev trace keeps running this many ticks after a dodge
 			bool            inStateB_{ true };  // dodge state used last; the first dodge goes to A
 			bool            moveHeld_{ false };
@@ -189,7 +192,9 @@ namespace rdf::game::update
 		}
 
 		Refresh3D(player);
-		graph::TrackActiveGraph(player);
+		if (graph::TrackActiveGraph(player) && (core_->DodgeRunning() || awaitingEnter_)) {
+			AbandonGraph(player, "active graph switched (camera)");
+		}
 		MeasureMotion(player, dt);
 		const FrameInput frame = BuildFrame(player, dt);
 		core_->BeginFrame(frame);
@@ -199,6 +204,7 @@ namespace rdf::game::update
 		}
 		MaintainBlock(player);
 		HandleGraphEvents(player);
+		ReleaseOrphanedState(player, dt);
 		RetryDeferred(player);
 
 		const auto           state = engine::Read(player);
@@ -228,8 +234,8 @@ namespace rdf::game::update
 		}
 		last3D_ = current;
 		graph::RegisterSink(player);
-		if (core_->DodgeRunning()) {
-			EndByGraph("3D reloaded");
+		if (core_->DodgeRunning() || awaitingEnter_) {
+			AbandonGraph(player, "3D reloaded");
 		}
 	}
 
@@ -333,6 +339,42 @@ namespace rdf::game::update
 		DevLog("dodge ended by graph: {}", why);
 		exitSent_ = true;  // the graph is already heading back to locomotion
 		core_->Apply(Decision{ DecisionKind::Interrupt }, true);
+	}
+
+	// The player has a first- and a third-person graph and our start event reached both, so after a
+	// camera switch the newly active one is still in a dodge state (bAnimationDriven, no clip-end
+	// exit) that we no longer drive. Send the exit so every graph goes back to locomotion.
+	void Controller::AbandonGraph(RE::PlayerCharacter* player, const char* why)
+	{
+		graph::SendExit(player);
+		if (awaitingEnter_) {
+			effects::RefundCost(player, charged_);
+			charged_ = 0.0f;
+			awaitingEnter_ = false;
+		}
+		if (core_->DodgeRunning()) {
+			EndByGraph(why);
+		} else {
+			DevLog("graph abandoned before entering: {}", why);
+			exitSent_ = true;
+		}
+	}
+
+	// Safety net: the active graph reports a dodge state while we own no dodge (a switch we did not
+	// see, a load mid-dodge). Our states have no exit of their own, so without this the player would
+	// stand animation-driven until the next dodge or jump. The grace period covers the out-blend.
+	void Controller::ReleaseOrphanedState(RE::PlayerCharacter* player, float dt)
+	{
+		if (core_->DodgeRunning() || awaitingEnter_ || !graph::GraphIsDodging(player)) {
+			orphanTime_ = 0.0f;
+			return;
+		}
+		orphanTime_ += dt;
+		if (orphanTime_ >= 0.6f) {
+			logger::info("graph stuck in a dodge state we do not own; sending {}", Settings::Get().graph.exit);
+			graph::SendExit(player);
+			orphanTime_ = 0.0f;  // retry after another grace period if it did not take
+		}
 	}
 
 	int Controller::ClipIndex(float angleDeg, bool keepFacing)

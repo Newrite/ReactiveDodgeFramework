@@ -12,7 +12,8 @@ namespace rdf::game::graph
 	// (Re-)registers the animation-graph sink on the player; safe to call repeatedly.
 	void RegisterSink(RE::PlayerCharacter* player);
 	// Main thread, every tick: remembers which of the player's graphs is active (first / third person).
-	void TrackActiveGraph(RE::PlayerCharacter* player);
+	// Returns true when the active graph changed since the last call.
+	bool TrackActiveGraph(RE::PlayerCharacter* player);
 
 	// What the graph reported since the last Take*.
 	// Entered is the start/chain handshake. Depth counts dodge states the graph is in: +1 on
