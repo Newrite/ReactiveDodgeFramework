@@ -28,7 +28,7 @@
 * A one-frame upper-body pop at dodge start, visible only in slow motion (parked; findings in JOURNAL.md).
 * Fixture animations are TUDM's clips (local only, not redistributable); visual quality is bounded by them, e.g. they
   settle into a full stance at the end. A proper clip set is needed for final visuals.
-* First person: dodge is refused (no 1P graph patch).
+* First person: no roll clip; the 1P graph plays the weapon stance (or MT_Idle when sheathed) while the plugin moves the player.
 * Beams and flame streams are not covered by projectile i-frames; left-hand and dual attacks from a dodge are not
   implemented.
 * In this modlist V also triggers a bash when a weapon is drawn (another mod's binding); choose a free key if that
