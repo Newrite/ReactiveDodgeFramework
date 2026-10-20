@@ -216,3 +216,9 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   block; on a successful start the plugin clears actorState2.staggered the way StaggeredStopHandler (0x140721280: bit 0x2000 at
   +0xC4) does, since the graph leaves the stagger state through our wildcard and its staggerStop never fires. During our own
   dodge only the actor flag counts as stagger, not the graph's IsStaggering (still true while the stagger blends out).
+* 1P view locked during a dodge (2026-10-20): the mouse turn of the player is a rotation rate emitted by
+  MovementHandlerAgentPlayerControls::BuildDirectControlOutput (0x1406FBA80: lookInputVec.x * movement-type float +0x24 =
+  rotateInPlaceRun). While bAnimationDriven the tweener builds the output instead (our ProcessMotionData hook), so the turn is
+  dropped; in 3P only the camera orbits, in 1P the camera yaw is the actor's. The hook now adds lookInputVec.x * rate * dt in
+  1P (rate read each tick via ActorState vfunc 8 -> Character 0x1406082B0, which writes 56 bytes; fFirstPersonLookScale).
+  Pitch goes through PlayerCamera 0x14084D3C0 -> ModifyRotationX and is not animation-driven.

@@ -72,7 +72,13 @@ namespace rdf::game::motion
 
 			// World velocity -> actor-local displacement for this dt, using the heading at the middle of
 			// the step because the yaw delta is applied during the same step.
-			const float yawStep = cmd.yawRate * dt;
+			float lookYaw = 0.0f;
+			if (cmd.lookYawRate != 0.0f) {
+				if (const auto* controls = RE::PlayerControls::GetSingleton()) {
+					lookYaw = controls->data.lookInputVec.x * cmd.lookYawRate;
+				}
+			}
+			const float yawStep = (cmd.yawRate + lookYaw) * dt;
 			const float heading = actor->data.angle.z + 0.5f * yawStep;
 			const Vec2  local = WorldToLocal({ cmd.vx, cmd.vy }, heading);
 			const float yaw = g_yawFactor.load(std::memory_order_relaxed) * yawStep;

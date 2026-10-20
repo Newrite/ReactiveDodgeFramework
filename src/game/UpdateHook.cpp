@@ -505,6 +505,9 @@ namespace rdf::game::update
 			return;
 		}
 		inStateB_ = entry == graph::DodgeEntry::Chain ? !inStateB_ : entry == graph::DodgeEntry::StartB;
+		if (firstPerson) {
+			DevLog("1P dodge: mouse turn rate {:.3f} rad/s x {:.2f}", engine::LookTurnRate(player), settings.firstPersonLookScale);
+		}
 		if (escapeStagger_) {
 			// The graph leaves the stagger state through our wildcard, so its staggerStop annotation never
 			// fires; clear the flag the way the engine's handler would.
@@ -590,6 +593,12 @@ namespace rdf::game::update
 			carry_ = moveHeld_ ? std::max(0.0f, carry_ - settings.carryDecay * dt) : 0.0f;
 		}
 		step.command.speedFloor = carry_;
+		if (step.command.active) {
+			const auto* camera = RE::PlayerCamera::GetSingleton();
+			if (camera && camera->IsInFirstPerson()) {
+				step.command.lookYawRate = engine::LookTurnRate(player) * settings.firstPersonLookScale;
+			}
+		}
 		motion::Publish(step.command, player->GetFormID());
 		requestedDistance_ = step.command.speed * dt;
 		requestedHeading_ = core_->Heading();

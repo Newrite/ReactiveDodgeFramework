@@ -57,4 +57,19 @@ namespace rdf::game::engine
 	{
 		player->AsActorState()->actorState2.staggered = 0;
 	}
+
+	float LookTurnRate(RE::PlayerCharacter* player)
+	{
+		constexpr std::size_t kGetMovementData = 8;
+		constexpr std::size_t kRotateInPlaceRun = 9;  // speeds[4][2], rotateInPlaceWalk, rotateInPlaceRun, ...
+		using GetMovementData_t = bool (*)(RE::ActorState*, float*);
+		auto* state = player->AsActorState();
+		alignas(16) float data[16]{};  // the callee writes 56 bytes
+		const auto fn = reinterpret_cast<GetMovementData_t>((*reinterpret_cast<std::uintptr_t**>(state))[kGetMovementData]);
+		if (!fn(state, data)) {
+			return 0.0f;
+		}
+		const float rate = data[kRotateInPlaceRun];
+		return std::isfinite(rate) && rate > 0.0f && rate < 100.0f ? rate : 0.0f;
+	}
 }

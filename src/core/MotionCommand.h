@@ -17,5 +17,9 @@ namespace rdf
 		// The engine's controls-driven speed may not drop below this (units/s). Published from the
 		// hand-over into running on, so it bridges the engine's re-acceleration from its first frame.
 		float speedFloor{ 0.0f };
+		// First person: the camera's yaw is the actor's, and while the motion is animation driven the
+		// engine's own mouse turn (MovementHandlerAgentPlayerControls, lookInputVec.x * rotateInPlaceRun)
+		// is not applied. The hook adds lookInputVec.x * lookYawRate per second. 0 = off.
+		float lookYawRate{ 0.0f };
 	};
 }

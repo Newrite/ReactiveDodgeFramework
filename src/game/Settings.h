@@ -58,6 +58,7 @@ namespace rdf::game
 		// weapon-ready pose stays on top of the clip's arm and camera motion.
 		float      armStanceFirstPerson{ 0.35f };
 		float      clipLengthFirstPerson{ 0.9f };
+		float      firstPersonLookScale{ 1.0f };  // mouse turn during a 1P dodge, x the engine's own rate
 		bool       armStanceWhenSheathed{ false };  // also keep the stance of a sheathed weapon / spell
 		bool       sidestepWhenKeepFacing{ true };  // clips 8..15 instead of 0..7 when the actor keeps its facing
 		int        enterTimeoutFrames{ 6 };
