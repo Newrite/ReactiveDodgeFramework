@@ -241,3 +241,10 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   fInputCone (input farther than X deg from the current path is ignored), bInputFromStartCamera (stick read against the camera
   yaw at dodge start unless locked on), bHoldFacing (keep-facing dodges hold the start yaw and take TDM yaw control; not with a
   locked target or in first person). 5 new tests, 59/59.
+* Direction commit window and orientation warp (2026-10-21): the dodge path was always continuous, only the clip is chosen in
+  45-degree steps, and keep-facing dodges (lock-on, camera-facing) ran a clip up to 22.5 deg off the path. Souls-likes cover
+  the gap by turning the body (lock-on rolls left/right are their own clips there, per a stream and the game files a friend
+  looked at). fDirectionCommitTime (0.06): in the first seconds the live input re-aims the dodge outright. fOrientationWarpMax
+  (22.5): keep-facing dodges turn the body by the rest of the angle so the clip runs along the path, eased back over the
+  recovery or over the exit / action blend when cut short; the dodge then owns the yaw (TDM yaw control). Not in first person.
+  A 4-direction set would need 45 (later per set, via the clip descriptor). 5 new tests, 64/64.

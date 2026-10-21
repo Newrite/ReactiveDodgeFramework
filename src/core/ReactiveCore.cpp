@@ -1,6 +1,7 @@
 #include "ReactiveCore.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace rdf
 {
@@ -109,6 +110,10 @@ namespace rdf
 		start.heading = StartHeading(d, chain);
 		start.keepFacing = PreviewKeepsFacing(d);
 		start.holdFacing = cfg_.steering.holdFacing && !frame_.lockOn && !frame_.cameraIsYaw;
+		// The directional clip is picked by the nearest 45-degree step (the game layer's ClipIndex).
+		const float startAngle = AngleDelta(frame_.actorYaw, start.heading);
+		start.clipAngle = std::round(startAngle / (kPi / 4.0f)) * (kPi / 4.0f);
+		start.warp = !frame_.cameraIsYaw;
 
 		windows_.Reset();  // the new clip announces its own windows
 		intoAction_ = false;

@@ -528,11 +528,11 @@ namespace rdf::game::update
 		enterFrames_ = 0;
 		exitSent_ = false;
 		startCameraYaw_ = input::CameraYaw();
-		if (!core_->KeepsFacing() || core_->HoldsFacing()) {
+		if (core_->OwnsYaw()) {
 			lockon::AcquireYaw();  // TDM would otherwise turn the player back toward its own target yaw
 		}
-		DevLog("dodge {} angle={:.1f} clip={} keepFacing={} holdFacing={} freeRotation={} ({})", chain ? "chain" : "start", angle,
-			clip, core_->KeepsFacing(), core_->HoldsFacing(), lockon::FreeRotation(), lockon::ModeName());
+		DevLog("dodge {} angle={:.1f} clip={} keepFacing={} holdFacing={} ownsYaw={} freeRotation={} ({})", chain ? "chain" : "start",
+			angle, clip, core_->KeepsFacing(), core_->HoldsFacing(), core_->OwnsYaw(), lockon::FreeRotation(), lockon::ModeName());
 	}
 
 	bool Controller::Perform(RE::PlayerCharacter* player, const Decision& d)
@@ -658,10 +658,10 @@ namespace rdf::game::update
 		const auto  hook = motion::ReadStats();
 		const float headingErr = AngleDelta(prevRequestedHeading_, measuredHeading_) * kRadToDeg;
 		logger::info(
-			"trace t={:.3f} phase={} act={:.3f} desiredHdg={:.1f} facing={:.1f} actorYaw={:.1f} cmdSpeed={:.1f} | "
+			"trace t={:.3f} phase={} act={:.3f} desiredHdg={:.1f} facing={:.1f} warp={:.1f} actorYaw={:.1f} cmdSpeed={:.1f} | "
 			"requested={:.2f} actual={:.2f} measuredHdg={:.1f} err={:.1f} | hook calls={} overrides={} thread={}/{} lastLocal=({:.2f},{:.2f}) yaw={:.4f} graphDodging={}",
 			core_->Now(), ToString(core_->Phase()), core_->ActionTime(), prevRequestedHeading_ * kRadToDeg, core_->Facing() * kRadToDeg,
-			player->data.angle.z * kRadToDeg, core_->Speed(), prevRequestedDistance_, measuredDistance_, measuredHeading_ * kRadToDeg,
+			core_->WarpOffsetDeg(), player->data.angle.z * kRadToDeg, core_->Speed(), prevRequestedDistance_, measuredDistance_, measuredHeading_ * kRadToDeg,
 			headingErr, hook.calls, hook.overrides, hook.firstThread, hook.lastThread, hook.lastLocalX, hook.lastLocalY,
 			hook.lastYaw, graph::GraphIsDodging(player));
 		float midSpeed = -1.0f;

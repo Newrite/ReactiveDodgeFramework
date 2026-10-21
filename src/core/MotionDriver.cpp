@@ -21,6 +21,11 @@ namespace rdf
 		origin_ = WrapAngle(s.heading);
 		keepFacing_ = s.keepFacing;
 		holdFacing_ = s.keepFacing && s.holdFacing;
+		warp_ = s.keepFacing && s.warp && cfg_.steering.orientationWarpMax > 0.0f;
+		clipAngle_ = s.clipAngle;
+		warpOffset_ = 0.0f;
+		exitFrom_ = -1.0f;
+		exitBlend_ = 0.0f;
 		heldFacing_ = facing_;
 		profile_.Plan(cfg_.timing, cfg_.motion, s.carrySpeed, ExitSpeed(s.moveHeld));
 		speed_ = profile_.Speed(0.0f);
@@ -53,6 +58,23 @@ namespace rdf
 		return false;
 	}
 
+	// Full warp through startup and active, eased back to none over the recovery, so the body ends the
+	// dodge facing the way it started (the camera / lock-on takes over from there).
+	float MotionDriver::WarpWeight(float t) const
+	{
+		const float from = cfg_.timing.startup + cfg_.timing.active;
+		float       w = 1.0f;
+		if (t > from) {
+			w = cfg_.timing.recovery > 0.0f ? 1.0f - Smoothstep(std::clamp((t - from) / cfg_.timing.recovery, 0.0f, 1.0f)) : 0.0f;
+		}
+		// Cut short (into running, an attack or a block): unwind within the hand-over instead.
+		if (exitFrom_ >= 0.0f) {
+			const float u = exitBlend_ > 0.0f ? std::clamp((t - exitFrom_) / exitBlend_, 0.0f, 1.0f) : 1.0f;
+			w = std::min(w, 1.0f - Smoothstep(u));
+		}
+		return w;
+	}
+
 	float MotionDriver::YawRate(DodgePhase phase) const
 	{
 		return (phase == DodgePhase::Startup ? cfg_.steering.startupYawRate : cfg_.steering.faceYawRate) * kDegToRad;
@@ -66,10 +88,18 @@ namespace rdf
 			retargeted_ = true;
 		}
 
-		float desired = 0.0f;
-		float magnitude = 0.0f;
-		const bool has = ResolveSteering(in, desired, magnitude);
-		steering_.Update(has, desired, magnitude, dt, phase);
+		// Commit window: the direction is still being chosen, so the live input re-aims the dodge outright.
+		const bool committing = t0 < cfg_.steering.commitTime && in.hasMove && steering_.Strength(in.moveMagnitude) > 0.0f;
+		if (committing) {
+			steering_.Reset(in.moveHeading);
+			origin_ = steering_.Heading();
+			latched_ = false;
+		} else {
+			float desired = 0.0f;
+			float magnitude = 0.0f;
+			const bool has = ResolveSteering(in, desired, magnitude);
+			steering_.Update(has, desired, magnitude, dt, phase);
+		}
 
 		const float distance = profile_.Distance(t1) - profile_.Distance(t0);
 		const float v = dt > 0.0f ? distance / dt : 0.0f;
@@ -81,8 +111,15 @@ namespace rdf
 		const float actual = WrapAngle(in.actorYaw);
 		float       yawRate = 0.0f;
 		facing_ = actual;
-		if ((!keepFacing_ || holdFacing_) && dt > 0.0f) {
-			const float target = holdFacing_ ? heldFacing_ : steering_.Heading();
+		warpOffset_ = 0.0f;
+		if (warp_) {
+			const float limit = cfg_.steering.orientationWarpMax * kDegToRad;
+			float       rest = AngleDelta(WrapAngle(heldFacing_ + clipAngle_), steering_.Heading());
+			rest = std::fabs(rest) < 1e-4f ? 0.0f : rest;  // the clip already runs along the path
+			warpOffset_ = std::clamp(rest, -limit, limit) * WarpWeight(t1);
+		}
+		if (OwnsYaw() && dt > 0.0f) {
+			const float target = keepFacing_ ? WrapAngle(heldFacing_ + warpOffset_) : steering_.Heading();
 			facing_ = MoveToward(actual, target, YawRate(phase) * dt);
 			yawRate = AngleDelta(actual, facing_) / dt;
 		}
@@ -101,11 +138,19 @@ namespace rdf
 	{
 		profile_.BlendOut(t, 0.0f, blend);
 		exiting_ = true;
+		if (exitFrom_ < 0.0f) {
+			exitFrom_ = t;
+			exitBlend_ = blend;
+		}
 	}
 
 	void MotionDriver::BeginExit(float t, bool moveHeld)
 	{
 		profile_.BlendOut(t, ExitSpeed(moveHeld), cfg_.timing.exitBlend);
 		exiting_ = true;
+		if (exitFrom_ < 0.0f) {
+			exitFrom_ = t;
+			exitBlend_ = cfg_.timing.exitBlend;
+		}
 	}
 }

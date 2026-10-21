@@ -537,9 +537,12 @@ TEST(facing_recovers_when_another_system_turns_the_actor)
 
 TEST(camera_owned_facing_never_commands_yaw)
 {
-	// TDM "Vanilla Style" / no TDM: the camera owns the facing, the directional clip carries the
-	// direction, and the dodge must not fight the camera over the yaw.
-	Sim s;
+	// TDM "Vanilla Style" / no TDM, with orientation warp and the commit window off: the camera owns
+	// the facing, the directional clip carries the direction, and the dodge must not fight the camera.
+	Config cfg;
+	cfg.steering.orientationWarpMax = 0.0f;
+	cfg.steering.commitTime = 0.0f;
+	Sim s(cfg);
 	s.freeRotation = false;
 	s.Frame(kDt64, Dir(135), { CommandKind::Dodge });
 	CHECK(s.core.KeepsFacing());
@@ -618,6 +621,7 @@ TEST(max_deviation_zero_locks_the_start_direction)
 {
 	auto cfg = ExactConfig();
 	cfg.steering.maxDeviation = 0.0f;
+	cfg.steering.commitTime = 0.0f;  // steering limits only; the commit window has its own tests
 	Sim s(cfg);
 	s.Frame(kDt64, Dir(90), { CommandKind::Dodge });
 	const float start = s.log.back().heading;
@@ -631,6 +635,7 @@ TEST(max_deviation_caps_how_far_input_bends_the_path)
 {
 	auto cfg = ExactConfig();
 	cfg.steering.maxDeviation = 30.0f;
+	cfg.steering.commitTime = 0.0f;  // steering limits only; the commit window has its own tests
 	Sim s(cfg);
 	s.Frame(kDt64, Dir(90), { CommandKind::Dodge });
 	const float start = s.log.back().heading;
@@ -647,6 +652,7 @@ TEST(input_outside_the_cone_is_ignored)
 {
 	auto cfg = ExactConfig();
 	cfg.steering.inputCone = 90.0f;
+	cfg.steering.commitTime = 0.0f;  // steering limits only; the commit window has its own tests
 	Sim s(cfg);
 	s.Frame(kDt64, Dir(90), { CommandKind::Dodge });
 	const float start = s.log.back().heading;
@@ -684,4 +690,72 @@ TEST(hold_facing_leaves_a_locked_target_in_charge)
 	s.lockOn = true;
 	s.Frame(kDt64, Dir(90), { CommandKind::Dodge });
 	CHECK(s.core.KeepsFacing() && !s.core.HoldsFacing());
+}
+
+// ---- commit window / orientation warp ------------------------------------------------------------
+
+TEST(commit_window_re_aims_at_the_live_input)
+{
+	// The press came with "right", the stick reached "forward-left" two frames later: still inside
+	// the 0.06 s commit window, so the dodge goes forward-left outright, not bent by the turn rate.
+	Sim s(ExactConfig());
+	s.Frame(kDt64, Dir(90), { CommandKind::Dodge });
+	s.Frame(kDt64, Dir(-45));
+	CHECK_NEAR(DegDelta(0.0f, s.log.back().heading), -45.0, 0.01);
+}
+
+TEST(after_the_commit_window_input_only_bends)
+{
+	auto cfg = ExactConfig();
+	cfg.steering.commitTime = 0.0625f;  // 4 frames
+	Sim s(cfg);
+	s.Frame(kDt64, Dir(90), { CommandKind::Dodge });
+	for (int n = 1; n < 5; ++n) {
+		s.Frame(kDt64, Dir(90));
+	}
+	const float before = s.log.back().heading;
+	const auto f = s.Frame(kDt64, Dir(-90));  // past the window: rate limited
+	CHECK(std::fabs(DegDelta(before, f.heading)) <= 900.0 * kDt64 + 0.01);
+}
+
+TEST(orientation_warp_turns_the_body_by_the_rest_of_the_angle)
+{
+	// Locked on, stick at 70 deg: the 90 deg (right) clip plays and the body turns -20 deg so the clip
+	// runs along the 70 deg path; over the recovery it turns back to the target.
+	auto cfg = ExactConfig();
+	Sim s(cfg);
+	s.lockOn = true;
+	s.Frame(kDt64, Dir(70), { CommandKind::Dodge });
+	for (int n = 1; n < 20; ++n) {  // well inside the active phase
+		s.Frame(kDt64, Dir(70));
+	}
+	CHECK_NEAR(s.yaw * kRadToDeg, -20.0, 0.05);
+	s.Run(1.0, kDt64, Dir(70));
+	CHECK_NEAR(s.yaw * kRadToDeg, 0.0, 0.05);
+}
+
+TEST(orientation_warp_is_capped)
+{
+	auto cfg = ExactConfig();
+	cfg.steering.orientationWarpMax = 10.0f;
+	Sim s(cfg);
+	s.lockOn = true;
+	s.Frame(kDt64, Dir(70), { CommandKind::Dodge });
+	for (int n = 1; n < 20; ++n) {
+		s.Frame(kDt64, Dir(70));
+	}
+	CHECK_NEAR(s.yaw * kRadToDeg, -10.0, 0.05);
+}
+
+TEST(orientation_warp_never_turns_the_first_person_view)
+{
+	Sim s(ExactConfig());
+	s.lockOn = true;
+	s.cameraIsYaw = true;
+	s.Frame(kDt64, Dir(70), { CommandKind::Dodge });
+	for (int n = 1; n < 20; ++n) {
+		const auto f = s.Frame(kDt64, Dir(70));
+		CHECK_NEAR(f.cmd.yawRate, 0.0, 1e-6);
+	}
+	CHECK(!s.core.OwnsYaw());
 }

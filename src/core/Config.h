@@ -79,6 +79,13 @@ namespace rdf
 		// Dodges that keep facing (camera / Vanilla-style TDM): hold the start yaw instead of letting the
 		// camera turn the actor. A locked target and first person keep owning the yaw.
 		bool            holdFacing{ false };
+		// The first commitTime seconds of a dodge re-aim it at the live input instead of bending it, so a
+		// press made a frame before the stick / keys arrived still goes where the player meant. 0 = off.
+		float           commitTime{ 0.06f };
+		// Directional (keep-facing) clips come in 45-degree steps; the body turns by the rest of the angle,
+		// at most this much, so the clip runs along the real path, and turns back during the recovery.
+		// 0 = off. Not in first person (the yaw is the view).
+		float           orientationWarpMax{ 22.5f };
 		OrientationMode orientation{ OrientationMode::Auto };
 	};
 

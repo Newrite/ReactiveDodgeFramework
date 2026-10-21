@@ -25,6 +25,8 @@ namespace rdf
 		bool  chain{ false };        // continue the previous trajectory and turn toward `heading`
 		bool  keepFacing{ false };   // the camera / lock-on owns the yaw for this dodge
 		bool  holdFacing{ false };   // keepFacing, but the actor holds `facing` instead (SteeringConfig::holdFacing)
+		bool  warp{ false };         // keepFacing: turn the body so the directional clip runs along the path
+		float clipAngle{ 0.0f };     // rad, direction of the chosen clip relative to `facing` (45-degree steps)
 	};
 
 	// Composes Steering x MotionProfile into a world velocity and a yaw rate.
@@ -46,11 +48,15 @@ namespace rdf
 		float Facing() const { return facing_; }
 		bool  KeepsFacing() const { return keepFacing_; }
 		bool  HoldsFacing() const { return holdFacing_; }
+		// The dodge commands the actor's yaw (and so takes it from TDM): face motion, hold facing or warp.
+		bool  OwnsYaw() const { return !keepFacing_ || holdFacing_ || warp_; }
+		float WarpOffset() const { return warpOffset_; }  // rad, body turn applied this step (diagnostics)
 		float Peak() const { return profile_.Peak(); }
 
 	private:
 		float ExitSpeed(bool moveHeld) const { return moveHeld ? cfg_.motion.runSpeed : 0.0f; }
 		float YawRate(DodgePhase phase) const;
+		float WarpWeight(float t) const;
 		bool  ResolveSteering(const DriverInput& in, float& desired, float& magnitude);
 
 		Config        cfg_;
@@ -66,5 +72,10 @@ namespace rdf
 		bool          exiting_{ false };
 		bool          keepFacing_{ false };
 		bool          holdFacing_{ false };
+		bool          warp_{ false };
+		float         clipAngle_{ 0.0f };
+		float         warpOffset_{ 0.0f };
+		float         exitFrom_{ -1.0f };   // action time the exit / stop began (-1 = none)
+		float         exitBlend_{ 0.0f };
 	};
 }

@@ -71,6 +71,8 @@ namespace rdf
 		bool  PreviewKeepsFacing(const Decision& d) const;  // what a dodge started by `d` would do
 		bool  KeepsFacing() const { return driver_.KeepsFacing(); }  // the current dodge
 		bool  HoldsFacing() const { return driver_.HoldsFacing(); }  // ... and holds its start yaw
+		bool  OwnsYaw() const { return driver_.OwnsYaw(); }          // the dodge turns the actor itself
+		float WarpOffsetDeg() const { return driver_.WarpOffset() * kRadToDeg; }
 		// Marks the command behind an attack/block decision consumed (after a deferred success).
 		void  Consume(const Decision& d);
 		// Heading of the current dodge relative to the actor's yaw when it began, degrees, +right.
