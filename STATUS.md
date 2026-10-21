@@ -39,3 +39,8 @@
    and attack -> dodge, block from a dodge; send the log.
 2. Remove the dev tracing of graph events once the above is confirmed (it is behind `bDevLog` already).
 3. A proper animation set annotated with `tools/annotate_clips.py`.
+4. Neutral dodge clip "N": its own slot for a dodge pressed without move input (today that backstep plays the backward
+   clip, slot 4 / 12). Default content: a copy of the backward clip, so nothing changes until a set provides its own.
+   Touches: RDF_DodgeClip index (new slot after the 16 directional ones) and ClipIndex in the plugin, CLIPS in
+   gen_rdf_patch.py (Pandora + Nemesis patches, character animationNames), the 1P chooser (DodgeBack), the clip-set
+   spec / build_clip_set.py ("n" direction, falling back to "b"), annotate_clips.py and ANIMATION_CONTRACT.md.
