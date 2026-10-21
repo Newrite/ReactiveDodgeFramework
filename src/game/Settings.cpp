@@ -281,6 +281,7 @@ namespace rdf::game
 		s.staggerDodgeDelay = ReadFloat("Stagger", "fDodgeDelay", s.staggerDodgeDelay, 0.0f, 10.0f);
 		s.suppressLegacyDodge = ReadBool("Compat", "bSuppressLegacyDodge", s.suppressLegacyDodge);
 		s.useTrueDirectionalMovement = ReadBool("Compat", "bUseTrueDirectionalMovement", s.useTrueDirectionalMovement);
+		s.usePrecision = ReadBool("Compat", "bUsePrecision", s.usePrecision);
 		s.devLog = ReadBool("Dev", "bDevLog", s.devLog);
 		g_settings = std::move(s);
 

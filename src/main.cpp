@@ -38,6 +38,9 @@ namespace
 		switch (message->type) {
 		case SKSE::MessagingInterface::kPostPostLoad:
 			rdf::game::lockon::Init();
+			if (rdf::game::Settings::Get().iFrames && rdf::game::Settings::Get().usePrecision) {
+				rdf::game::effects::InstallPrecisionIFrames();
+			}
 			break;
 		case SKSE::MessagingInterface::kDataLoaded:
 			rdf::game::input::Install();

@@ -222,3 +222,8 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   dropped; in 3P only the camera orbits, in 1P the camera yaw is the actor's. The hook now adds lookInputVec.x * rate * dt in
   1P (rate read each tick via ActorState vfunc 8 -> Character 0x1406082B0, which writes 56 bytes; fFirstPersonLookScale).
   Pitch goes through PlayerCamera 0x14084D3C0 -> ModifyRotationX and is not animation-driven.
+* Precision i-frames (2026-10-21): Precision (active in STB) runs its own hit pipeline (hitstop, impacts, recoil) before the game's
+  hit code, so the 37673+0x3C0 hook only dropped the damage. Following vinymayan/Dodge, the plugin now registers a Precision V4
+  pre-hit callback at kPostPostLoad that sets bIgnoreHit while the player is invulnerable ([Compat] bUsePrecision). Header copied
+  unchanged from ersh1/Precision. vinymayan/Dodge reviewed: its i-frames and "perfect dodge" are wall-clock windows from the dodge
+  start (perfect = the first perfectDodgeWindow seconds), time stop is only graph events for another mod to act on.

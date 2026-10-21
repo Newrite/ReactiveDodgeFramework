@@ -53,3 +53,9 @@ python tools\annotate_clips.py                   # write RDF_* window annotation
 | `TESTING.md` | verification report: automated / static / in-game (what was verified, what is waiting) |
 | `STATUS.md`, `JOURNAL.md` | current state and decision log |
 | `docs/research/` | modlist audit, public implementations + Elden Ring notes, behavior pipeline |
+
+## Third-party API headers
+- `src/game/PrecisionAPI.h`: Precision's modder API header, copied unchanged from
+  [ersh1/Precision](https://github.com/ersh1/Precision) `src/PrecisionAPI.h` (v2.0.6, GPL-3.0 with a modding exception; the
+  header asks modders to copy it). Used only to register a pre-hit callback for i-frames (`[Compat] bUsePrecision`).
+- `src/game/TrueDirectionalMovementAPI.h`: True Directional Movement's API header (lock-on target and directional mode).

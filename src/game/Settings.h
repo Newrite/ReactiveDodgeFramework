@@ -84,6 +84,7 @@ namespace rdf::game
 
 		bool suppressLegacyDodge{ true };
 		bool useTrueDirectionalMovement{ true };
+		bool usePrecision{ true };  // register i-frames with Precision's pre-hit callback
 
 		// [Dev]
 		bool devLog{ false };

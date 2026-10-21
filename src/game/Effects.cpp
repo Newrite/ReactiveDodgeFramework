@@ -1,6 +1,7 @@
 #include "Effects.h"
 
 #include "Diagnostics.h"
+#include "PrecisionAPI.h"
 #include "Settings.h"
 
 #include <atomic>
@@ -102,6 +103,27 @@ namespace rdf::game::effects
 		g_originalHit = reinterpret_cast<ProcessHit_t>(callSite.write_call<5>(HitThunk));
 		logger::info("i-frame hook installed (original {:#x})", reinterpret_cast<std::uintptr_t>(g_originalHit));
 		return true;
+	}
+
+	// Precision runs its own hit pipeline (hitstop, impact effects, recoil) before the game's hit code,
+	// so dropping the hit at 37673 alone still lets those play. Its pre-hit callback can ignore the hit
+	// outright, which is what i-frames mean.
+	void InstallPrecisionIFrames()
+	{
+		auto* api = static_cast<PRECISION_API::IVPrecision4*>(PRECISION_API::RequestPluginAPI(PRECISION_API::InterfaceVersion::V4));
+		if (!api) {
+			logger::info("Precision not found; melee i-frames use the game's hit hook only");
+			return;
+		}
+		const auto result = api->AddPreHitCallback(SKSE::GetPluginHandle(), [](const PRECISION_API::PrecisionHitData& hit) {
+			PRECISION_API::PreHitCallbackReturn ret;
+			if (hit.target && hit.target->IsPlayerRef() && g_invulnerable.load(std::memory_order_acquire)) {
+				ret.bIgnoreHit = true;
+				DevLog("i-frames: Precision hit from {:08X} ignored", hit.attacker ? hit.attacker->GetFormID() : 0u);
+			}
+			return ret;
+		});
+		logger::info("Precision pre-hit callback: {}", result == PRECISION_API::APIResult::OK ? "registered" : "already registered");
 	}
 
 	void SetInvulnerable(bool invulnerable)
