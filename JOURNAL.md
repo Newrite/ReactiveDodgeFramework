@@ -261,3 +261,12 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   generation counter); the controller hands the new core Config to ReactiveCore::Reconfigure between dodges. One schema
   table (SettingsSchema.cpp) drives the widgets and the ini writer; rdf::ini::Update (core, 7 tests) rewrites keys in place.
   Translations EN/RU are UTF-16LE "$KEY<TAB>text" (FLICK's parser splits at the first whitespace). 72/72 tests.
+* Nemesis patch and FOMOD (2026-10-21): Nemesis format = per behavior folder (0_master, defaultmale, defaultfemale,
+  _1stperson/0_master), edited nodes as their full original text with <!-- MOD_CODE ~rdfm~ OPEN --> ... <!-- CLOSE --> blocks,
+  new nodes as #rdfm$N.txt; $eventID/$variableID are shared syntax. Nemesis' original text is not an hkxcmd dump: no
+  SERIALIZE_IGNORED comments, one pointer per line in vanilla pointer arrays, one vector component per line (quadVariableValues);
+  the generator builds it from the vanilla dumps with those rules and requires an installed Nemesis mod (tudm, flinch, jpbo,
+  zcbe, aaaaa, abeef, itmuse...) to agree, numelements aside (mods update counts, Nemesis recounts). Mod code rdfm: every
+  installed Nemesis mod uses 4+ characters. check_rdf_nemesis.py: 33/33 (applied offline, serde-hkx round trip, hkxcheck 0
+  new errors in 3P and 1P). Pandora never added our clips to animationdata either, so neither patch does. FOMOD validated
+  against ModConfig 5.0 (GandaG/fomod-schema, one stray space in its xsd fixed locally).

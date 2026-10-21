@@ -1,0 +1,7 @@
+		<hkobject name="#rdfm$164" class="hkbBlenderGeneratorChild" signature="0xe2b384b0">
+			<hkparam name="variableBindingSet">#rdfm$290</hkparam>
+			<hkparam name="generator">#rdfm$287</hkparam>
+			<hkparam name="boneWeights">null</hkparam>
+			<hkparam name="weight">1.000000</hkparam>
+			<hkparam name="worldFromModelWeight">0.000000</hkparam>
+		</hkobject>

@@ -1,0 +1,12 @@
+		<hkobject name="#rdfm$193" class="hkbStateMachineStateInfo" signature="0xed7f9d0">
+			<hkparam name="variableBindingSet">null</hkparam>
+			<hkparam name="listeners" numelements="0"></hkparam>
+			<hkparam name="enterNotifyEvents">null</hkparam>
+			<hkparam name="exitNotifyEvents">null</hkparam>
+			<hkparam name="transitions">null</hkparam>
+			<hkparam name="generator">#rdfm$191</hkparam>
+			<hkparam name="name">RDF_Dodge_B_Main_S8_rdf_step_f</hkparam>
+			<hkparam name="stateId">8</hkparam>
+			<hkparam name="probability">1.000000</hkparam>
+			<hkparam name="enable">true</hkparam>
+		</hkobject>

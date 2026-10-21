@@ -54,6 +54,17 @@ python tools\annotate_clips.py                   # write RDF_* window annotation
 | `STATUS.md`, `JOURNAL.md` | current state and decision log |
 | `docs/research/` | modlist audit, public implementations + Elden Ring notes, behavior pipeline |
 
+## Behavior engines and the FOMOD
+The behavior patch ships for both engines, generated from one model:
+- Pandora: `behavior/Pandora_Engine/mod/rdf` (`tools/gen_rdf_patch.py`; checked by staging Pandora and `tools/validate_rdf.py`).
+- Nemesis: `behavior/Nemesis_Engine/mod/rdfm` (`tools/gen_rdf_nemesis.py`, converted from the Pandora patch). Edited nodes
+  carry Nemesis' own original text (the vanilla graph in Nemesis' line layout, confirmed against the Nemesis mods installed
+  in the modlist); `tools/check_rdf_nemesis.py` applies the patch to the vanilla graphs offline, packs them with serde-hkx
+  and checks them with hkxcheck.
+`tools/build_fomod.py` packs `ReactiveDodgeFramework-<version>.zip`: core (DLL, ini, translations, clips), then a choice of
+Pandora or Nemesis, a steering preset (default / Committed Dodge) and the optional greatsword OAR set. After installing,
+run the chosen engine with "Reactive Dodge Framework" ticked.
+
 ## In-game settings menu (FLICK)
 With [FLICK](https://www.nexusmods.com/skyrimspecialedition/mods/181603) installed, its menu (F7 by default) gets a
 "Reactive Dodge" group with seven pages: controls (the dodge button for keyboard/mouse and for gamepad, input buffer), timing and windows, motion, steering and facing, animation, cost and rules, debug.
