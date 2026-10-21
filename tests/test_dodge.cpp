@@ -759,3 +759,21 @@ TEST(orientation_warp_never_turns_the_first_person_view)
 	}
 	CHECK(!s.core.OwnsYaw());
 }
+
+TEST(held_facing_is_handed_back_to_the_camera_as_the_dodge_ends)
+{
+	// The camera turned 90 deg during a held dodge: the actor keeps its start yaw through the active
+	// phase, then turns to the camera during the recovery, so TDM has nothing to snap afterwards.
+	auto cfg = ExactConfig();
+	cfg.steering.holdFacing = true;
+	Sim s(cfg);
+	s.freeRotation = false;
+	s.Frame(kDt64, Dir(180), { CommandKind::Dodge });
+	s.cameraYaw = 90.0f * kDegToRad;
+	for (int n = 1; n < 20; ++n) {
+		s.Frame(kDt64);
+	}
+	CHECK_NEAR(s.yaw * kRadToDeg, 0.0, 0.05);
+	s.Run(1.0, kDt64);
+	CHECK_NEAR(s.yaw * kRadToDeg, 90.0, 0.05);
+}

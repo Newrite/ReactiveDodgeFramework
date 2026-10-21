@@ -248,3 +248,10 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   (22.5): keep-facing dodges turn the body by the rest of the angle so the clip runs along the path, eased back over the
   recovery or over the exit / action blend when cut short; the dodge then owns the yaw (TDM yaw control). Not in first person.
   A 4-direction set would need 45 (later per set, via the clip descriptor). 5 new tests, 64/64.
+* Gamepad / 1P / TDM follow-ups (2026-10-21): (1) diagonal chains after a forward dodge lost the arm blend: TDM reported 360
+  mid-dodge (its _bHasMovementInput comes from the controls-driven movement handler, idle while the dodge drives the motion),
+  so the chain picked the forward roll (fArmStanceRoll 0). The TDM mode is now sampled only while no dodge runs and kept for a
+  chain. (2) 1P forward played the vanilla sneak roll, whose camera drop left the stance arms out of view; forward now keeps
+  MT_Idle on the body. (3) A held / warped facing is now handed back to the camera yaw as the dodge eases out (recovery or the
+  exit/action blend), so TDM's face-crosshair-on-attack no longer snaps the actor at the first attack. Gamepad: iDodgeGamepad
+  0x80 (RS click) is TDM's target lock / camera reset, which explains the slide. 65/65 tests, 219/219 checks.

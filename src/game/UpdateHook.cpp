@@ -77,7 +77,9 @@ namespace rdf::game::update
 			CommandKind     lastRejectCommand_{ CommandKind::Dodge };
 			float           orphanTime_{ 0.0f };
 			float           staggerAge_{ 0.0f };
-			float           startCameraYaw_{ 0.0f };   // camera yaw when the current dodge started       // seconds the player has been staggered
+			float           startCameraYaw_{ 0.0f };   // camera yaw when the current dodge started
+			bool            freeRotation_{ false };    // TDM 360, sampled while no dodge runs
+			const char*     modeName_{ "" };       // seconds the player has been staggered
 			bool            escapeStagger_{ false };   // this tick a dodge may cut the stagger short  // graph in a dodge state we do not own, seconds
 			int             tailFrames_{ 0 };   // dev trace keeps running this many ticks after a dodge
 			bool            inStateB_{ true };  // dodge state used last; the first dodge goes to A
@@ -288,8 +290,16 @@ namespace rdf::game::update
 		// In first person the camera owns the yaw: the dodge never turns the player there.
 		const auto* camera = RE::PlayerCamera::GetSingleton();
 		const bool  firstPerson = camera && camera->IsInFirstPerson();
-		f.freeRotation = lockon::FreeRotation() && !firstPerson;
+		// TDM's reported mode is only meaningful outside our dodge: its movement-input flag comes from the
+		// controls-driven movement handler, which does not run while the dodge drives the motion, so in
+		// "Vanilla style" it reports 360 mid-dodge. A chain keeps the mode the sequence started with.
+		if (!core_->DodgeRunning()) {
+			freeRotation_ = lockon::FreeRotation();
+			modeName_ = lockon::ModeName();
+		}
+		f.freeRotation = freeRotation_ && !firstPerson;
 		f.cameraIsYaw = firstPerson;
+		f.cameraYaw = input::CameraYaw();
 		moveHeld_ = Length(f.move) > Settings::Get().core.steering.deadzone;
 		return f;
 	}
@@ -532,7 +542,7 @@ namespace rdf::game::update
 			lockon::AcquireYaw();  // TDM would otherwise turn the player back toward its own target yaw
 		}
 		DevLog("dodge {} angle={:.1f} clip={} keepFacing={} holdFacing={} ownsYaw={} freeRotation={} ({})", chain ? "chain" : "start",
-			angle, clip, core_->KeepsFacing(), core_->HoldsFacing(), core_->OwnsYaw(), lockon::FreeRotation(), lockon::ModeName());
+			angle, clip, core_->KeepsFacing(), core_->HoldsFacing(), core_->OwnsYaw(), freeRotation_, modeName_);
 	}
 
 	bool Controller::Perform(RE::PlayerCharacter* player, const Decision& d)

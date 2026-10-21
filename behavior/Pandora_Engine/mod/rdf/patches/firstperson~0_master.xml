@@ -110,7 +110,7 @@
     <hkparam name="variableBindingSet">#rdf$22</hkparam>
     <hkparam name="userData">0</hkparam>
     <hkparam name="name">RDF_Dodge_A_FP_rdf_roll_f</hkparam>
-    <hkparam name="animationName">Animations\SneakRun_ForwardRoll.hkx</hkparam>
+    <hkparam name="animationName">Animations\MT_Idle.hkx</hkparam>
     <hkparam name="triggers">null</hkparam>
     <hkparam name="cropStartAmountLocalTime">0.000000</hkparam>
     <hkparam name="cropEndAmountLocalTime">0.000000</hkparam>
@@ -358,7 +358,7 @@
     <hkparam name="variableBindingSet">#rdf$46</hkparam>
     <hkparam name="userData">0</hkparam>
     <hkparam name="name">RDF_Dodge_A_FP_rdf_step_f</hkparam>
-    <hkparam name="animationName">Animations\SneakRun_ForwardRoll.hkx</hkparam>
+    <hkparam name="animationName">Animations\MT_Idle.hkx</hkparam>
     <hkparam name="triggers">null</hkparam>
     <hkparam name="cropStartAmountLocalTime">0.000000</hkparam>
     <hkparam name="cropEndAmountLocalTime">0.000000</hkparam>
@@ -628,7 +628,7 @@
     <hkparam name="variableBindingSet">#rdf$72</hkparam>
     <hkparam name="userData">0</hkparam>
     <hkparam name="name">RDF_Dodge_A_FPArmDodge_rdf_roll_f</hkparam>
-    <hkparam name="animationName">Animations\SneakRun_ForwardRoll.hkx</hkparam>
+    <hkparam name="animationName">Animations\MT_Idle.hkx</hkparam>
     <hkparam name="triggers">null</hkparam>
     <hkparam name="cropStartAmountLocalTime">0.000000</hkparam>
     <hkparam name="cropEndAmountLocalTime">0.000000</hkparam>
@@ -876,7 +876,7 @@
     <hkparam name="variableBindingSet">#rdf$96</hkparam>
     <hkparam name="userData">0</hkparam>
     <hkparam name="name">RDF_Dodge_A_FPArmDodge_rdf_step_f</hkparam>
-    <hkparam name="animationName">Animations\SneakRun_ForwardRoll.hkx</hkparam>
+    <hkparam name="animationName">Animations\MT_Idle.hkx</hkparam>
     <hkparam name="triggers">null</hkparam>
     <hkparam name="cropStartAmountLocalTime">0.000000</hkparam>
     <hkparam name="cropEndAmountLocalTime">0.000000</hkparam>
@@ -2065,7 +2065,7 @@
     <hkparam name="variableBindingSet">#rdf$202</hkparam>
     <hkparam name="userData">0</hkparam>
     <hkparam name="name">RDF_Dodge_B_FP_rdf_roll_f</hkparam>
-    <hkparam name="animationName">Animations\SneakRun_ForwardRoll.hkx</hkparam>
+    <hkparam name="animationName">Animations\MT_Idle.hkx</hkparam>
     <hkparam name="triggers">null</hkparam>
     <hkparam name="cropStartAmountLocalTime">0.000000</hkparam>
     <hkparam name="cropEndAmountLocalTime">0.000000</hkparam>
@@ -2313,7 +2313,7 @@
     <hkparam name="variableBindingSet">#rdf$226</hkparam>
     <hkparam name="userData">0</hkparam>
     <hkparam name="name">RDF_Dodge_B_FP_rdf_step_f</hkparam>
-    <hkparam name="animationName">Animations\SneakRun_ForwardRoll.hkx</hkparam>
+    <hkparam name="animationName">Animations\MT_Idle.hkx</hkparam>
     <hkparam name="triggers">null</hkparam>
     <hkparam name="cropStartAmountLocalTime">0.000000</hkparam>
     <hkparam name="cropEndAmountLocalTime">0.000000</hkparam>
@@ -2583,7 +2583,7 @@
     <hkparam name="variableBindingSet">#rdf$252</hkparam>
     <hkparam name="userData">0</hkparam>
     <hkparam name="name">RDF_Dodge_B_FPArmDodge_rdf_roll_f</hkparam>
-    <hkparam name="animationName">Animations\SneakRun_ForwardRoll.hkx</hkparam>
+    <hkparam name="animationName">Animations\MT_Idle.hkx</hkparam>
     <hkparam name="triggers">null</hkparam>
     <hkparam name="cropStartAmountLocalTime">0.000000</hkparam>
     <hkparam name="cropEndAmountLocalTime">0.000000</hkparam>
@@ -2831,7 +2831,7 @@
     <hkparam name="variableBindingSet">#rdf$276</hkparam>
     <hkparam name="userData">0</hkparam>
     <hkparam name="name">RDF_Dodge_B_FPArmDodge_rdf_step_f</hkparam>
-    <hkparam name="animationName">Animations\SneakRun_ForwardRoll.hkx</hkparam>
+    <hkparam name="animationName">Animations\MT_Idle.hkx</hkparam>
     <hkparam name="triggers">null</hkparam>
     <hkparam name="cropStartAmountLocalTime">0.000000</hkparam>
     <hkparam name="cropEndAmountLocalTime">0.000000</hkparam>

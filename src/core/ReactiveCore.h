@@ -19,6 +19,7 @@ namespace rdf
 		bool  lockOn{ false };
 		bool  freeRotation{ true };  // something lets the actor face any direction (TDM 360 mode)
 		bool  cameraIsYaw{ false };  // first person: the actor's yaw is the view, never hold it
+		float cameraYaw{ 0.0f };     // where the camera looks: a held / warped facing is handed back to it
 	};
 
 	struct EngineView

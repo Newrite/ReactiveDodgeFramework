@@ -117,7 +117,7 @@ V = dict(
 # 7 Stagger_State), but its own Nemesis ids. A state plays Bethesda's own 1P dodge clip on torso, head and camera, and on the
 # arms a parametric blend (RDF_ArmBlend: 0 clip, 1 stance) with the 1P weapon-ready idle of the current hand types.
 # The dodge clips are vanilla `Animations\DodgeLeft/Right/Back.hkx`, already in the vanilla FirstPerson character (no copies,
-# and OAR replacers such as Sigma - Magic apply). Forward has no 1P dodge: it plays the vanilla 1P sneak forward roll.
+# and OAR replacers such as Sigma - Magic apply). Forward has no 1P dodge: the body keeps the neutral idle (see FP_DODGE_CLIPS).
 # TUDM's 1P roll_*/sidestep_* are 16 copies of that same roll, so they add nothing.
 V_FP = dict(
     STRING="#0095", VALUES="#0096", DATA="#0097",
@@ -133,7 +133,9 @@ FP_PATCH_NAME = "firstperson~0_master.xml"
 # this list replaces it): clavicles, arms, twists, hands, fingers, pauldrons, magic nodes and the hand/weapon/shield nodes.
 N_BONES_FP = 99
 FP_ARM_BONES = [27, 28, 29, 30, 31, 32, 38, 39, 40, 41, 42, 43, 44, 45, 47, 48] + list(range(52, 60)) + list(range(67, 97))
-FP_DODGE_CLIPS = {"f": "SneakRun_ForwardRoll", "fr": "DodgeRight", "r": "DodgeRight", "br": "DodgeRight",
+# Forward has no 1P dodge clip. The vanilla 1P sneak roll dropped the camera far below the arms (which hold the stance),
+# so the arms left the view; forward keeps the neutral 1P idle on the body and the plugin alone moves the player.
+FP_DODGE_CLIPS = {"f": "MT_Idle", "fr": "DodgeRight", "r": "DodgeRight", "br": "DodgeRight",
                   "b": "DodgeBack", "bl": "DodgeLeft", "l": "DodgeLeft", "fl": "DodgeLeft"}
 # Outer 1P chooser: hkbStateMachine startStateId <- currentDefaultState (the vanilla sync variable that holds the stateId of
 # Default_Behavior: 0 MT/sheathed, 1 weapon readied, 2 magic readied, 10/11 equip, 12/13 unequip, 14 kill move, 20 paired).

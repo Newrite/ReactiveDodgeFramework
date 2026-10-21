@@ -14,6 +14,7 @@ namespace rdf
 		float moveHeading{ 0.0f };   // world heading of the input
 		float moveMagnitude{ 0.0f };  // 0..1
 		float actorYaw{ 0.0f };   // the actor's real yaw this frame (other mods may rotate it too)
+		float cameraYaw{ 0.0f };  // the camera's yaw (under a target lock it looks at the target)
 	};
 
 	struct DriverStart

@@ -49,6 +49,7 @@ namespace sim
 			in.lockOn = lockOn;
 			in.freeRotation = freeRotation;
 			in.cameraIsYaw = cameraIsYaw;
+			in.cameraYaw = cameraYaw;
 			core.BeginFrame(in);
 			for (auto k : presses) {
 				core.Press(k, move);
@@ -95,6 +96,7 @@ namespace sim
 		bool               lockOn{ false };
 		bool               freeRotation{ true };
 		bool               cameraIsYaw{ false };
+		float              cameraYaw{ 0.0f };
 		std::vector<Sample> log;
 	};
 

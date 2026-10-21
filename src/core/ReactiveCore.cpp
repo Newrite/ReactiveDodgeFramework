@@ -182,6 +182,7 @@ namespace rdf
 		in.moveHeading = in.hasMove ? HeadingOf(frame_.move) : 0.0f;
 		in.moveMagnitude = magnitude;
 		in.actorYaw = frame_.actorYaw;
+		in.cameraYaw = frame_.cameraYaw;
 		return in;
 	}
 

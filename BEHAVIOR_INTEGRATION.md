@@ -218,8 +218,8 @@ return as 3P (with the 1P ids above). Per state:
 `ModifierGenerator{ BSIsActiveModifier(bAnimationDriven, RDF_IsDodging), Blend{ body mask: DodgeSM, arm mask: Blend(blendParameter <- RDF_ArmBlend){ 0: DodgeSM copy, 1: DrawnSM } } }`, the 3P layout. The 1P skeleton (vanilla `skeletonfirst.hkx`) has the same 99 bones as the vanilla 3P one; the arm mask is `FP_ARM_BONES` (clavicles, arms, twists, hands, fingers, pauldrons, magic and weapon/shield nodes), so the clip moves torso, head and camera while the arms hold the stance.
 `DodgeSM = hkbStateMachine, startStateId <- RDF_DodgeClip`, 16 states like 3P, playing Bethesda's own 1P dodge clips (vanilla, already in
 `FirstPerson`, playback speed <- `RDF_DodgeSpeed`): right/forward-right/back-right -> `Animations\DodgeRight.hkx`, left/forward-left/back-left
--> `DodgeLeft`, back -> `DodgeBack`, forward -> `SneakRun_ForwardRoll` (the vanilla 1P sneak roll; Motion Sensitive Fix SE replaces it with a
-camera-stable one). Roll and step slots get the same clip. TUDM's 1P `Roll_*`/`Sidestep_*` are 16 byte-identical copies of the vanilla
+-> `DodgeLeft`, back -> `DodgeBack`, forward -> `MT_Idle` (no 1P forward dodge exists; the vanilla 1P sneak roll dropped the camera far
+below the stance arms, so they left the view). Roll and step slots get the same clip. TUDM's 1P `Roll_*`/`Sidestep_*` are 16 byte-identical copies of the vanilla
 sneak roll, so they are not used. The clips carry no RDF annotations, so 1P dodges use the ini window timers.
 `DrawnSM = hkbStateMachine, startStateId <- currentDefaultState` (the vanilla sync variable holding Default_Behavior's stateId; states 0, 1, 2,
 10-14, 20): sheathed/unequipping/killmove ids play the looping neutral 1P idle `MT_Idle` (vanilla 1P sheathed idle), weapon/spell ids (1, 2, 10, 11)

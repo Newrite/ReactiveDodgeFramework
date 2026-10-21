@@ -112,14 +112,19 @@ namespace rdf
 		float       yawRate = 0.0f;
 		facing_ = actual;
 		warpOffset_ = 0.0f;
+		const float weight = WarpWeight(t1);
 		if (warp_) {
 			const float limit = cfg_.steering.orientationWarpMax * kDegToRad;
 			float       rest = AngleDelta(WrapAngle(heldFacing_ + clipAngle_), steering_.Heading());
 			rest = std::fabs(rest) < 1e-4f ? 0.0f : rest;  // the clip already runs along the path
-			warpOffset_ = std::clamp(rest, -limit, limit) * WarpWeight(t1);
+			warpOffset_ = std::clamp(rest, -limit, limit) * weight;
 		}
 		if (OwnsYaw() && dt > 0.0f) {
-			const float target = keepFacing_ ? WrapAngle(heldFacing_ + warpOffset_) : steering_.Heading();
+			// A kept facing belongs to the camera (or, locked on, to the target the camera looks at): while
+			// the dodge eases out it turns toward the camera, so the camera / TDM finds the actor already
+			// facing its way instead of snapping it there on the next attack.
+			const float held = WrapAngle(heldFacing_ + warpOffset_);
+			const float target = keepFacing_ ? WrapAngle(held + AngleDelta(held, in.cameraYaw) * (1.0f - weight)) : steering_.Heading();
 			facing_ = MoveToward(actual, target, YawRate(phase) * dt);
 			yawRate = AngleDelta(actual, facing_) / dt;
 		}
