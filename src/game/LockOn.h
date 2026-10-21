@@ -11,6 +11,8 @@ namespace rdf::game::lockon
 		virtual bool LockedOn(RE::PlayerCharacter* player) = 0;
 		// True when the actor may face any direction (TDM 360 movement); false = the camera owns it.
 		virtual bool FreeRotation() = 0;
+		// Diagnostics: the mod's own name for its current mode.
+		virtual const char* ModeName() { return "vanilla camera"; }
 		// Keep the mod from turning the player while a dodge turns it; balanced by ReleaseYaw.
 		virtual void AcquireYaw() = 0;
 		virtual void ReleaseYaw() = 0;
@@ -20,6 +22,7 @@ namespace rdf::game::lockon
 	void Init();
 	bool LockedOn(RE::PlayerCharacter* player);
 	bool FreeRotation();
+	const char* ModeName();
 	void AcquireYaw();
 	void ReleaseYaw();
 }

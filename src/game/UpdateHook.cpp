@@ -524,8 +524,8 @@ namespace rdf::game::update
 		if (!core_->KeepsFacing()) {
 			lockon::AcquireYaw();  // TDM would otherwise turn the player back toward its own target yaw
 		}
-		DevLog("dodge {} angle={:.1f} clip={} keepFacing={} freeRotation={}", chain ? "chain" : "start", angle, clip,
-			core_->KeepsFacing(), lockon::FreeRotation());
+		DevLog("dodge {} angle={:.1f} clip={} keepFacing={} freeRotation={} ({})", chain ? "chain" : "start", angle, clip,
+			core_->KeepsFacing(), lockon::FreeRotation(), lockon::ModeName());
 	}
 
 	bool Controller::Perform(RE::PlayerCharacter* player, const Decision& d)

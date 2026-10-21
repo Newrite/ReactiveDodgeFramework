@@ -32,6 +32,19 @@ namespace rdf::game::lockon
 				return api_->GetDirectionalMovementMode() == TDM_API::DirectionalMovementMode::kDirectional;
 			}
 
+			// TDM reports kDirectional only in its 360 mode with no face-crosshair reason active (attacking,
+			// blocking, casting, aiming, shouting); its MCM "Vanilla" setting is always kVanillaStyle.
+			const char* ModeName() override
+			{
+				switch (api_->GetDirectionalMovementMode()) {
+				case TDM_API::DirectionalMovementMode::kDisabled: return "TDM disabled";
+				case TDM_API::DirectionalMovementMode::kVanillaStyle: return "TDM vanilla style";
+				case TDM_API::DirectionalMovementMode::kDirectional: return "TDM 360";
+				case TDM_API::DirectionalMovementMode::kTargetLock: return "TDM target lock";
+				default: return "TDM ?";
+				}
+			}
+
 			void AcquireYaw() override
 			{
 				if (owned_) {
@@ -97,6 +110,7 @@ namespace rdf::game::lockon
 	}
 
 	bool FreeRotation() { return g_provider->FreeRotation(); }
+	const char* ModeName() { return g_provider->ModeName(); }
 	void AcquireYaw() { g_provider->AcquireYaw(); }
 	void ReleaseYaw() { g_provider->ReleaseYaw(); }
 }

@@ -54,9 +54,9 @@ namespace rdf::game
 		// rolls let the clip move the arms (a body turning over with arms frozen in a stance looks wrong).
 		float      armStanceStep{ 1.0f };
 		float      armStanceRoll{ 0.0f };
-		// First person plays Bethesda's 1P dodge clips (0.9 s); the stance share there is how much of the
-		// weapon-ready pose stays on top of the clip's arm and camera motion.
-		float      armStanceFirstPerson{ 0.35f };
+		// First person plays Bethesda's 1P dodge clips (0.9 s) on torso, head and camera; this is the
+		// share of the weapon-ready pose on the arms (1 = the grip stays on the weapon).
+		float      armStanceFirstPerson{ 1.0f };
 		float      clipLengthFirstPerson{ 0.9f };
 		float      firstPersonLookScale{ 1.0f };  // mouse turn during a 1P dodge, x the engine's own rate
 		bool       armStanceWhenSheathed{ false };  // also keep the stance of a sheathed weapon / spell

@@ -325,18 +325,32 @@ def check_fp(rdf_x, base_x):
         check(tag + "1P %d name/enable/enter/exit" % sid, so.text("name") == nm and so.text("enable") == "true" and ent == ["RDF_DodgeEntered", "InterruptCast"] and ext == ["RDF_DodgeLeft"])
         mg = g.objs[so.text("generator")]
         mod = g.objs[mg.text("modifier")]
-        blend = g.objs[mg.text("generator")]
-        check(tag + "1P %d generator = ModifierGenerator{BSIsActiveModifier(bAnimationDriven, RDF_IsDodging), parametric blender <- RDF_ArmBlend}" % sid,
-              mg.cls == "hkbModifierGenerator" and mod.cls == "BSIsActiveModifier" and blend.cls == "hkbBlenderGenerator"
-              and blend.text("flags") == "16" and bind_list(g, blend) == [("blendParameter", "RDF_ArmBlend", "BINDING_TYPE_VARIABLE")]
+        outer = g.objs[mg.text("generator")]
+        check(tag + "1P %d generator = ModifierGenerator{BSIsActiveModifier(bAnimationDriven, RDF_IsDodging), plain blender, 2 children}" % sid,
+              mg.cls == "hkbModifierGenerator" and mod.cls == "BSIsActiveModifier" and outer.cls == "hkbBlenderGenerator"
+              and outer.text("flags") == "0" and len(children_of(g, outer)) == 2
               and [(m, v) for m, v, _t in bind_list(g, mod)] == [("bIsActive0", "bAnimationDriven"), ("bIsActive1", "RDF_IsDodging")])
-        b0, b1 = children_of(g, blend)
-        check(tag + "1P %d blend children: weight 0 = dodge clip, weight 1 = stance; no masks; worldFromModel 0" % sid,
+        c_main, c_arm = children_of(g, outer)
+        m_main = floats(g.objs[c_main.text("boneWeights")], "boneWeights") if c_main.text("boneWeights") != "null" else []
+        m_arm = floats(g.objs[c_arm.text("boneWeights")], "boneWeights") if c_arm.text("boneWeights") != "null" else []
+        want_arm = [1.0 if i in set(G.FP_ARM_BONES) else 0.0 for i in range(G.N_BONES_FP)]
+        check(tag + "1P %d masks: arms = FP_ARM_BONES (%d of %d), body = complement; both weight 1, worldFromModel 0" % (sid, len(G.FP_ARM_BONES), G.N_BONES_FP),
+              m_arm == want_arm and m_main == [1.0 - w for w in want_arm] and float(c_main.text("weight")) == 1.0 and float(c_arm.text("weight")) == 1.0
+              and c_main.text("worldFromModelWeight") == c_arm.text("worldFromModelWeight") == "0.000000", "len %d/%d" % (len(m_main), len(m_arm)))
+        fp_sm = g.objs[c_main.text("generator")]
+        pr = dodge_selector_problems(g, fp_sm, G.fp_clip_path)
+        check(tag + "1P %d body: dodge chooser, startStateId <- RDF_DodgeClip, 16 states -> vanilla 1P dodge clips, speed binding" % sid, not pr, "; ".join(pr[:3]))
+        arm = g.objs[c_arm.text("generator")]
+        check(tag + "1P %d arms: parametric blender (flags 16), blendParameter <- RDF_ArmBlend" % sid,
+              arm.cls == "hkbBlenderGenerator" and arm.text("flags") == "16" and bind_list(g, arm) == [("blendParameter", "RDF_ArmBlend", "BINDING_TYPE_VARIABLE")])
+        b0, b1 = children_of(g, arm)
+        check(tag + "1P %d arm blend children: weight 0 = dodge clip, weight 1 = stance; no masks; worldFromModel 0" % sid,
               float(b0.text("weight")) == 0.0 and float(b1.text("weight")) == 1.0 and b0.text("boneWeights") == "null"
               and b1.text("boneWeights") == "null" and b0.text("worldFromModelWeight") == b1.text("worldFromModelWeight") == "0.000000")
-        fp_sm = g.objs[b0.text("generator")]
-        pr = dodge_selector_problems(g, fp_sm, G.fp_clip_path)
-        check(tag + "1P %d dodge chooser: startStateId <- RDF_DodgeClip, 16 states -> vanilla 1P dodge clips, speed binding" % sid, not pr, "; ".join(pr[:3]))
+        arm_sm = g.objs[b0.text("generator")]
+        pr = dodge_selector_problems(g, arm_sm, G.fp_clip_path)
+        check(tag + "1P %d arms: own dodge chooser (not shared with the body one)" % sid,
+              not pr and arm_sm.name != fp_sm.name and not (reachable(g, arm_sm.name) & reachable(g, fp_sm.name)), "; ".join(pr[:3]))
         fp_files = {G.fp_clip_path(c).lower() for c in G.CLIPS}
         check(tag + "1P %d dodge clips are in FirstPerson animationNames %s" % (sid, sorted(fp_files)), fp_files <= have, str(fp_files - have))
         drawn = g.objs[b1.text("generator")]

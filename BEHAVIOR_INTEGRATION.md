@@ -57,7 +57,7 @@ python tools/dump_pandora_out.py --vanilla                                   # v
 python tools/gen_rdf_patch.py --verify-ids                                   # vanilla ids used by the generator
 python tools/stage_pandora.py --label baseline                               # same modlist, no rdf
 python tools/stage_pandora.py --label rdf --rdf behavior/Pandora_Engine/mod/rdf
-python tools/validate_rdf.py                                                 # 213 checks (3P + first person), exit 0 = pass
+python tools/validate_rdf.py                                                 # 219 checks (3P + first person), exit 0 = pass
 python tools/test_hkxcheck.py
 ```
 
@@ -212,10 +212,10 @@ validate in game before converting them too).
   5 `2HM_Idle`, 6 `2HW_Idle`, 7 `Bow_IdleHeld`, 8-11 `1HM_Idle`; right 5 `2HM_Idle`, 6 `2HW_Idle`, 7 `Bow_IdleHeld`, 8-11 1HM pose,
   12 `CrossBow_IdleHeld`. Spells/staffs are drawn by `magicbehavior` (`MRh_Idle`, `MLh_Idle`, `StaffRight_Idle`, `Staff_Idle`).
 
-### 6.2 What the patch adds (257 new nodes)
+### 6.2 What the patch adds (365 new nodes)
 Same events (13), variables (4: `RDF_DodgeClip/DodgeSpeed/IsDodging/ArmBlend`), blends, wildcards, exit/stagger transitions and conditional
 return as 3P (with the 1P ids above). Per state:
-`ModifierGenerator{ BSIsActiveModifier(bAnimationDriven, RDF_IsDodging), Blend(blendParameter <- RDF_ArmBlend){ 0: DodgeSM, 1: DrawnSM } }`.
+`ModifierGenerator{ BSIsActiveModifier(bAnimationDriven, RDF_IsDodging), Blend{ body mask: DodgeSM, arm mask: Blend(blendParameter <- RDF_ArmBlend){ 0: DodgeSM copy, 1: DrawnSM } } }`, the 3P layout. The 1P skeleton (vanilla `skeletonfirst.hkx`) has the same 99 bones as the vanilla 3P one; the arm mask is `FP_ARM_BONES` (clavicles, arms, twists, hands, fingers, pauldrons, magic and weapon/shield nodes), so the clip moves torso, head and camera while the arms hold the stance.
 `DodgeSM = hkbStateMachine, startStateId <- RDF_DodgeClip`, 16 states like 3P, playing Bethesda's own 1P dodge clips (vanilla, already in
 `FirstPerson`, playback speed <- `RDF_DodgeSpeed`): right/forward-right/back-right -> `Animations\DodgeRight.hkx`, left/forward-left/back-left
 -> `DodgeLeft`, back -> `DodgeBack`, forward -> `SneakRun_ForwardRoll` (the vanilla 1P sneak roll; Motion Sensitive Fix SE replaces it with a
@@ -224,8 +224,8 @@ sneak roll, so they are not used. The clips carry no RDF annotations, so 1P dodg
 `DrawnSM = hkbStateMachine, startStateId <- currentDefaultState` (the vanilla sync variable holding Default_Behavior's stateId; states 0, 1, 2,
 10-14, 20): sheathed/unequipping/killmove ids play the looping neutral 1P idle `MT_Idle` (vanilla 1P sheathed idle), weapon/spell ids (1, 2, 10, 11)
 use `StanceSM = hkbStateMachine, startStateId <- iRightHandType, 13 states (stateId = hand type)`; entries are looping `hkbClipGenerator`s
-or nested `hkbStateMachine`s on `iLeftHandType`. No bone mask (the 1P skeleton is arms and camera only): the plugin sends
-`RDF_ArmBlend = fArmStanceFirstPerson` (0.35) while a weapon/spell is drawn, 0 otherwise, and fits the playback to `fClipLengthFirstPerson`.
+or nested `hkbStateMachine`s on `iLeftHandType`. The plugin sends
+`RDF_ArmBlend = fArmStanceFirstPerson` (1.0) while a weapon/spell is drawn, 0 otherwise, and fits the playback to `fClipLengthFirstPerson`.
 The chooser is a state machine rather than a ManualSelector for the reason in 5.6 (a selector shows a one-frame step when it reactivates
 on a different child; a state machine applies the bound start state at activation).
 

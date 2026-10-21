@@ -114,8 +114,8 @@ V = dict(
 # ------------------------------------------------------------------------- first person (firstperson~0_master)
 # The 1P graph (project `firstperson`, Pandora file name `firstperson~0_master`) mirrors the 3P 0_master: same event/variable
 # tables (1217 events / 230 variables), RootBehaviorGraph with the same stateIds (14 Default_State, 48 PlayerStagger_State,
-# 7 Stagger_State), but its own Nemesis ids. 1P renders ARMS ONLY, so there is no bone mask: a state plays a parametric blend
-# (RDF_ArmBlend: 0 dodge, 1 stance) of Bethesda's own 1P dodge clip and the 1P weapon-ready idle of the current hand types.
+# 7 Stagger_State), but its own Nemesis ids. A state plays Bethesda's own 1P dodge clip on torso, head and camera, and on the
+# arms a parametric blend (RDF_ArmBlend: 0 clip, 1 stance) with the 1P weapon-ready idle of the current hand types.
 # The dodge clips are vanilla `Animations\DodgeLeft/Right/Back.hkx`, already in the vanilla FirstPerson character (no copies,
 # and OAR replacers such as Sigma - Magic apply). Forward has no 1P dodge: it plays the vanilla 1P sneak forward roll.
 # TUDM's 1P roll_*/sidestep_* are 16 copies of that same roll, so they add nothing.
@@ -129,6 +129,10 @@ V_FP = dict(
                   (True, 0, "#0176", "(currentDefaultState >= 12) && (bAttached == 1)")],
 )
 FP_PATCH_NAME = "firstperson~0_master.xml"
+# 1P skeleton (vanilla _1stperson/characterassets/skeletonfirst.hkx: 99 bones, same order as the vanilla 3P one; no mod in
+# this list replaces it): clavicles, arms, twists, hands, fingers, pauldrons, magic nodes and the hand/weapon/shield nodes.
+N_BONES_FP = 99
+FP_ARM_BONES = [27, 28, 29, 30, 31, 32, 38, 39, 40, 41, 42, 43, 44, 45, 47, 48] + list(range(52, 60)) + list(range(67, 97))
 FP_DODGE_CLIPS = {"f": "SneakRun_ForwardRoll", "fr": "DodgeRight", "r": "DodgeRight", "br": "DodgeRight",
                   "b": "DodgeBack", "bl": "DodgeLeft", "l": "DodgeLeft", "fl": "DodgeLeft"}
 # Outer 1P chooser: hkbStateMachine startStateId <- currentDefaultState (the vanilla sync variable that holds the stateId of
@@ -424,15 +428,22 @@ def build_state(nm, state_id, other_id, N, fx, bind_extra, masks, v=None, fp=Fal
         p("enterNotifyEvents", enter), p("exitNotifyEvents", exit_), p("transitions", trans), p("generator", modgen),
         p("name", nm), p("stateId", state_id), p("probability", "1.000000"), p("enable", "true")])))
     # --- ModifierGenerator { BSIsActiveModifier, Blender }
-    if fp:   # first person: ModifierGenerator{ BSIsActiveModifier, Blend(RDF_ArmBlend){ 0 dodge clip, 1 stance } }
-        gen_ptr, blend_bs, c0, c1 = N.new(), N.new(), N.new(), N.new()
-        named(gen_ptr, nm + "_FPStanceBlend")
-        dodge = dodge_selector(N, out, nm + "_FP", fp_clip_path)
+    if fp:   # first person: ModifierGenerator{ BSIsActiveModifier, Blend{ body: clip, arms: Blend(RDF_ArmBlend){ clip, stance } } }
+        # Same layout as 3P: the clip moves torso, head and camera (the dodge's impact), the arms take the stance share,
+        # so a two-handed grip stays on the weapon instead of following the one-handed pose of Bethesda's 1P clips.
+        gen_ptr, c_main, c_arm, arm, arm_bs, p0, p1 = (N.new() for _ in range(7))
+        named(gen_ptr, nm + "_FPArmStanceBlend")
+        named(arm, nm + "_FPArmLayer")
+        main = dodge_selector(N, out, nm + "_FP", fp_clip_path)
+        arm_dodge = dodge_selector(N, out, nm + "_FPArmDodge", fp_clip_path)
         stance = stance_chooser_fp(N, out, nm)
-        out.append(binding_set(blend_bs, [("blendParameter", ARM_BLEND_VAR)]))
-        out.append(blender_child(c0, dodge, "null", 0.0, 0.0))
-        out.append(blender_child(c1, stance, "null", 1.0, 0.0))
-        out.append(blender(gen_ptr, [c0, c1], BLEND_FLAGS_PARAMETRIC, blend_bs))
+        out.append(blender_child(c_main, main, masks["not_arms"], 1.0, 0.0))
+        out.append(blender_child(c_arm, arm, masks["arms"], 1.0, 0.0))
+        out.append(blender(gen_ptr, [c_main, c_arm], BLEND_FLAGS_PLAIN))
+        out.append(binding_set(arm_bs, [("blendParameter", ARM_BLEND_VAR)]))
+        out.append(blender_child(p0, arm_dodge, "null", 0.0, 0.0))
+        out.append(blender_child(p1, stance, "null", 1.0, 0.0))
+        out.append(blender(arm, [p0, p1], BLEND_FLAGS_PARAMETRIC, arm_bs))
         out.append(node(modgen, "hkbModifierGenerator", "0x1f81fae6", "\n".join([
             p("variableBindingSet", "null"), p("userData", "1"), p("name", nm + "_MG"), p("modifier", isact),
             p("generator", gen_ptr)])))
@@ -509,9 +520,12 @@ def gen_master(existing_vars, fp=False):
         fx_nodes[key] = nm
         new_nodes.append(effect_node(nm, spec))
     if fp:
-        masks = None
-        st_a, nodes_a = build_state(STATE_A[0], STATE_A[1], STATE_B[1], N, fx_nodes, bind_extra, None, V_, True)
-        st_b, nodes_b = build_state(STATE_B[0], STATE_B[1], STATE_A[1], N, fx_nodes, bind_extra, None, V_, True)
+        arms = set(FP_ARM_BONES)
+        masks = {"arms": N.new(), "not_arms": N.new()}
+        new_nodes.append(bone_weight_array(masks["arms"], [1.0 if b in arms else 0.0 for b in range(N_BONES_FP)]))
+        new_nodes.append(bone_weight_array(masks["not_arms"], [0.0 if b in arms else 1.0 for b in range(N_BONES_FP)]))
+        st_a, nodes_a = build_state(STATE_A[0], STATE_A[1], STATE_B[1], N, fx_nodes, bind_extra, masks, V_, True)
+        st_b, nodes_b = build_state(STATE_B[0], STATE_B[1], STATE_A[1], N, fx_nodes, bind_extra, masks, V_, True)
     else:
         arms = set(RIGHT_ARM_BONES) | set(LEFT_ARM_BONES)
         masks = {"arms": N.new(), "not_arms": N.new()}

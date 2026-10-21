@@ -227,3 +227,10 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   pre-hit callback at kPostPostLoad that sets bIgnoreHit while the player is invulnerable ([Compat] bUsePrecision). Header copied
   unchanged from ersh1/Precision. vinymayan/Dodge reviewed: its i-frames and "perfect dodge" are wall-clock windows from the dodge
   start (perfect = the first perfectDodgeWindow seconds), time stop is only graph events for another mod to act on.
+* 1P stance and TDM mode (2026-10-21): with a whole-pose blend the vanilla 1P dodge clips (a one-handed arm pose) pulled a
+  two-hander's grip forward. The 1P state now uses the 3P layout with bone masks on the vanilla 99-bone 1P skeleton: clip on
+  torso/head/camera, arms = Blend(RDF_ArmBlend){clip, stance}; fArmStanceFirstPerson default 1.0. Validator 219/219.
+  "Diagonal dodge in TDM 360": every dodge in the log had freeRotation=false; the STB TDM MCM ini has uDirectionalMovementDrawn
+  = uDirectionalMovementSheathed = 1 (TDM: 1 = Vanilla style, 2 = 360). TDM also reports kVanillaStyle in 360 while a
+  face-crosshair reason is active (attacking, blocking, casting, aiming, shouting, bFaceCrosshairWhileAttacking = 1 in STB).
+  The dodge start line now names the TDM mode.
