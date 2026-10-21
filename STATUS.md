@@ -44,3 +44,9 @@
    Touches: RDF_DodgeClip index (new slot after the 16 directional ones) and ClipIndex in the plugin, CLIPS in
    gen_rdf_patch.py (Pandora + Nemesis patches, character animationNames), the 1P chooser (DodgeBack), the clip-set
    spec / build_clip_set.py ("n" direction, falling back to "b"), annotate_clips.py and ANIMATION_CONTRACT.md.
+5. Projectiles that outlive the i-frames. Arrows and missiles already pass through (their contacts with the player are
+   dropped while invulnerable, the projectile is not destroyed, as in Elden Ring; not yet checked in game). Open case: the
+   i-frames end while the projectile still overlaps the player, so the next physics step lands the hit late. Plan: remember
+   every projectile that passed through during i-frames (handle + expiry) and keep ignoring its contacts with that actor
+   for the rest of its life, or until it has fully left the actor's collision; decide which. Also look at what is not
+   covered at all: beams, flames (cone), barrier and grenade projectiles, explosions / area hits.
