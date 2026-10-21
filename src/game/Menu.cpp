@@ -183,11 +183,77 @@ namespace rdf::game::menu
 			}
 		}
 
+		// --- dodge keys: one FLICK hotkey, keyboard/mouse and gamepad bound separately, no modifiers.
+		// FLICK codes: keyboard = scan code, mouse = 256 + button, gamepad = 266 + SKSE gamepad code.
+		// The ini keeps the game's own: iDodgeKeyboard scan code, iDodgeMouse button, iDodgeGamepad XInput mask.
+		std::uint32_t ToFlickKbm(const Settings& s)
+		{
+			if (s.dodgeKeyboard >= 0) {
+				return static_cast<std::uint32_t>(s.dodgeKeyboard);
+			}
+			return s.dodgeMouse >= 0 ? FUCK::Keys::kMBBase + static_cast<std::uint32_t>(s.dodgeMouse) : 0;
+		}
+
+		std::uint32_t ToFlickPad(const Settings& s)
+		{
+			if (s.dodgeGamepad <= 0) {
+				return 0;
+			}
+			const auto code = SKSE::InputMap::GamepadMaskToKeycode(static_cast<std::uint32_t>(s.dodgeGamepad));
+			return code >= FUCK::Keys::kGPBase && code < SKSE::InputMap::kMaxMacros ? FUCK::Keys::FromSKSE(code) : 0;
+		}
+
+		void FromFlick(std::uint32_t kbm, std::uint32_t pad, Settings& s)
+		{
+			s.dodgeKeyboard = kbm > 0 && kbm < FUCK::Keys::kMBBase ? static_cast<int>(kbm) : -1;
+			s.dodgeMouse = kbm >= FUCK::Keys::kMBBase && kbm < FUCK::Keys::kGPBase ? static_cast<int>(kbm - FUCK::Keys::kMBBase) : -1;
+			s.dodgeGamepad = pad >= 2 * FUCK::Keys::kGPBase && pad - FUCK::Keys::kGPBase < SKSE::InputMap::kMaxMacros ?
+			                     static_cast<int>(SKSE::InputMap::GamepadKeycodeToMask(pad - FUCK::Keys::kGPBase)) :
+			                     -1;
+		}
+
+		class DodgeKey
+		{
+		public:
+			static DodgeKey& Get()
+			{
+				static DodgeKey k;
+				return k;
+			}
+
+			void Draw()
+			{
+				auto& s = State::Get().Draft();
+				if (!hotkey_.isBinding) {
+					hotkey_.kKey = ToFlickKbm(s);
+					hotkey_.gKey = ToFlickPad(s);
+					hotkey_.kMod1 = hotkey_.kMod2 = hotkey_.gMod1 = hotkey_.gMod2 = -1;
+				}
+				hotkey_.disallowModifiers = true;
+				FUCK::DrawManagedHotkey("$RDF_DodgeKey"_T, hotkey_, FUCK::HotkeyFlags::kNoModifiers);
+				if (FUCK::IsItemHovered()) {
+					FUCK::SetTooltip("$RDF_DodgeKey_Desc"_T);
+				}
+				if (!hotkey_.isBinding && (hotkey_.kKey != ToFlickKbm(s) || hotkey_.gKey != ToFlickPad(s))) {
+					FromFlick(hotkey_.kKey, hotkey_.gKey, s);
+					State::Get().Commit();
+				}
+			}
+
+			// While binding, FLICK reads the next press from the game's input stream.
+			bool OnInput(const void* e) { return hotkey_.isBinding && FUCK::UpdateManagedHotkey(e, hotkey_); }
+
+		private:
+			FUCK::ManagedHotkey hotkey_;
+		};
+
 		class PageTool final : public FUCK::ITool
 		{
 		public:
 			PageTool(Page page, const char* nameKey, const char* icon, const char* noteKey) :
 				page_(page), nameKey_(nameKey), icon_(icon), noteKey_(noteKey) {}
+
+			bool OnAsyncInput(const void* e) override { return page_ == Page::Input && DodgeKey::Get().OnInput(e); }
 
 			const char* Name() const override { return FUCK::Translate(nameKey_); }
 			const char* Group() const override { return "$RDF_Group"_T; }
@@ -204,11 +270,15 @@ namespace rdf::game::menu
 				}
 				FUCK::Separator();
 				FUCK::Spacing();
+				if (page_ == Page::Input) {
+					FUCK::SeparatorText("$RDF_Section_Keys"_T);
+					DodgeKey::Get().Draw();
+				}
 				const auto  fields = schema::Fields();
 				const auto& texts = Texts();
 				const char* section = nullptr;
 				for (std::size_t n = 0; n < fields.size(); ++n) {
-					if (fields[n].page != page_) {
+					if (fields[n].page != page_ || fields[n].custom) {
 						continue;
 					}
 					if (!section || std::strcmp(section, fields[n].section) != 0) {
@@ -234,6 +304,7 @@ namespace rdf::game::menu
 		std::vector<PageTool>& Tools()
 		{
 			static std::vector<PageTool> tools{
+				{ Page::Input, "$RDF_Page_Input", ICON_FA_KEYBOARD, "$RDF_Note_Input" },
 				{ Page::Timing, "$RDF_Page_Timing", ICON_FA_STOPWATCH, "$RDF_Note_Timing" },
 				{ Page::Motion, "$RDF_Page_Motion", ICON_FA_PERSON_RUNNING, "$RDF_Note_Motion" },
 				{ Page::Steering, "$RDF_Page_Steering", ICON_FA_COMPASS, "$RDF_Note_Steering" },

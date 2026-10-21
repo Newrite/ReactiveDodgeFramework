@@ -8,9 +8,10 @@
 namespace rdf::game::schema
 {
 	// The live-tunable settings: one row per ini key, shared by the in-game menu and the ini writer.
-	// Keys that only take effect at startup (hooks, key bindings, graph names) stay ini-only.
+	// Keys that only take effect at startup (hooks, compatibility switches, graph names) stay ini-only.
 	enum class Page
 	{
+		Input,
 		Timing,
 		Motion,
 		Steering,
@@ -42,6 +43,7 @@ namespace rdf::game::schema
 		int (*getChoice)(const Settings&){ nullptr };
 		void (*setChoice)(Settings&, int){ nullptr };
 		std::span<const char* const> choices{};  // ini names; labels are "$RDF_<key>_<name>"
+		bool        custom{ false };              // saved like the others, drawn by its page's own widget
 	};
 
 	std::span<const Field> Fields();

@@ -32,9 +32,9 @@ namespace rdf::game
 		Config core;
 
 		// [Input]: raw device scan codes, -1 = unbound
-		int   dodgeKeyboard{ 0x2F };  // V
+		int   dodgeKeyboard{ RE::BSKeyboardDevice::Keys::kV };
 		int   dodgeMouse{ -1 };
-		int   dodgeGamepad{ 0x80 };  // right stick click
+		int   dodgeGamepad{ RE::BSWin32GamepadDevice::Keys::kRightThumb };  // XInput mask
 		float powerAttackHold{ 0.30f };
 
 		// [Cost]

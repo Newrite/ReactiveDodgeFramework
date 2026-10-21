@@ -40,6 +40,12 @@ namespace rdf::game::schema
 			return x;
 		}
 
+		Field Custom(Field f)
+		{
+			f.custom = true;
+			return f;
+		}
+
 		constexpr std::array<const char*, 3> kOrientations{ "Auto", "FaceMotion", "KeepFacing" };
 		constexpr std::array<const char*, 3> kResources{ "None", "Stamina", "Magicka" };
 
@@ -74,6 +80,13 @@ namespace rdf::game::schema
 		const std::vector<Field>& Table()
 		{
 			static const std::vector<Field> fields{
+				// --- input: the dodge keys are drawn as one FLICK hotkey widget (Menu.cpp)
+				Custom(Int(Page::Input, "Input", "iDodgeKeyboard", RDF_I(dodgeKeyboard), -1, 0xFF)),
+				Custom(Int(Page::Input, "Input", "iDodgeMouse", RDF_I(dodgeMouse), -1, 0xFF)),
+				Custom(Int(Page::Input, "Input", "iDodgeGamepad", RDF_I(dodgeGamepad), -1, 0xFFFF)),
+				Float(Page::Input, "Input", "fBufferWindow", RDF_F(core.input.bufferWindow), 0.0f, 1.0f, "%.2f s"),
+				Float(Page::Input, "Input", "fDebounce", RDF_F(core.input.debounce), 0.0f, 0.3f, "%.2f s"),
+				Float(Page::Input, "Input", "fPowerAttackHold", RDF_F(powerAttackHold), 0.05f, 1.0f, "%.2f s"),
 				// --- timing and windows
 				Float(Page::Timing, "Timing", "fStartup", RDF_F(core.timing.startup), 0.0f, 0.5f, "%.3f s"),
 				Float(Page::Timing, "Timing", "fActive", RDF_F(core.timing.active), 0.0f, 1.0f, "%.3f s"),
@@ -126,9 +139,6 @@ namespace rdf::game::schema
 				Bool(Page::Rules, "Jump", "bBlockDuringDodge", RDF_B(blockJumpDuringDodge)),
 				Bool(Page::Rules, "Stagger", "bDodgeFromStagger", RDF_B(dodgeFromStagger)),
 				Float(Page::Rules, "Stagger", "fDodgeDelay", RDF_F(staggerDodgeDelay), 0.0f, 3.0f, "%.2f s"),
-				Float(Page::Rules, "Input", "fBufferWindow", RDF_F(core.input.bufferWindow), 0.0f, 1.0f, "%.2f s"),
-				Float(Page::Rules, "Input", "fDebounce", RDF_F(core.input.debounce), 0.0f, 0.3f, "%.2f s"),
-				Float(Page::Rules, "Input", "fPowerAttackHold", RDF_F(powerAttackHold), 0.05f, 1.0f, "%.2f s"),
 				// --- debug
 				Bool(Page::Debug, "Dev", "bDevLog", RDF_B(devLog)),
 			};
