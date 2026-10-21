@@ -202,7 +202,7 @@ def main():
         for op, path, items in ops:
             if op == "insert":
                 for node in items:
-                    with open(os.path.join(out_dir, node.get("name") + ".txt"), "w", encoding="utf-8", newline="\n") as f:
+                    with open(os.path.join(out_dir, node.get("name") + ".txt"), "w", encoding="utf-8", newline="\r\n") as f:  # CRLF like Nemesis mods
                         f.write("\n".join(fmt(node, 2)) + "\n")
                     new_nodes += 1
             elif op == "append":
@@ -218,7 +218,7 @@ def main():
             sources[node_id] = codes
             for param, lines in params.items():
                 text = insert_block(text, param, lines)
-            with open(os.path.join(out_dir, node_id + ".txt"), "w", encoding="utf-8", newline="\n") as f:
+            with open(os.path.join(out_dir, node_id + ".txt"), "w", encoding="utf-8", newline="\r\n") as f:
                 f.write(text)
         summary.append("%s: %d new nodes, edited %s (originals from %s)"
                        % (folder, new_nodes, sorted(edits), {k: v[:2] for k, v in sources.items()}))
