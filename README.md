@@ -54,7 +54,22 @@ python tools\annotate_clips.py                   # write RDF_* window annotation
 | `STATUS.md`, `JOURNAL.md` | current state and decision log |
 | `docs/research/` | modlist audit, public implementations + Elden Ring notes, behavior pipeline |
 
+## In-game settings menu (FLICK)
+With [FLICK](https://www.nexusmods.com/skyrimspecialedition/mods/181603) installed, its menu (F7 by default) gets a
+"Reactive Dodge" group with six pages: timing and windows, motion, steering and facing, animation, cost and rules, debug.
+Every change applies live (a running dodge keeps the tuning it began with; the next one uses the new values).
+"Save to ini" writes the values into `SKSE/Plugins/ReactiveDodgeFramework.ini` in place (comments and order kept;
+under MO2 that is the winning copy, e.g. a preset mod's), "Reload ini" discards unsaved edits, "Page defaults" resets
+one page. Key bindings, the i-frame hooks and compatibility switches stay ini-only (they apply at game start).
+Labels and descriptions: `Interface/Translations/ReactiveDodgeFramework_<LANGUAGE>.txt` (English and Russian, generated
+by `tools/gen_menu_translations.py`). Without FLICK the plugin works as before.
+
 ## Third-party API headers
+- `src/third_party/fuck/FUCK_API.h`, `IconsFontAwesome6.h`: FLICK's API from
+  [Fuzzlesz/FUCK_API](https://github.com/Fuzzlesz/FUCK_API) (bc52809, API version 7, FLICK 1.7.2), unchanged. GPL-3.0;
+  FLICK itself is GPL-3.0 with a modding exception. Keep this in mind for the license of a published build.
+- `src/third_party/imgui/imgui.h`, `imconfig.h`: from [powerof3/imgui](https://github.com/powerof3/imgui) at
+  fbbe3efd (the revision FLICK builds with; MIT). Types only: every ImGui call goes through FLICK's interface.
 - `src/game/PrecisionAPI.h`: Precision's modder API header, copied unchanged from
   [ersh1/Precision](https://github.com/ersh1/Precision) `src/PrecisionAPI.h` (v2.0.6, GPL-3.0 with a modding exception; the
   header asks modders to copy it). Used only to register a pre-hit callback for i-frames (`[Compat] bUsePrecision`).

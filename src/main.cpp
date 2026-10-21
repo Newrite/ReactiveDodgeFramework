@@ -4,6 +4,7 @@
 #include "game/JumpGate.h"
 #include "game/LegacyDodge.h"
 #include "game/LockOn.h"
+#include "game/Menu.h"
 #include "game/MotionHook.h"
 #include "game/Settings.h"
 #include "game/UpdateHook.h"
@@ -44,6 +45,7 @@ namespace
 			break;
 		case SKSE::MessagingInterface::kDataLoaded:
 			rdf::game::input::Install();
+			rdf::game::menu::Install();
 			break;
 		case SKSE::MessagingInterface::kPostLoadGame:
 		case SKSE::MessagingInterface::kNewGame:

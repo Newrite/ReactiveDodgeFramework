@@ -25,7 +25,20 @@ namespace rdf::game::update
 		class Controller
 		{
 		public:
-			void Configure() { core_ = std::make_unique<ReactiveCore>(Settings::Get().core); }
+			void Configure()
+			{
+				core_ = std::make_unique<ReactiveCore>(Settings::Get().core);
+				seenGeneration_ = Settings::Generation();
+			}
+			// The menu committed new tuning: hand it to the core between dodges.
+			void RefreshConfig()
+			{
+				const auto generation = Settings::Generation();
+				if (generation != seenGeneration_ && !awaitingEnter_ && core_->Reconfigure(Settings::Get().core)) {
+					seenGeneration_ = generation;
+					DevLog("tuning updated (generation {})", generation);
+				}
+			}
 			void Reset();
 			void Tick(RE::PlayerCharacter* player, float dt);
 
@@ -76,6 +89,7 @@ namespace rdf::game::update
 			RejectReason    lastReject_{ RejectReason::None };
 			CommandKind     lastRejectCommand_{ CommandKind::Dodge };
 			float           orphanTime_{ 0.0f };
+			std::uint32_t   seenGeneration_{ 0 };
 			float           staggerAge_{ 0.0f };
 			float           startCameraYaw_{ 0.0f };   // camera yaw when the current dodge started
 			bool            freeRotation_{ false };    // TDM 360, sampled while no dodge runs
@@ -197,6 +211,7 @@ namespace rdf::game::update
 			return;
 		}
 
+		RefreshConfig();
 		Refresh3D(player);
 		if (graph::TrackActiveGraph(player) && (core_->DodgeRunning() || awaitingEnter_)) {
 			AbandonGraph(player, "active graph switched (camera)");

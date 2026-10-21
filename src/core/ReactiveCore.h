@@ -44,6 +44,9 @@ namespace rdf
 	{
 	public:
 		explicit ReactiveCore(const Config& cfg);
+		// New tuning (an in-game menu edit). Only between dodges: a running one keeps the config it began
+		// with. Returns false (nothing changed) while a dodge runs; the caller retries.
+		bool          Reconfigure(const Config& cfg);
 
 		void          BeginFrame(const FrameInput& frame);
 		std::uint64_t Press(CommandKind kind, Vec2 dir);

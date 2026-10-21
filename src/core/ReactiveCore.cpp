@@ -11,6 +11,18 @@ namespace rdf
 		arbiter_(cfg.policy),
 		driver_(cfg) {}
 
+	bool ReactiveCore::Reconfigure(const Config& cfg)
+	{
+		if (action_.Running()) {
+			return false;
+		}
+		cfg_ = cfg;
+		buffer_.SetTiming(cfg.input.bufferWindow, cfg.input.debounce);
+		arbiter_ = ActionArbiter(cfg.policy);
+		driver_ = MotionDriver(cfg);
+		return true;
+	}
+
 	void ReactiveCore::BeginFrame(const FrameInput& frame)
 	{
 		frame_ = frame;

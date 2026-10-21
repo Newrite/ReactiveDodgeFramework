@@ -35,6 +35,8 @@ target("ReactiveDodgeFramework")
     })
 
     add_includedirs("src")
+    -- FLICK (FUCK.dll) API header and the ImGui headers of the revision it is built with (types only)
+    add_includedirs("src/third_party/imgui", "src/third_party/fuck")
     set_pcxxheader("src/game/pch.h")
     add_headerfiles("src/**.h")
     add_files("src/main.cpp", "src/game/**.cpp", "src/core/**.cpp")
@@ -46,6 +48,10 @@ target("ReactiveDodgeFramework")
         if os.isfile(pdb) then
             os.cp(pdb, deploy_dir)
         end
+        -- menu translations (ours, always refreshed): Data/Interface/Translations/ReactiveDodgeFramework_<LANG>.txt
+        local translations = path.join(deploy_dir, "..", "..", "Interface", "Translations")
+        os.mkdir(translations)
+        os.cp("dist/Interface/Translations/*.txt", translations)
         local ini = path.join(deploy_dir, "ReactiveDodgeFramework.ini")
         if not os.isfile(ini) then
             os.cp("dist/ReactiveDodgeFramework.ini", ini)

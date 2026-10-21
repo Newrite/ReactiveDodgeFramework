@@ -1,0 +1,227 @@
+#!/usr/bin/env python3
+"""Writes the FLICK menu translations (UTF-16LE with BOM, "$KEY<TAB>text", CRLF) into dist/Interface/Translations.
+
+Keys follow src/game/Menu.cpp + SettingsSchema.cpp: $RDF_<iniKey>, $RDF_<iniKey>_Desc, $RDF_<iniKey>_<choice>,
+$RDF_Page_*, $RDF_Note_*, $RDF_Section_<iniSection>. Descriptions must not contain a percent sign (shown printf-style).
+
+    python tools/gen_menu_translations.py
+"""
+import os
+import re
+import sys
+
+# key: (english, russian)
+T = {
+    "Group": ("Reactive Dodge", "Reactive Dodge"),
+    "Page_Timing": ("Timing & windows", "Тайминги и окна"),
+    "Page_Motion": ("Motion", "Движение"),
+    "Page_Steering": ("Steering & facing", "Управление и разворот"),
+    "Page_Animation": ("Animation", "Анимация"),
+    "Page_Rules": ("Cost & rules", "Стоимость и правила"),
+    "Page_Debug": ("Debug", "Отладка"),
+    "Note_Timing": ("Seconds from the dodge start. A clip with RDF_* annotations uses its own windows instead of these timers.",
+                    "Секунды от начала доджа. Клип с аннотациями RDF_* использует свои окна вместо этих таймеров."),
+    "Note_Motion": ("The plugin moves the character; the clip only plays. Changes apply from the next dodge.",
+                    "Перемещает персонажа плагин, клип только проигрывается. Изменения действуют со следующего доджа."),
+    "Note_Steering": ("How the input and the camera may change a dodge after it starts, and who turns the character.",
+                      "Как ввод и камера могут менять начатый додж и кто поворачивает персонажа."),
+    "Note_Animation": ("Clip playback and how much of the weapon stance stays on the arms.",
+                       "Проигрывание клипа и доля стойки оружия на руках."),
+    "Note_Debug": ("Key bindings, i-frame hooks and compatibility switches stay in the ini (they apply at game start).",
+                   "Клавиши, хуки i-frames и переключатели совместимости остаются в ini (действуют при запуске игры)."),
+    "Section_Timing": ("Phases and cancel windows", "Фазы и окна отмены"),
+    "Section_IFrames": ("Invulnerability", "Неуязвимость"),
+    "Section_Motion": ("Distance and speed", "Дистанция и скорость"),
+    "Section_Steering": ("Steering", "Управление"),
+    "Section_Graph": ("Clips and arm stance", "Клипы и стойка рук"),
+    "Section_Cost": ("Cost", "Стоимость"),
+    "Section_Jump": ("Jump", "Прыжок"),
+    "Section_Stagger": ("Stagger", "Стаггер"),
+    "Section_Input": ("Input buffer", "Буфер ввода"),
+    "Section_Dev": ("Diagnostics", "Диагностика"),
+    "Save": ("Save to ini", "Сохранить в ini"),
+    "Reload": ("Reload ini", "Перечитать ini"),
+    "Defaults": ("Page defaults", "Сбросить страницу"),
+    "Unsaved": ("Applied live, not saved to the ini yet.", "Применено в игре, но ещё не сохранено в ini."),
+    "Live": ("Changes apply live (between dodges).", "Изменения применяются сразу (между доджами)."),
+
+    # --- timing
+    "fStartup": ("Startup", "Разгон"),
+    "fStartup_Desc": ("Acceleration phase at the start of the dodge.", "Фаза разгона в начале доджа."),
+    "fActive": ("Active", "Активная фаза"),
+    "fActive_Desc": ("Phase at peak speed.", "Фаза на пиковой скорости."),
+    "fRecovery": ("Recovery", "Восстановление"),
+    "fRecovery_Desc": ("Deceleration into the exit speed. Startup + active + recovery = dodge length.",
+                       "Торможение до скорости выхода. Разгон + активная + восстановление = длительность доджа."),
+    "fExitBlend": ("Exit blend (running)", "Переход в бег"),
+    "fExitBlend_Desc": ("How long a dodge left for running hands its speed over.",
+                        "За сколько додж, прерванный бегом, передаёт скорость."),
+    "fActionExitBlend": ("Exit blend (attack / block)", "Переход в атаку / блок"),
+    "fActionExitBlend_Desc": ("Momentum carried into an attack or block cancel, decaying to zero.",
+                              "Инерция, переносимая в атаку или блок, затухает до нуля за это время."),
+    "fChainFrom": ("Chain from", "Цепочка с"),
+    "fChainFrom_Desc": ("From when a buffered dodge may chain.", "С какого момента можно сделать следующий додж цепочкой."),
+    "fAttackFrom": ("Attack from", "Атака с"),
+    "fAttackFrom_Desc": ("From when an attack may cancel the dodge.", "С какого момента додж можно отменить атакой."),
+    "fBlockFrom": ("Block from", "Блок с"),
+    "fBlockFrom_Desc": ("From when a block may cancel the dodge.", "С какого момента додж можно отменить блоком."),
+    "fExitFrom": ("Exit from", "Выход с"),
+    "fExitFrom_Desc": ("From when running (and a jump) may leave the dodge.",
+                       "С какого момента додж можно прервать бегом (и прыжком)."),
+    "iMaxChain": ("Max chain", "Длина цепочки"),
+    "iMaxChain_Desc": ("Dodges in a row before the chain is refused. 0 = unlimited.",
+                       "Сколько доджей подряд разрешено. 0 = без ограничения."),
+    "fIFrameStart": ("I-frames start", "Начало i-frames"),
+    "fIFrameStart_Desc": ("Invulnerability window start (clips without annotations).",
+                          "Начало окна неуязвимости (для клипов без аннотаций)."),
+    "fIFrameEnd": ("I-frames end", "Конец i-frames"),
+    "fIFrameEnd_Desc": ("Invulnerability window end (clips without annotations).",
+                        "Конец окна неуязвимости (для клипов без аннотаций)."),
+    # --- motion
+    "fDistance": ("Distance", "Дистанция"),
+    "fDistance_Desc": ("Units an uncancelled dodge travels. The peak speed follows from it.",
+                       "Сколько юнитов проходит неотменённый додж. Пиковая скорость подбирается под неё."),
+    "fRunSpeed": ("Exit speed (moving)", "Скорость выхода (с вводом)"),
+    "fRunSpeed_Desc": ("Speed at the end of the dodge when a direction is held; should match your running speed.",
+                       "Скорость в конце доджа при зажатом направлении, лучше совпадает со скоростью бега."),
+    "fMaxCarrySpeed": ("Max carry-in speed", "Макс. входная скорость"),
+    "fMaxCarrySpeed_Desc": ("Cap on the speed carried into a dodge from running or sprinting.",
+                            "Ограничение скорости, переносимой в додж из бега или спринта."),
+    "fCarryDecay": ("Hand-over floor decay", "Затухание пола скорости"),
+    "fCarryDecay_Desc": ("After a dodge hands over into running, the engine speed may not drop under the exit speed decaying at this rate (u/s2). 0 = off.",
+                         "После передачи в бег скорость движка не падает ниже скорости выхода, убывающей с этим темпом (юн/с2). 0 = выкл."),
+    "bBackstepWithoutInput": ("Backstep without input", "Отскок назад без ввода"),
+    "bBackstepWithoutInput_Desc": ("No direction held: dodge backwards (otherwise forwards).",
+                                   "Без направления додж идёт назад (иначе вперёд)."),
+    # --- steering
+    "fDirectionCommitTime": ("Direction commit window", "Окно выбора направления"),
+    "fDirectionCommitTime_Desc": ("The first seconds in which the live input still re-aims the dodge outright. 0 = the press direction is final.",
+                                  "Первые секунды, в которые текущий ввод полностью переставляет направление доджа. 0 = только направление при нажатии."),
+    "fMaxDeviation": ("Max steering deviation", "Макс. отклонение рулением"),
+    "fMaxDeviation_Desc": ("How far input may bend a started dodge from its start direction. 0 = no steering, 180 = free.",
+                           "Насколько ввод может увести начатый додж от направления старта. 0 = без руления, 180 = свободно."),
+    "fInputCone": ("Input cone", "Конус ввода"),
+    "fInputCone_Desc": ("Input farther than this from the current path is ignored (pressing back does nothing at 90).",
+                        "Ввод дальше этого угла от текущего пути игнорируется (при 90 нажатие назад ничего не делает)."),
+    "bInputFromStartCamera": ("Input from the start camera", "Ввод от камеры на старте"),
+    "bInputFromStartCamera_Desc": ("Read the input against the camera the dodge started with: turning the camera does not steer it.",
+                                   "Ввод считается от камеры на момент старта: поворот камеры не рулит доджем."),
+    "bHoldFacing": ("Hold facing", "Держать разворот"),
+    "bHoldFacing_Desc": ("Camera-facing dodges keep the start facing; the camera cannot turn the character mid-dodge.",
+                         "Доджи со взглядом в камеру держат стартовый разворот: камера не крутит персонажа во время доджа."),
+    "fOrientationWarpMax": ("Orientation warp", "Довод тела под клип"),
+    "fOrientationWarpMax_Desc": ("Directional clips come in 45 degree steps; the body turns by the rest of the angle, at most this much. 0 = off.",
+                                 "Направленные клипы идут шагом 45 градусов; тело доворачивается на остаток угла, не больше этого. 0 = выкл."),
+    "sOrientation": ("Facing mode", "Режим взгляда"),
+    "sOrientation_Desc": ("Auto: face the path with TDM 360, keep facing otherwise.",
+                          "Авто: в TDM 360 смотреть по пути, иначе сохранять взгляд."),
+    "sOrientation_Auto": ("Auto", "Авто"),
+    "sOrientation_FaceMotion": ("Face the path", "По пути"),
+    "sOrientation_KeepFacing": ("Keep facing", "Сохранять взгляд"),
+    "fFaceMotionMaxAngle": ("Face-path max angle", "Макс. угол разворота по пути"),
+    "fFaceMotionMaxAngle_Desc": ("With free rotation, dodges wider than this keep facing (backsteps instead of a spin).",
+                                 "При свободном повороте доджи шире этого угла сохраняют взгляд (отскок вместо разворота)."),
+    "fRateStartup": ("Steer rate: startup", "Скорость руления: разгон"),
+    "fRateStartup_Desc": ("How fast input turns the path during startup.", "Как быстро ввод поворачивает путь в разгоне."),
+    "fRateActive": ("Steer rate: active", "Скорость руления: активная"),
+    "fRateActive_Desc": ("How fast input turns the path at peak speed.", "Как быстро ввод поворачивает путь на пике."),
+    "fRateRecovery": ("Steer rate: recovery", "Скорость руления: восстановление"),
+    "fRateRecovery_Desc": ("How fast input turns the path during recovery.", "Как быстро ввод поворачивает путь в восстановлении."),
+    "fStartupYawRate": ("Turn rate: startup", "Поворот тела: разгон"),
+    "fStartupYawRate_Desc": ("How fast the body turns at the start (effectively a snap).",
+                             "Как быстро поворачивается тело на старте (почти мгновенно)."),
+    "fFaceYawRate": ("Turn rate", "Поворот тела"),
+    "fFaceYawRate_Desc": ("How fast the body follows its target facing afterwards.", "Как быстро тело догоняет нужный разворот дальше."),
+    "fDeadzone": ("Stick deadzone", "Мёртвая зона стика"),
+    "fDeadzone_Desc": ("Stick input below this does not steer.", "Ввод стика ниже этого не рулит."),
+    "fResponseExponent": ("Stick response", "Отклик стика"),
+    "fResponseExponent_Desc": ("Curve of stick strength: 1 = linear, above 1 = softer near the center.",
+                               "Кривая силы стика: 1 = линейно, больше 1 = мягче у центра."),
+    # --- animation
+    "fAnimSpeed": ("Animation speed", "Скорость анимации"),
+    "fAnimSpeed_Desc": ("Playback multiplier on top of fitting the clip to the dodge length.",
+                        "Множитель поверх подгонки клипа под длительность доджа."),
+    "fClipLength": ("Clip length", "Длина клипа"),
+    "fClipLength_Desc": ("Seconds of the third-person dodge clip at speed 1.", "Секунды клипа доджа от третьего лица при скорости 1."),
+    "fArmStanceStep": ("Arm stance: steps", "Стойка рук: шаги"),
+    "fArmStanceStep_Desc": ("Share of the weapon stance on the arms during sidesteps.", "Доля стойки оружия на руках при шагах в сторону."),
+    "fArmStanceRoll": ("Arm stance: rolls", "Стойка рук: перекаты"),
+    "fArmStanceRoll_Desc": ("Share of the weapon stance on the arms during rolls.", "Доля стойки оружия на руках при перекатах."),
+    "bArmStanceWhenSheathed": ("Arm stance when sheathed", "Стойка рук без оружия"),
+    "bArmStanceWhenSheathed_Desc": ("Also keep the stance of a sheathed weapon or spell.",
+                                    "Держать стойку и с убранным оружием или заклинанием."),
+    "bSidestepWhenKeepFacing": ("Sidesteps when keeping facing", "Шаги при сохранении взгляда"),
+    "bSidestepWhenKeepFacing_Desc": ("Lock-on and camera-facing dodges use the step clips instead of rolls.",
+                                     "При захвате цели и взгляде в камеру использовать шаги вместо перекатов."),
+    "fArmStanceFirstPerson": ("Arm stance: first person", "Стойка рук: первое лицо"),
+    "fArmStanceFirstPerson_Desc": ("Share of the weapon stance on the arms in first person. 1 keeps the grip on the weapon.",
+                                   "Доля стойки оружия на руках от первого лица. 1 = хват остаётся на оружии."),
+    "fClipLengthFirstPerson": ("Clip length: first person", "Длина клипа: первое лицо"),
+    "fClipLengthFirstPerson_Desc": ("Seconds of the vanilla first-person dodge clips at speed 1.",
+                                    "Секунды ванильных 1P-клипов доджа при скорости 1."),
+    "fFirstPersonLookScale": ("First-person mouse turn", "Поворот мышью от 1-го лица"),
+    "fFirstPersonLookScale_Desc": ("Mouse turn during a first-person dodge: 1 = normal, 0 = locked, -1 = flipped.",
+                                   "Поворот мышью во время 1P-доджа: 1 = как обычно, 0 = заблокирован, -1 = наоборот."),
+    # --- rules
+    "sResource": ("Cost resource", "Ресурс"),
+    "sResource_Desc": ("What a dodge costs.", "Чем оплачивается додж."),
+    "sResource_None": ("Free", "Бесплатно"),
+    "sResource_Stamina": ("Stamina", "Запас сил"),
+    "sResource_Magicka": ("Magicka", "Магия"),
+    "fCost": ("Cost", "Стоимость"),
+    "fCost_Desc": ("Amount spent per dodge.", "Сколько тратится за додж."),
+    "fMinimum": ("Minimum to dodge", "Минимум для доджа"),
+    "fMinimum_Desc": ("A dodge is refused below this much of the resource.", "Ниже этого значения ресурса додж не выполняется."),
+    "bBlockDuringDodge": ("Block jump during dodge", "Запрет прыжка в додже"),
+    "bBlockDuringDodge_Desc": ("Jump does nothing until the dodge's exit window opens.",
+                               "Прыжок не срабатывает, пока не открылось окно выхода."),
+    "bDodgeFromStagger": ("Dodge out of stagger", "Додж из стаггера"),
+    "bDodgeFromStagger_Desc": ("A dodge may cut a stagger short.", "Додж может прервать стаггер."),
+    "fDodgeDelay": ("Stagger dodge delay", "Задержка доджа из стаггера"),
+    "fDodgeDelay_Desc": ("Seconds of stagger before that dodge is allowed.", "Сколько секунд стаггера должно пройти до доджа."),
+    "fBufferWindow": ("Buffer window", "Окно буфера"),
+    "fBufferWindow_Desc": ("How long a press waits for its window to open.", "Сколько нажатие ждёт открытия своего окна."),
+    "fDebounce": ("Debounce", "Защита от дребезга"),
+    "fDebounce_Desc": ("Presses closer than this count as one.", "Нажатия ближе этого считаются одним."),
+    "fPowerAttackHold": ("Power attack hold", "Удержание силовой атаки"),
+    "fPowerAttackHold_Desc": ("Holding attack this long during a dodge makes the cancel a power attack.",
+                              "Удержание атаки столько времени в додже превращает отмену в силовую атаку."),
+    # --- debug
+    "bDevLog": ("Developer log", "Отладочный лог"),
+    "bDevLog_Desc": ("Write decisions, graph events and a per-frame trace to ReactiveDodgeFramework.log.",
+                     "Писать решения, события графа и покадровый трейс в ReactiveDodgeFramework.log."),
+}
+
+
+def schema_keys(root):
+    """Every key the menu asks for, read from the C++ sources, so a missing translation fails the script."""
+    src = open(os.path.join(root, "src", "game", "SettingsSchema.cpp"), encoding="utf-8").read()
+    menu = open(os.path.join(root, "src", "game", "Menu.cpp"), encoding="utf-8").read()
+    keys = set()
+    for key in re.findall(r'"(?:Timing|IFrames|Motion|Steering|Graph|Cost|Jump|Stagger|Input|Dev)", "([A-Za-z]+)"', src):
+        keys |= {key, key + "_Desc"}
+    for key, items in (("sOrientation", "Auto FaceMotion KeepFacing"), ("sResource", "None Stamina Magicka")):
+        keys |= {"%s_%s" % (key, c) for c in items.split()}
+    keys |= {"Section_" + s for s in set(re.findall(r'Page::\w+, "(\w+)"', src))}
+    keys |= {k for k in re.findall(r'"\$RDF_(\w+)"', menu) if not k.endswith("_")}
+    return keys
+
+
+def main():
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    missing = sorted(k for k in schema_keys(root) if k not in T)
+    if missing:
+        sys.exit("missing translations: " + ", ".join(missing))
+    out = os.path.join(root, "dist", "Interface", "Translations")
+    os.makedirs(out, exist_ok=True)
+    for i, lang in enumerate(("ENGLISH", "RUSSIAN")):
+        for k, v in T.items():
+            assert "%" not in v[i], k
+        text = "\r\n".join("$RDF_%s\t%s" % (k, v[i]) for k, v in T.items()) + "\r\n"
+        with open(os.path.join(out, "ReactiveDodgeFramework_%s.txt" % lang), "wb") as f:
+            f.write(b"\xff\xfe" + text.encode("utf-16-le"))
+    print("wrote %d keys x 2 languages -> %s" % (len(T), out))
+
+
+if __name__ == "__main__":
+    main()

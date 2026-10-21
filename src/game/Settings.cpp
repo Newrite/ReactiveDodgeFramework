@@ -3,7 +3,9 @@
 #include <Windows.h>
 
 #include <algorithm>
+#include <atomic>
 #include <cstdlib>
+#include <mutex>
 #include <sstream>
 
 namespace rdf::game
@@ -12,7 +14,9 @@ namespace rdf::game
 	{
 		constexpr auto kIniPath = "Data/SKSE/Plugins/ReactiveDodgeFramework.ini";
 
-		Settings g_settings;
+		Settings                   g_settings;
+		std::mutex                 g_snapshotLock;  // Commit (main thread) vs Snapshot (render thread)
+		std::atomic<std::uint32_t> g_generation{ 1 };
 
 		std::string ReadString(const char* section, const char* key, const std::string& def)
 		{
@@ -271,6 +275,26 @@ namespace rdf::game
 		return g_settings;
 	}
 
+	void Settings::Commit(const Settings& s)
+	{
+		{
+			std::scoped_lock lock(g_snapshotLock);
+			g_settings = s;
+		}
+		g_generation.fetch_add(1, std::memory_order_acq_rel);
+	}
+
+	std::uint32_t Settings::Generation()
+	{
+		return g_generation.load(std::memory_order_acquire);
+	}
+
+	Settings Settings::Snapshot()
+	{
+		std::scoped_lock lock(g_snapshotLock);
+		return g_settings;
+	}
+
 	void Settings::Load()
 	{
 		Settings s;
@@ -289,7 +313,7 @@ namespace rdf::game
 		s.useTrueDirectionalMovement = ReadBool("Compat", "bUseTrueDirectionalMovement", s.useTrueDirectionalMovement);
 		s.usePrecision = ReadBool("Compat", "bUsePrecision", s.usePrecision);
 		s.devLog = ReadBool("Dev", "bDevLog", s.devLog);
-		g_settings = std::move(s);
+		Commit(s);
 
 		logger::info("settings: dodge keys kb={} mouse={} pad={} total={:.3f}s distance={:.0f} maxChain={} iframes={} devLog={}",
 			g_settings.dodgeKeyboard, g_settings.dodgeMouse, g_settings.dodgeGamepad, g_settings.core.timing.Total(),

@@ -39,6 +39,12 @@ namespace rdf
 		InputBuffer(float window, float debounce) :
 			window_(window), debounce_(debounce) {}
 
+		void SetTiming(float window, float debounce)
+		{
+			window_ = window;
+			debounce_ = debounce;
+		}
+
 		// Returns the sequence id, or 0 when the press was debounced.
 		std::uint64_t Push(CommandKind kind, double now, Vec2 dir = {});
 

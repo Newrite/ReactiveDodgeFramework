@@ -84,16 +84,22 @@ namespace rdf::game
 
 		bool suppressLegacyDodge{ true };
 		bool useTrueDirectionalMovement{ true };
-		bool usePrecision{ true };
+		bool usePrecision{ true };  // register i-frames with Precision's pre-hit callback
 
 		// [Steering] (game side): read the move input against the camera yaw the dodge started with,
 		// so turning the camera mid-dodge does not steer it (a locked target still does).
-		bool inputFromStartCamera{ false };  // register i-frames with Precision's pre-hit callback
+		bool inputFromStartCamera{ false };
 
 		// [Dev]
 		bool devLog{ false };
 
+		// Main thread. Get() is the live tuning everything reads.
 		static const Settings& Get();
 		static void            Load();
+		// Replace the live tuning (main thread); bumps Generation() so cached copies (the core) refresh.
+		static void            Commit(const Settings& s);
+		static std::uint32_t   Generation();
+		// A copy for another thread (the menu renders on the render thread).
+		static Settings        Snapshot();
 	};
 }

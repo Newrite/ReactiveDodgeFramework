@@ -255,3 +255,9 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   MT_Idle on the body. (3) A held / warped facing is now handed back to the camera yaw as the dodge eases out (recovery or the
   exit/action blend), so TDM's face-crosshair-on-attack no longer snaps the actor at the first attack. Gamepad: iDodgeGamepad
   0x80 (RS click) is TDM's target lock / camera reset, which explains the slide. 65/65 tests, 219/219 checks.
+* FLICK settings menu (2026-10-21): FLICK (FUCK.dll 1.7.2, API v7; Fuzzlesz/FUCK_API, template Fuzzlesz/FUCK-Template)
+  exports only RequestFUCK; FUCK::Connect at kDataLoaded, six ITool pages in the group "Reactive Dodge" of its F7 menu.
+  The menu edits a copy on the render thread and commits each change on the main thread (SKSE task -> Settings::Commit,
+  generation counter); the controller hands the new core Config to ReactiveCore::Reconfigure between dodges. One schema
+  table (SettingsSchema.cpp) drives the widgets and the ini writer; rdf::ini::Update (core, 7 tests) rewrites keys in place.
+  Translations EN/RU are UTF-16LE "$KEY<TAB>text" (FLICK's parser splits at the first whitespace). 72/72 tests.
