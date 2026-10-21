@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/InputBuffer.h"
+#include <optional>
 #include "core/Math.h"
 
 namespace rdf::game::input
@@ -27,7 +28,8 @@ namespace rdf::game::input
 	void DiscardQueued();
 
 	// Analog move input (x right, y forward) rotated into world space by the camera yaw. Length 0..1.
-	Vec2  WorldMoveInput();
+	// `cameraYaw`: interpret the stick against this camera yaw instead of the current one.
+	Vec2  WorldMoveInput(std::optional<float> cameraYaw = std::nullopt);
 	// The block ("Left Attack/Block") button is down right now.
 	bool  BlockHeld();
 	float CameraYaw();

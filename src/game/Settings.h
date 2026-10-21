@@ -84,7 +84,11 @@ namespace rdf::game
 
 		bool suppressLegacyDodge{ true };
 		bool useTrueDirectionalMovement{ true };
-		bool usePrecision{ true };  // register i-frames with Precision's pre-hit callback
+		bool usePrecision{ true };
+
+		// [Steering] (game side): read the move input against the camera yaw the dodge started with,
+		// so turning the camera mid-dodge does not steer it (a locked target still does).
+		bool inputFromStartCamera{ false };  // register i-frames with Precision's pre-hit callback
 
 		// [Dev]
 		bool devLog{ false };

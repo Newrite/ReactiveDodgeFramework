@@ -18,6 +18,7 @@ namespace rdf
 		float locomotionSpeed{ 0.0f };  // measured planar speed, carried into a fresh dodge
 		bool  lockOn{ false };
 		bool  freeRotation{ true };  // something lets the actor face any direction (TDM 360 mode)
+		bool  cameraIsYaw{ false };  // first person: the actor's yaw is the view, never hold it
 	};
 
 	struct EngineView
@@ -69,6 +70,7 @@ namespace rdf
 		float PreviewStartAngleDeg(const Decision& d) const;
 		bool  PreviewKeepsFacing(const Decision& d) const;  // what a dodge started by `d` would do
 		bool  KeepsFacing() const { return driver_.KeepsFacing(); }  // the current dodge
+		bool  HoldsFacing() const { return driver_.HoldsFacing(); }  // ... and holds its start yaw
 		// Marks the command behind an attack/block decision consumed (after a deferred success).
 		void  Consume(const Decision& d);
 		// Heading of the current dodge relative to the actor's yaw when it began, degrees, +right.

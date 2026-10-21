@@ -73,6 +73,12 @@ namespace rdf
 		float           faceYawRate{ 720.0f };     // deg/s: actor yaw follows its target at most this fast
 		float           startupYawRate{ 3600.0f };  // deg/s during Startup: effectively a snap-turn
 		float           faceMotionMaxAngle{ 100.0f };  // Auto + free rotation: wider dodges keep facing (backsteps)
+		// How far input may bend a running dodge. 180 = anywhere (default), 0 = the start direction is final.
+		float           maxDeviation{ 180.0f };  // deg the trajectory may leave its start heading
+		float           inputCone{ 180.0f };     // deg: input farther than this from the current heading is ignored
+		// Dodges that keep facing (camera / Vanilla-style TDM): hold the start yaw instead of letting the
+		// camera turn the actor. A locked target and first person keep owning the yaw.
+		bool            holdFacing{ false };
 		OrientationMode orientation{ OrientationMode::Auto };
 	};
 

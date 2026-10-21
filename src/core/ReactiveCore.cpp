@@ -108,6 +108,7 @@ namespace rdf
 		start.carrySpeed = chain ? driver_.Speed() : std::min(frame_.locomotionSpeed, cfg_.motion.maxCarrySpeed);
 		start.heading = StartHeading(d, chain);
 		start.keepFacing = PreviewKeepsFacing(d);
+		start.holdFacing = cfg_.steering.holdFacing && !frame_.lockOn && !frame_.cameraIsYaw;
 
 		windows_.Reset();  // the new clip announces its own windows
 		intoAction_ = false;

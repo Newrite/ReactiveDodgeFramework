@@ -218,6 +218,10 @@ namespace rdf::game
 			st.startupYawRate = ReadFloat("Steering", "fStartupYawRate", st.startupYawRate, 1.0f, 100000.0f);
 			st.faceYawRate = ReadFloat("Steering", "fFaceYawRate", st.faceYawRate, 1.0f, 5000.0f);
 			st.faceMotionMaxAngle = ReadFloat("Steering", "fFaceMotionMaxAngle", st.faceMotionMaxAngle, 0.0f, 180.0f);
+			st.maxDeviation = ReadFloat("Steering", "fMaxDeviation", st.maxDeviation, 0.0f, 180.0f);
+			st.inputCone = ReadFloat("Steering", "fInputCone", st.inputCone, 0.0f, 180.0f);
+			st.holdFacing = ReadBool("Steering", "bHoldFacing", st.holdFacing);
+			s.inputFromStartCamera = ReadBool("Steering", "bInputFromStartCamera", s.inputFromStartCamera);
 			st.orientation = ParseOrientation(ReadString("Steering", "sOrientation", "Auto"));
 		}
 

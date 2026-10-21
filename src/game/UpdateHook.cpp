@@ -76,7 +76,8 @@ namespace rdf::game::update
 			RejectReason    lastReject_{ RejectReason::None };
 			CommandKind     lastRejectCommand_{ CommandKind::Dodge };
 			float           orphanTime_{ 0.0f };
-			float           staggerAge_{ 0.0f };       // seconds the player has been staggered
+			float           staggerAge_{ 0.0f };
+			float           startCameraYaw_{ 0.0f };   // camera yaw when the current dodge started       // seconds the player has been staggered
 			bool            escapeStagger_{ false };   // this tick a dodge may cut the stagger short  // graph in a dodge state we do not own, seconds
 			int             tailFrames_{ 0 };   // dev trace keeps running this many ticks after a dodge
 			bool            inStateB_{ true };  // dodge state used last; the first dodge goes to A
@@ -277,13 +278,18 @@ namespace rdf::game::update
 	{
 		FrameInput f;
 		f.dt = dt;
-		f.move = input::WorldMoveInput();
 		f.actorYaw = player->data.angle.z;
 		f.locomotionSpeed = measuredSpeed_;
 		f.lockOn = lockon::LockedOn(player);
+		// [Steering] bInputFromStartCamera: while a dodge runs (not locked on) the stick is read against
+		// the camera yaw it started with, so the camera cannot steer it.
+		const bool frozenBasis = Settings::Get().inputFromStartCamera && core_->DodgeRunning() && !f.lockOn;
+		f.move = input::WorldMoveInput(frozenBasis ? std::optional<float>(startCameraYaw_) : std::nullopt);
 		// In first person the camera owns the yaw: the dodge never turns the player there.
 		const auto* camera = RE::PlayerCamera::GetSingleton();
-		f.freeRotation = lockon::FreeRotation() && !(camera && camera->IsInFirstPerson());
+		const bool  firstPerson = camera && camera->IsInFirstPerson();
+		f.freeRotation = lockon::FreeRotation() && !firstPerson;
+		f.cameraIsYaw = firstPerson;
 		moveHeld_ = Length(f.move) > Settings::Get().core.steering.deadzone;
 		return f;
 	}
@@ -521,11 +527,12 @@ namespace rdf::game::update
 		awaitingEnter_ = true;
 		enterFrames_ = 0;
 		exitSent_ = false;
-		if (!core_->KeepsFacing()) {
+		startCameraYaw_ = input::CameraYaw();
+		if (!core_->KeepsFacing() || core_->HoldsFacing()) {
 			lockon::AcquireYaw();  // TDM would otherwise turn the player back toward its own target yaw
 		}
-		DevLog("dodge {} angle={:.1f} clip={} keepFacing={} freeRotation={} ({})", chain ? "chain" : "start", angle, clip,
-			core_->KeepsFacing(), lockon::FreeRotation(), lockon::ModeName());
+		DevLog("dodge {} angle={:.1f} clip={} keepFacing={} holdFacing={} freeRotation={} ({})", chain ? "chain" : "start", angle,
+			clip, core_->KeepsFacing(), core_->HoldsFacing(), lockon::FreeRotation(), lockon::ModeName());
 	}
 
 	bool Controller::Perform(RE::PlayerCharacter* player, const Decision& d)

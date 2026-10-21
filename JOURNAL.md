@@ -234,3 +234,10 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   = uDirectionalMovementSheathed = 1 (TDM: 1 = Vanilla style, 2 = 360). TDM also reports kVanillaStyle in 360 while a
   face-crosshair reason is active (attacking, blocking, casting, aiming, shouting, bFaceCrosshairWhileAttacking = 1 in STB).
   The dodge start line now names the TDM mode.
+* Steering limits (2026-10-21, animator feedback): input could bend a running dodge anywhere (even reverse it), the move input
+  was read against the live camera so turning the camera steered the dodge, and in keep-facing dodges (Vanilla-style TDM) TDM
+  turned the actor toward the camera, allowing a 180 mid-dodge. New [Steering] keys, defaults = previous behavior:
+  fMaxDeviation (path stays within +-X deg of its start heading; the desired heading is clamped, so there is no snap),
+  fInputCone (input farther than X deg from the current path is ignored), bInputFromStartCamera (stick read against the camera
+  yaw at dodge start unless locked on), bHoldFacing (keep-facing dodges hold the start yaw and take TDM yaw control; not with a
+  locked target or in first person). 5 new tests, 59/59.

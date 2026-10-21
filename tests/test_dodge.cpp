@@ -611,3 +611,77 @@ TEST(exit_window_gates_the_jump_until_exit_from)
 	CHECK(openedAt == 29);  // the start tick is the first 1/64 s, so t reaches exitFrom (30/64 s) here
 	CHECK(s.core.ActionTime() == 0.46875f);
 }
+
+// ---- steering limits ---------------------------------------------------------------------------
+
+TEST(max_deviation_zero_locks_the_start_direction)
+{
+	auto cfg = ExactConfig();
+	cfg.steering.maxDeviation = 0.0f;
+	Sim s(cfg);
+	s.Frame(kDt64, Dir(90), { CommandKind::Dodge });
+	const float start = s.log.back().heading;
+	for (int n = 0; n < 40; ++n) {
+		s.Frame(kDt64, Dir(n < 20 ? 0.0f : 200.0f));  // hard left, then reversed
+	}
+	CHECK(std::fabs(DegDelta(start, s.log.back().heading)) < 0.01);
+}
+
+TEST(max_deviation_caps_how_far_input_bends_the_path)
+{
+	auto cfg = ExactConfig();
+	cfg.steering.maxDeviation = 30.0f;
+	Sim s(cfg);
+	s.Frame(kDt64, Dir(90), { CommandKind::Dodge });
+	const float start = s.log.back().heading;
+	double worst = 0.0;
+	for (int n = 0; n < 40; ++n) {
+		const auto f = s.Frame(kDt64, Dir(0));  // 90 deg off the dodge
+		worst = std::max(worst, std::fabs(DegDelta(start, f.heading)));
+	}
+	CHECK(worst <= 30.0 + 0.01);
+	CHECK(worst > 29.0);  // it does bend as far as allowed
+}
+
+TEST(input_outside_the_cone_is_ignored)
+{
+	auto cfg = ExactConfig();
+	cfg.steering.inputCone = 90.0f;
+	Sim s(cfg);
+	s.Frame(kDt64, Dir(90), { CommandKind::Dodge });
+	const float start = s.log.back().heading;
+	for (int n = 0; n < 30; ++n) {
+		s.Frame(kDt64, Dir(270));  // straight back: outside the 90 deg cone
+	}
+	CHECK(std::fabs(DegDelta(start, s.log.back().heading)) < 0.01);
+	for (int n = 0; n < 30; ++n) {
+		s.Frame(kDt64, Dir(45));  // 45 deg off: inside, steers
+	}
+	CHECK(std::fabs(DegDelta(start, s.log.back().heading)) > 10.0);
+}
+
+TEST(hold_facing_returns_the_camera_turned_actor_to_its_start_yaw)
+{
+	// Vanilla-style TDM turns the actor toward the camera mid-dodge; with holdFacing the dodge turns it back.
+	auto cfg = ExactConfig();
+	cfg.steering.holdFacing = true;
+	Sim s(cfg);
+	s.freeRotation = false;
+	s.Frame(kDt64, Dir(135), { CommandKind::Dodge });
+	CHECK(s.core.KeepsFacing() && s.core.HoldsFacing());
+	s.yaw = WrapAngle(s.yaw + 1.0f);  // something rotated the actor ~57 deg
+	for (int i = 0; i < 20; ++i) {
+		s.Frame(kDt64, Dir(135));
+	}
+	CHECK_NEAR(s.yaw, 0.0, 1e-3);
+}
+
+TEST(hold_facing_leaves_a_locked_target_in_charge)
+{
+	auto cfg = ExactConfig();
+	cfg.steering.holdFacing = true;
+	Sim s(cfg);
+	s.lockOn = true;
+	s.Frame(kDt64, Dir(90), { CommandKind::Dodge });
+	CHECK(s.core.KeepsFacing() && !s.core.HoldsFacing());
+}

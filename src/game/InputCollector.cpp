@@ -221,7 +221,7 @@ namespace rdf::game::input
 		return std::atan2(m.entry[0][1], m.entry[1][1]);
 	}
 
-	Vec2 WorldMoveInput()
+	Vec2 WorldMoveInput(std::optional<float> cameraYaw)
 	{
 		const auto* controls = RE::PlayerControls::GetSingleton();
 		if (!controls) {
@@ -239,7 +239,7 @@ namespace rdf::game::input
 			return {};
 		}
 		// Heading of the stick relative to "camera forward": right is clockwise-positive.
-		const float heading = CameraYaw() + std::atan2(raw.x, raw.y);
+		const float heading = cameraYaw.value_or(CameraYaw()) + std::atan2(raw.x, raw.y);
 		return FromHeading(heading) * length;
 	}
 }

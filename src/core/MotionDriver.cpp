@@ -1,5 +1,6 @@
 #include "MotionDriver.h"
 
+#include <algorithm>
 #include <cmath>
 
 namespace rdf
@@ -17,7 +18,10 @@ namespace rdf
 			latched_ = false;
 		}
 		facing_ = WrapAngle(s.facing);
+		origin_ = WrapAngle(s.heading);
 		keepFacing_ = s.keepFacing;
+		holdFacing_ = s.keepFacing && s.holdFacing;
+		heldFacing_ = facing_;
 		profile_.Plan(cfg_.timing, cfg_.motion, s.carrySpeed, ExitSpeed(s.moveHeld));
 		speed_ = profile_.Speed(0.0f);
 		retargeted_ = false;
@@ -26,9 +30,14 @@ namespace rdf
 
 	bool MotionDriver::ResolveSteering(const DriverInput& in, float& desired, float& magnitude)
 	{
-		if (in.hasMove && steering_.Strength(in.moveMagnitude) > 0.0f) {
+		const auto& st = cfg_.steering;
+		if (in.hasMove && steering_.Strength(in.moveMagnitude) > 0.0f &&
+			std::fabs(AngleDelta(steering_.Heading(), in.moveHeading)) <= st.inputCone * kDegToRad + 1e-5f) {
 			latched_ = false;
-			desired = in.moveHeading;
+			// Bend toward the input, but never past maxDeviation from where this dodge set off.
+			const float limit = st.maxDeviation * kDegToRad;
+			const float off = std::clamp(AngleDelta(origin_, in.moveHeading), -limit, limit);
+			desired = WrapAngle(origin_ + off);
 			magnitude = in.moveMagnitude;
 			return true;
 		}
@@ -72,8 +81,9 @@ namespace rdf
 		const float actual = WrapAngle(in.actorYaw);
 		float       yawRate = 0.0f;
 		facing_ = actual;
-		if (!keepFacing_ && dt > 0.0f) {
-			facing_ = MoveToward(actual, steering_.Heading(), YawRate(phase) * dt);
+		if ((!keepFacing_ || holdFacing_) && dt > 0.0f) {
+			const float target = holdFacing_ ? heldFacing_ : steering_.Heading();
+			facing_ = MoveToward(actual, target, YawRate(phase) * dt);
 			yawRate = AngleDelta(actual, facing_) / dt;
 		}
 

@@ -24,6 +24,7 @@ namespace rdf
 		bool  moveHeld{ false };     // decides the exit speed
 		bool  chain{ false };        // continue the previous trajectory and turn toward `heading`
 		bool  keepFacing{ false };   // the camera / lock-on owns the yaw for this dodge
+		bool  holdFacing{ false };   // keepFacing, but the actor holds `facing` instead (SteeringConfig::holdFacing)
 	};
 
 	// Composes Steering x MotionProfile into a world velocity and a yaw rate.
@@ -44,6 +45,7 @@ namespace rdf
 		float Heading() const { return steering_.Heading(); }
 		float Facing() const { return facing_; }
 		bool  KeepsFacing() const { return keepFacing_; }
+		bool  HoldsFacing() const { return holdFacing_; }
 		float Peak() const { return profile_.Peak(); }
 
 	private:
@@ -57,9 +59,12 @@ namespace rdf
 		float         facing_{ 0.0f };
 		float         speed_{ 0.0f };
 		float         latchedHeading_{ 0.0f };
+		float         origin_{ 0.0f };      // start heading of this dodge: maxDeviation is measured from it
+		float         heldFacing_{ 0.0f };
 		bool          latched_{ false };
 		bool          retargeted_{ false };
 		bool          exiting_{ false };
 		bool          keepFacing_{ false };
+		bool          holdFacing_{ false };
 	};
 }
