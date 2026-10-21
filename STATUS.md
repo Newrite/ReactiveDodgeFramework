@@ -49,4 +49,10 @@
    i-frames end while the projectile still overlaps the player, so the next physics step lands the hit late. Plan: remember
    every projectile that passed through during i-frames (handle + expiry) and keep ignoring its contacts with that actor
    for the rest of its life, or until it has fully left the actor's collision; decide which. Also look at what is not
-   covered at all: beams, flames (cone), barrier and grenade projectiles, explosions / area hits.
+   covered at all: beams, flames (cone), barrier and grenade projectiles.
+6. Explosions. They hit through their own path: an explosion (RE::Explosion, from a BGSExplosion record) finds the actors
+   in its radius and builds its own HitData, so neither the melee hook (37673+0x3C0) nor the projectile contact hook sees
+   it; a fireball that a dodge lets pass still explodes where it lands and its blast still hits. To study in IDA: where an
+   explosion applies its hit / damage to an actor, so i-frames can drop it there; how a dodged projectile's own explosion
+   should behave (no blast, blast that ignores the dodger, or a normal blast that the i-frames cover); whether blast
+   knockdown / stagger (explosion force) is applied separately from the damage and needs its own guard.
