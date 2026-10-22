@@ -6,6 +6,7 @@
 
 #include <Windows.h>
 
+#include <array>
 #include <atomic>
 #include <cstring>
 
@@ -17,8 +18,33 @@ namespace rdf::game::motion
 		constexpr std::uint32_t kProcessMotionDataId = 31949;  // Character::ProcessMotionData (diagnostics only)
 		constexpr std::ptrdiff_t kCallOffset = 0x111;          // 0x1407021F1 in 1.5.97
 
-		Seqlock<MotionCommand>     g_box;
+		// One slot per actor whose dodge drives its motion (the player and any NPC dodging through the API).
+		// The main thread writes, the movement threads read. A slot is matched by the actor's FormID, the cheapest
+		// key in this hot path (it runs for every animation-driven actor every frame); the command repeats the
+		// owner, so a slot reused by another actor in between is never applied to the wrong one.
+		constexpr std::size_t kSlots = 32;
+		struct Slot
+		{
+			std::atomic<std::uint32_t> owner{ 0 };
+			Seqlock<MotionCommand>     box;
+		};
+		std::array<Slot, kSlots>   g_slots;
+		std::atomic<int>           g_used{ 0 };
 		std::atomic<std::uint32_t> g_generation{ 1 };
+
+		bool ReadFor(const RE::Actor* actor, MotionCommand& cmd)
+		{
+			if (!actor || g_used.load(std::memory_order_acquire) == 0) {
+				return false;
+			}
+			const auto id = actor->GetFormID();
+			for (const auto& slot : g_slots) {
+				if (slot.owner.load(std::memory_order_acquire) == id) {
+					return slot.box.TryRead(cmd) && cmd.ownerFormId == id && cmd.generation == g_generation.load(std::memory_order_acquire);
+				}
+			}
+			return false;
+		}
 
 		std::atomic<std::uint32_t> g_calls{ 0 };
 		std::atomic<std::uint32_t> g_overrides{ 0 };
@@ -64,8 +90,7 @@ namespace rdf::game::motion
 			g_lastThread.store(thread, std::memory_order_relaxed);
 
 			MotionCommand cmd;
-			const bool owned = actor && outTranslation && outRotation && dt > 0.0f && g_box.TryRead(cmd) && cmd.active &&
-			                   cmd.ownerFormId == actor->GetFormID() && cmd.generation == g_generation.load(std::memory_order_acquire);
+			const bool owned = actor && outTranslation && outRotation && dt > 0.0f && ReadFor(actor, cmd) && cmd.active;
 			if (!owned) {
 				return g_original(actor, dt, outTranslation, outRotation, outFlag);
 			}
@@ -105,8 +130,7 @@ namespace rdf::game::motion
 			MotionCommand cmd;
 			// The payload is only built for controls-driven movement, so the floor can be published while the
 			// dodge still owns the animation-driven motion: it is in place on the first engine-driven frame.
-			if (!payload || !self->actor || !g_box.TryRead(cmd) || !(cmd.speedFloor > 0.0f) ||
-				cmd.ownerFormId != self->actor->GetFormID() || cmd.generation != g_generation.load(std::memory_order_acquire)) {
+			if (!payload || !self->actor || !ReadFor(self->actor, cmd) || !(cmd.speedFloor > 0.0f)) {
 				return result;
 			}
 			auto* speed = reinterpret_cast<float*>(payload + kPayloadSpeed);
@@ -169,13 +193,49 @@ namespace rdf::game::motion
 	{
 		cmd.ownerFormId = ownerFormId;
 		cmd.generation = g_generation.load(std::memory_order_relaxed);
-		g_box.Write(cmd);
+		Slot* free = nullptr;
+		for (auto& slot : g_slots) {
+			const auto owner = slot.owner.load(std::memory_order_relaxed);
+			if (owner == ownerFormId) {
+				slot.box.Write(cmd);
+				return;
+			}
+			if (owner == 0 && !free) {
+				free = &slot;
+			}
+		}
+		if (!free) {
+			static bool warned = false;
+			if (!std::exchange(warned, true)) {
+				logger::warn("motion hook: more than {} actors dodging at once; {:08X} is not driven", kSlots, ownerFormId);
+			}
+			return;
+		}
+		free->box.Write(cmd);
+		free->owner.store(ownerFormId, std::memory_order_release);
+		g_used.fetch_add(1, std::memory_order_acq_rel);
+	}
+
+	void Release(std::uint32_t ownerFormId)
+	{
+		for (auto& slot : g_slots) {
+			if (slot.owner.load(std::memory_order_relaxed) == ownerFormId) {
+				slot.box.Write(MotionCommand{});
+				slot.owner.store(0, std::memory_order_release);
+				g_used.fetch_sub(1, std::memory_order_acq_rel);
+				return;
+			}
+		}
 	}
 
 	void Reset()
 	{
 		g_generation.fetch_add(1, std::memory_order_release);
-		g_box.Write(MotionCommand{});
+		for (auto& slot : g_slots) {
+			slot.box.Write(MotionCommand{});
+			slot.owner.store(0, std::memory_order_release);
+		}
+		g_used.store(0, std::memory_order_release);
 	}
 
 	HookStats ReadStats()

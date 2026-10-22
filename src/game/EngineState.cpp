@@ -6,7 +6,7 @@ namespace rdf::game::engine
 {
 	namespace
 	{
-		EngineBlock Classify(RE::PlayerCharacter* p, const RE::ActorState* state, bool ownDodge)
+		EngineBlock Classify(RE::Actor* p, const RE::ActorState* state, bool ownDodge)
 		{
 			if (p->IsDead() || state->IsBleedingOut() || state->IsUnconscious()) {
 				return EngineBlock::Dead;
@@ -35,14 +35,14 @@ namespace rdf::game::engine
 				return EngineBlock::Jumping;
 			}
 			const auto* camera = RE::PlayerCamera::GetSingleton();
-			if (!Settings::Get().allowFirstPerson && camera && camera->IsInFirstPerson()) {
+			if (p->IsPlayerRef() && !Settings::Get().allowFirstPerson && camera && camera->IsInFirstPerson()) {
 				return EngineBlock::FirstPerson;  // no first-person graph support yet
 			}
 			return EngineBlock::None;
 		}
 	}
 
-	Snapshot Read(RE::PlayerCharacter* player, bool ownDodge)
+	Snapshot Read(RE::Actor* player, bool ownDodge)
 	{
 		const auto* state = player->AsActorState();
 		Snapshot    s;
@@ -53,7 +53,7 @@ namespace rdf::game::engine
 		return s;
 	}
 
-	void EndStagger(RE::PlayerCharacter* player)
+	void EndStagger(RE::Actor* player)
 	{
 		player->AsActorState()->actorState2.staggered = 0;
 	}

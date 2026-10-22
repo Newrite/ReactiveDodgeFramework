@@ -290,3 +290,12 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   dodged hits per dodger. HandleHits no longer drops a whole contact step: it compacts the collector's points in place
   without the ignored actors' contacts (hits._data/_size, 0x40 stride as HandleHits indexes them), calls the original,
   and restores the points, so one projectile can pass several dodgers and still hit the one behind them.
+* Dodge on any actor (2026-10-22, user: "not NPC logic, the mechanics and the dodge itself usable on NPCs"): the old
+  player Controller split into `DodgeAgent` (everything per actor: core, graph handshake with per-actor graph state
+  keyed by handle, clip / stance choice, chains, exits, cost, stagger escape, orphaned-state watchdog, i-frames,
+  perfect dodge with the dodger's FormID in the mod event's strArg) and the player's driver in UpdateHook (input,
+  camera, TDM yaw, first person, block holding, jump gate, slow motion). The motion hook has 32 per-actor slots matched
+  by FormID (the command repeats its owner, so a reused slot is never applied to the wrong actor). NPC agents live in a
+  registry keyed by actor handle, ticked from PlayerCharacter::Update with the player's dt, and are released (exit,
+  motion slot, graph sink, i-frames) a second after the dodge or when the handle resolves to null / the actor unloads
+  or dies. Requests are queued under a mutex because Papyrus natives do not run on the main thread.

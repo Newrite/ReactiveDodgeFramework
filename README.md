@@ -75,6 +75,15 @@ one page. The i-frame hooks and compatibility switches stay ini-only (they apply
 Labels and descriptions: `Interface/Translations/ReactiveDodgeFramework_<LANGUAGE>.txt` (English and Russian, generated
 by `tools/gen_menu_translations.py`). Without FLICK the plugin works as before.
 
+## API: dodge any actor
+The player's dodge (states, clips, annotation windows, chains, exits, cost, i-frames, perfect dodge) runs on any
+humanoid actor; only the decision to dodge is the caller's. The angle is relative to where the actor faces (0 forward,
+90 right, 180 back, -90 left). The request is queued (any thread) and starts on the next frame if the actor can dodge.
+- Papyrus: `ReactiveDodge.Dodge(Actor akActor, float afAngle = 180.0)` (`Scripts/ReactiveDodge.pex`, source in
+  `dist/Scripts/Source`). Console: click the actor, then `cgf "ReactiveDodge.Dodge" <refid> 90`.
+- SKSE plugins: `api/ReactiveDodgeAPI.h` (`ReactiveDodgeAPI::Get()` returns `RDF_RequestDodge`, or null without the DLL).
+An NPC faces its combat target through the dodge; without one it turns to the path.
+
 ## Third-party API headers
 - `src/third_party/fuck/FUCK_API.h`, `IconsFontAwesome6.h`: FLICK's API from
   [Fuzzlesz/FUCK_API](https://github.com/Fuzzlesz/FUCK_API) (bc52809, API version 7, FLICK 1.7.2), unchanged. GPL-3.0,

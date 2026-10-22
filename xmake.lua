@@ -52,6 +52,11 @@ target("ReactiveDodgeFramework")
         local translations = path.join(deploy_dir, "..", "..", "Interface", "Translations")
         os.mkdir(translations)
         os.cp("dist/Interface/Translations/*.txt", translations)
+        -- Papyrus API (ReactiveDodge.Dodge), compiled from dist/Scripts/Source with S:/SkyrimPapyrus/papyrus.exe
+        local scripts = path.join(deploy_dir, "..", "..", "Scripts")
+        os.mkdir(path.join(scripts, "Source"))
+        os.cp("dist/Scripts/*.pex", scripts)
+        os.cp("dist/Scripts/Source/*.psc", path.join(scripts, "Source"))
         local ini = path.join(deploy_dir, "ReactiveDodgeFramework.ini")
         if not os.isfile(ini) then
             os.cp("dist/ReactiveDodgeFramework.ini", ini)

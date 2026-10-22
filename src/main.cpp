@@ -1,3 +1,4 @@
+#include "game/Api.h"
 #include "game/Effects.h"
 #include "game/GraphCoordinator.h"
 #include "game/InputCollector.h"
@@ -89,6 +90,7 @@ SKSEPluginLoad(const SKSE::LoadInterface* a_skse)
 	}
 	rdf::game::update::Install();
 	rdf::game::jump::Install();
+	rdf::game::api::Install();
 
 	SKSE::GetMessagingInterface()->RegisterListener(OnMessage);
 

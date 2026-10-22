@@ -4,6 +4,8 @@
 
 #include <array>
 #include <atomic>
+#include <mutex>
+#include <unordered_map>
 #include <vector>
 
 namespace rdf::game::graph
@@ -17,17 +19,30 @@ namespace rdf::game::graph
 		};
 		Names g_names;
 
-		std::atomic<std::uint32_t> g_entered{ 0 };
-		std::atomic<int>           g_depth{ 0 };
-		std::atomic<const RE::BSTEventSource<RE::BSAnimationGraphEvent>*> g_activeSource{ nullptr };
-		std::atomic<bool>          g_logEvents{ false };  // dev: log every graph event (see LogEvents)
-		std::atomic<bool>          g_window{ false };
-		std::atomic<std::uint32_t> g_clipWindows{ 0 };  // bit per WindowEvent seen since the last drain
-
 		// Clip annotation names (ANIMATION_CONTRACT.md), indexed by WindowEvent.
 		constexpr std::array kWindowEventNames{ "RDF_Windows"sv, "RDF_IFrameStart"sv, "RDF_IFrameEnd"sv,
 			"RDF_ChainOpen"sv, "RDF_AttackOpen"sv, "RDF_BlockOpen"sv, "RDF_ExitOpen"sv };
 		std::array<RE::BSFixedString, kWindowEventNames.size()> g_windowNames;
+
+		struct ActorGraph
+		{
+			std::uint32_t entered{ 0 };
+			int           depth{ 0 };
+			bool          window{ false };
+			std::uint32_t clipWindows{ 0 };  // bit per WindowEvent seen since the last drain
+			// Several graphs (the player's first / third person): only this one counts; null = every graph.
+			const RE::BSTEventSource<RE::BSAnimationGraphEvent>* activeSource{ nullptr };
+		};
+
+		// Graph events come from the threads that update the graphs; the main thread reads. Keyed by ref handle.
+		std::mutex                                    g_lock;
+		std::unordered_map<std::uint32_t, ActorGraph> g_actors;
+		std::atomic<bool>                             g_logEvents{ false };  // dev: log every graph event
+
+		std::uint32_t HandleOf(const RE::TESObjectREFR* ref)
+		{
+			return ref ? const_cast<RE::TESObjectREFR*>(ref)->GetHandle().native_handle() : 0;
+		}
 
 		bool Contains(const std::vector<RE::BSFixedString>& list, const RE::BSFixedString& tag)
 		{
@@ -49,44 +64,53 @@ namespace rdf::game::graph
 			return -1;
 		}
 
-		bool Take(std::atomic<std::uint32_t>& counter)
-		{
-			return counter.exchange(0, std::memory_order_acq_rel) != 0;
-		}
-
 		class Sink final : public RE::BSTEventSink<RE::BSAnimationGraphEvent>
 		{
 		public:
 			RE::BSEventNotifyControl ProcessEvent(const RE::BSAnimationGraphEvent* event, RE::BSTEventSource<RE::BSAnimationGraphEvent>* source) override
 			{
-				// Both the third- and the first-person graph run the dodge states; only the one the player
-				// currently uses counts, so a dodge is entered and left once.
-				const auto* active = g_activeSource.load(std::memory_order_acquire);
-				if (!event || (active && source != active)) {
+				if (!event || !event->holder) {
+					return RE::BSEventNotifyControl::kContinue;
+				}
+				const auto       handle = HandleOf(event->holder);
+				std::scoped_lock lock(g_lock);
+				const auto       it = g_actors.find(handle);
+				if (it == g_actors.end()) {
+					return RE::BSEventNotifyControl::kContinue;
+				}
+				auto& g = it->second;
+				// The player's third- and first-person graphs both run the dodge states; only the one in use
+				// counts, so a dodge is entered and left once.
+				if (g.activeSource && source != g.activeSource) {
 					return RE::BSEventNotifyControl::kContinue;
 				}
 				if (g_logEvents.load(std::memory_order_relaxed)) {
-					logger::info("graph event {} '{}' (depth {})", event->tag.c_str(), event->payload.c_str(),
-						g_depth.load(std::memory_order_relaxed));
+					logger::info("graph event {:08X} {} '{}' (depth {})", event->holder->GetFormID(), event->tag.c_str(),
+						event->payload.c_str(), g.depth);
 				}
 				if (event->tag == g_names.entered) {
-					g_entered.fetch_add(1, std::memory_order_acq_rel);
-					g_depth.fetch_add(1, std::memory_order_acq_rel);
+					++g.entered;
+					++g.depth;
 				} else if (event->tag == g_names.left) {
-					int depth = g_depth.load(std::memory_order_acquire);
-					while (depth > 0 && !g_depth.compare_exchange_weak(depth, depth - 1, std::memory_order_acq_rel)) {
-					}
+					g.depth = std::max(0, g.depth - 1);
 				} else if (const int w = WindowIndex(event->tag); w >= 0) {
-					g_clipWindows.fetch_or(1u << w, std::memory_order_acq_rel);
+					g.clipWindows |= 1u << w;
 				} else if (Contains(g_names.windowOpen, event->tag)) {
-					g_window.store(true, std::memory_order_release);
+					g.window = true;
 				} else if (Contains(g_names.windowClose, event->tag)) {
-					g_window.store(false, std::memory_order_release);
+					g.window = false;
 				}
 				return RE::BSEventNotifyControl::kContinue;
 			}
 		};
 		Sink g_sink;
+
+		template <class F>
+		auto WithActor(RE::Actor* actor, F&& f)
+		{
+			std::scoped_lock lock(g_lock);
+			return f(g_actors[HandleOf(actor)]);
+		}
 	}
 
 	void Init()
@@ -113,16 +137,20 @@ namespace rdf::game::graph
 		}
 	}
 
-	void RegisterSink(RE::PlayerCharacter* player)
+	void RegisterSink(RE::Actor* actor)
 	{
-		if (!player) {
+		if (!actor) {
 			return;
 		}
-		// Every graph of the player: the third-person one and the first-person one each send their own
-		// dodge events (CommonLib's AddAnimationGraphEventSink only covers the first graph).
+		{
+			std::scoped_lock lock(g_lock);
+			g_actors.try_emplace(HandleOf(actor));
+		}
+		// Every graph of the actor: the player's third- and first-person ones each send their own dodge events
+		// (CommonLib's AddAnimationGraphEventSink only covers the first graph).
 		RE::BSTSmartPointer<RE::BSAnimationGraphManager> manager;
-		if (!player->GetAnimationGraphManager(manager) || !manager || manager->graphs.empty()) {
-			logger::info("{}", "animation graph sink NOT registered (graph not loaded yet)");
+		if (!actor->GetAnimationGraphManager(manager) || !manager || manager->graphs.empty()) {
+			logger::info("animation graph sink NOT registered on {:08X} (graph not loaded yet)", actor->GetFormID());
 			return;
 		}
 		std::uint32_t count = 0;
@@ -135,33 +163,66 @@ namespace rdf::game::graph
 			source->AddEventSink(&g_sink);
 			++count;
 		}
-		logger::info("animation graph sink registered on {} graph(s)", count);
+		logger::info("animation graph sink registered on {:08X}: {} graph(s)", actor->GetFormID(), count);
 	}
 
-	bool TrackActiveGraph(RE::PlayerCharacter* player)
+	void UnregisterSink(RE::Actor* actor)
+	{
+		if (!actor) {
+			return;
+		}
+		RE::BSTSmartPointer<RE::BSAnimationGraphManager> manager;
+		if (actor->GetAnimationGraphManager(manager) && manager) {
+			for (const auto& graph : manager->graphs) {
+				if (graph) {
+					graph->GetEventSource<RE::BSAnimationGraphEvent>()->RemoveEventSink(&g_sink);
+				}
+			}
+		}
+		std::scoped_lock lock(g_lock);
+		g_actors.erase(HandleOf(actor));
+	}
+
+	bool TrackActiveGraph(RE::Actor* actor)
 	{
 		RE::BSTSmartPointer<RE::BSAnimationGraphManager> manager;
 		const RE::BSTEventSource<RE::BSAnimationGraphEvent>* source = nullptr;
-		if (player->GetAnimationGraphManager(manager) && manager && manager->activeGraph < manager->graphs.size()) {
+		if (actor->GetAnimationGraphManager(manager) && manager && manager->activeGraph < manager->graphs.size()) {
 			if (const auto& graph = manager->graphs[manager->activeGraph]) {
 				source = graph->GetEventSource<RE::BSAnimationGraphEvent>();
 			}
 		}
-		if (g_activeSource.exchange(source, std::memory_order_acq_rel) != source) {
-			g_depth = 0;  // a switch between first and third person starts the count afresh
-			return true;
-		}
-		return false;
+		return WithActor(actor, [&](ActorGraph& g) {
+			if (g.activeSource == source) {
+				return false;
+			}
+			const bool switched = g.activeSource != nullptr;
+			g.activeSource = source;
+			g.depth = 0;  // a switch between first and third person starts the count afresh
+			return switched;
+		});
 	}
 
-	bool TakeEntered() { return Take(g_entered); }
-	int  Depth() { return g_depth.load(std::memory_order_acquire); }
-	void LogEvents(bool on) { g_logEvents.store(on, std::memory_order_relaxed); }
-	bool DodgeWindowOpen() { return g_window.load(std::memory_order_acquire); }
-
-	void DrainClipWindows(const std::function<void(WindowEvent)>& sink)
+	bool TakeEntered(RE::Actor* actor)
 	{
-		const auto bits = g_clipWindows.exchange(0, std::memory_order_acq_rel);
+		return WithActor(actor, [](ActorGraph& g) { return std::exchange(g.entered, 0u) != 0; });
+	}
+
+	int Depth(RE::Actor* actor)
+	{
+		return WithActor(actor, [](ActorGraph& g) { return g.depth; });
+	}
+
+	void LogEvents(bool on) { g_logEvents.store(on, std::memory_order_relaxed); }
+
+	bool DodgeWindowOpen(RE::Actor* actor)
+	{
+		return WithActor(actor, [](ActorGraph& g) { return g.window; });
+	}
+
+	void DrainClipWindows(RE::Actor* actor, const std::function<void(WindowEvent)>& sink)
+	{
+		const auto bits = WithActor(actor, [](ActorGraph& g) { return std::exchange(g.clipWindows, 0u); });
 		for (std::uint32_t i = 0; i < kWindowEventNames.size(); ++i) {  // enum order: an end after its start
 			if (bits & (1u << i)) {
 				sink(static_cast<WindowEvent>(i));
@@ -169,12 +230,20 @@ namespace rdf::game::graph
 		}
 	}
 
-	void ClearEvents()
+	void ClearEvents(RE::Actor* actor)
 	{
-		g_entered = 0;
-		g_depth = 0;
-		g_window = false;
-		g_clipWindows = 0;
+		WithActor(actor, [](ActorGraph& g) {
+			const auto source = g.activeSource;
+			g = ActorGraph{};
+			g.activeSource = source;
+			return 0;
+		});
+	}
+
+	void ClearAll()
+	{
+		std::scoped_lock lock(g_lock);
+		g_actors.clear();
 	}
 
 	float ArmBlendWeight(float stanceShare)
@@ -184,27 +253,27 @@ namespace rdf::game::graph
 		return std::clamp(stanceShare, 0.0f, 1.0f);
 	}
 
-	bool SendStart(RE::PlayerCharacter* player, DodgeEntry entry, int clip, float animSpeed, float armStance)
+	bool SendStart(RE::Actor* actor, DodgeEntry entry, int clip, float animSpeed, float armStance)
 	{
-		player->SetGraphVariableInt(g_names.clip, clip);
-		player->SetGraphVariableFloat(g_names.speed, animSpeed);
-		player->SetGraphVariableFloat(g_names.armBlend, ArmBlendWeight(armStance));
+		actor->SetGraphVariableInt(g_names.clip, clip);
+		actor->SetGraphVariableFloat(g_names.speed, animSpeed);
+		actor->SetGraphVariableFloat(g_names.armBlend, ArmBlendWeight(armStance));
 		switch (entry) {
-		case DodgeEntry::Chain: return player->NotifyAnimationGraph(g_names.chain);
-		case DodgeEntry::StartB: return player->NotifyAnimationGraph(g_names.startB);
-		default: return player->NotifyAnimationGraph(g_names.start);
+		case DodgeEntry::Chain: return actor->NotifyAnimationGraph(g_names.chain);
+		case DodgeEntry::StartB: return actor->NotifyAnimationGraph(g_names.startB);
+		default: return actor->NotifyAnimationGraph(g_names.start);
 		}
 	}
 
-	void SendExit(RE::PlayerCharacter* player)
+	void SendExit(RE::Actor* actor)
 	{
-		player->NotifyAnimationGraph(g_names.exit);
+		actor->NotifyAnimationGraph(g_names.exit);
 	}
 
-	bool GraphIsDodging(const RE::PlayerCharacter* player)
+	bool GraphIsDodging(RE::Actor* actor)
 	{
 		bool value = false;
-		player->GetGraphVariableBool(g_names.isDodging, value);
+		actor->GetGraphVariableBool(g_names.isDodging, value);
 		return value;
 	}
 }

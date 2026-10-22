@@ -36,6 +36,7 @@
 * FLICK menu (F7): seven pages, live edits, save to ini, dodge button rebinding.
 * Nemesis patch (`Nemesis_Engine/mod/rdfm`): offline check 33/33, never run through Nemesis itself.
 * Motion hook chains behind another plugin's hook on the same call (user fix); not yet seen with one installed.
+* Dodge on any actor through the API (Papyrus `ReactiveDodge.Dodge`, C `RDF_RequestDodge`); never run on an NPC yet.
 
 ## Known limitations
 * A one-frame upper-body pop at dodge start, visible only in slow motion (parked; findings in JOURNAL.md).
@@ -82,12 +83,11 @@
    perk / keyword gating through item 7.
 10. Lock-on style option: Souls-like FaceMotion rolls under lock-on (turn to the path, roll forward, turn back to the
     target in the recovery) next to today's directional clips.
-11. NPC dodges. The hit side is already per actor (2026-10-22): i-frames are a set of actor handles, remembered
-    projectiles are keyed by (projectile handle, dodger handle) and dropped when the projectile's handle resolves to
-    null, dodged hits are reported per dodger, a contact step only loses the dodgers' contacts (one arrow can pass
-    several dodgers and still hit the actor behind them). Still player-only: the Controller (input, camera, TDM,
-    FLICK), ReactiveCore owned by it, the motion hook's single command slot (MotionCommand has ownerFormId already),
-    the speed floor. Next: an actor-agnostic dodge component (one core per dodging actor, motion commands keyed by
-    actor handle), an AI side that decides when an NPC dodges (attack start / projectile launch events), and the
-    graph side for NPCs (humanoids share 0_master, so the states are already there).
-
+11. NPC dodges. Mechanics done (2026-10-22, waiting for an in-game check): the dodge is a per-actor `DodgeAgent`
+    (core, graph handshake, clips and arm stance, chains, exits, cost, stagger escape, i-frames, perfect dodge, motion
+    slot) used by the player and by any actor asked through the API: `ReactiveDodge.Dodge(Actor, float)` (Papyrus,
+    console `cgf`), `RDF_RequestDodge` (C export, `api/ReactiveDodgeAPI.h`). An NPC faces its combat target through
+    the dodge (side dodges around it) and turns to the path without one; its agent is dropped a second after the
+    dodge. Player-only by design: input, camera / first person, TDM, block holding, jump gate, slow motion.
+    Next: the AI side that decides when an NPC dodges (attack start / projectile launch events), and checking that the
+    combat AI does not fight the animation-driven motion.

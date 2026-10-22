@@ -15,9 +15,11 @@ namespace rdf::game::motion
 	// speed floor for the owner after a dodge.
 	bool InstallSpeedFloor();
 
-	// Main thread only. Stamps the owner/generation and publishes through the seqlock.
+	// Main thread only. Per actor: stamps the owner/generation and publishes through that actor's slot.
 	void Publish(MotionCommand cmd, std::uint32_t ownerFormId);
-	// Invalidates every earlier snapshot (load, new game, 3D reset) and publishes "inactive".
+	// The actor's dodge agent is gone: frees its slot.
+	void Release(std::uint32_t ownerFormId);
+	// Invalidates every earlier snapshot of every actor (load, new game) and frees all slots.
 	void Reset();
 
 	struct HookStats
