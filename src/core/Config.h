@@ -34,6 +34,8 @@ namespace rdf
 			                           attack_state::Bit(attack_state::kBowDrawn) | attack_state::Bit(attack_state::kBowReleased) |
 			                           attack_state::Bit(attack_state::kBowFollowThrough) };
 
+		bool cancelInRecovery{ true };  // an attack framework's recovery (MCO / BFCO) lets a dodge cancel the attack
+
 		bool DodgeAllowedFromAttackState(std::uint8_t state) const
 		{
 			return state == attack_state::kNone || (state < 32 && (attackStateMask & attack_state::Bit(state)) != 0);

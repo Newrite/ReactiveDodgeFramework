@@ -32,7 +32,11 @@ FILES = {
     "firstperson~0_master.xml": os.path.join("_1stperson", "0_master"),
     "defaultmale_character.xml": "defaultmale",
     "defaultfemale_character.xml": "defaultfemale",
+    "1hm_behavior.xml": "1hm_behavior",
+    "firstperson~1hm_behavior.xml": os.path.join("_1stperson", "1hm_behavior"),
 }
+# besides the MO2 mods: Nemesis mods kept for reference (the attack frameworks edit 1hm_behavior)
+EXTRA_MOD_ROOTS = [r"S:\AI Agent Skyrim\Attack Frameworks"]
 INFO = "name=Reactive Dodge Framework\nauthor=newrite\nsite=https://www.nexusmods.com/skyrimspecialedition\n"
 
 
@@ -59,8 +63,12 @@ def strip_mod_blocks(text):
 def find_originals(folder, node_file):
     """[(mod code, original text)] from every installed Nemesis mod that edits this node."""
     found = []
-    for mod in sorted(os.listdir(MODS)):
-        base = os.path.join(MODS, mod, "Nemesis_Engine", "mod")
+    bases = [os.path.join(MODS, mod, "Nemesis_Engine", "mod") for mod in sorted(os.listdir(MODS))]
+    for extra in EXTRA_MOD_ROOTS:
+        for dp, dn, _ in os.walk(extra):
+            if os.path.basename(dp) == "mod" and os.path.basename(os.path.dirname(dp)) == "Nemesis_Engine":
+                bases.append(dp)
+    for base in bases:
         if not os.path.isdir(base):
             continue
         for code in sorted(os.listdir(base)):
@@ -78,6 +86,8 @@ VANILLA = {
     "defaultmale": os.path.join(ROOT, "_work", "vanilla_nemesis_xml", "defaultmale_nem.xml"),
     "defaultfemale": os.path.join(ROOT, "_work", "vanilla_nemesis_xml", "defaultfemale_nem.xml"),
     os.path.join("_1stperson", "0_master"): os.path.join(ROOT, "_work", "fp_nem_xml", "0_master_nem.xml"),
+    "1hm_behavior": os.path.join(ROOT, "_work", "vanilla_nemesis_xml", "1hm_behavior_nem.xml"),
+    os.path.join("_1stperson", "1hm_behavior"): os.path.join(ROOT, "_work", "fp_nem_xml", "1hm_behavior_nem.xml"),
 }
 
 

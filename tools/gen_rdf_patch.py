@@ -6,6 +6,7 @@
 Writes   info.xml
          patches/0_master.xml               events, variables, 2 root states, root wildcard
          patches/defaultmale_character.xml  18 animation names
+         patches/1hm_behavior.xml           dodge-cancel events for attack clips (and firstperson~1hm_behavior.xml)
          patches/defaultfemale_character.xml
 
 All node ids are NEMESIS ids of the VANILLA graph (see docs/research/behavior-pipeline.md section 1.3 / 2.7).
@@ -30,6 +31,13 @@ EVENTS += ANNOTATION_EVENTS
 # Sent by the plugin on a perfect dodge (to the player and to the attacker); registered so behaviors, OAR and other
 # plugins' graph-event sinks receive them (NotifyAnimationGraph drops a name the graph does not know).
 EVENTS += ["RDF_PerfectDodge", "RDF_PerfectDodged"]
+# Dodge-cancel windows of ATTACK clips (ANIMATION_CONTRACT.md "Attack clips"). A clip annotation only becomes an event
+# when its text is an event of the behavior file that plays the clip, so these are registered in 1hm_behavior (vanilla
+# melee attacks, BFCO's attacks), third and first person. Attack clips of other behavior files (MCO's MCO_Attack.hkx ...)
+# need them in that file's own event list.
+CANCEL_EVENTS = ["RDF_DodgeCancelOpen", "RDF_DodgeCancelClose"]
+# vanilla 1hm_behavior (Nemesis ids; the same in the 1P file)
+V_1HM = dict(STRING="#0085", DATA="#0087")
 # (name, type, initial value)
 VARIABLES = [("RDF_DodgeClip", "VARIABLE_TYPE_INT32", 0),
              ("RDF_DodgeSpeed", "VARIABLE_TYPE_REAL", 1.0),
@@ -555,6 +563,17 @@ def gen_master(existing_vars, fp=False):
     return "\n".join(x) + "\n", N.n, bind_extra
 
 
+def gen_events(V_, events):
+    """Events appended to a behavior file's eventNames / eventInfos."""
+    x = ["<patch>"]
+    for e in events:
+        x.append('  <append path="%s/eventNames"><hkcstring>%s</hkcstring></append>' % (V_["STRING"], e))
+        x.append('  <append path="%s/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>'
+                 % V_["DATA"])
+    x.append("</patch>")
+    return "\n".join(x) + "\n"
+
+
 def gen_character():
     x = ["<patch>"]
     for c in CLIPS:
@@ -654,6 +673,8 @@ def main():
     fp_master, fp_nodes, _ = gen_master(set(), fp=True)
     write(os.path.join(out, "patches", FP_PATCH_NAME), fp_master)
     print("first person: %d new nodes -> patches/%s" % (fp_nodes, FP_PATCH_NAME))
+    write(os.path.join(out, "patches", "1hm_behavior.xml"), gen_events(V_1HM, CANCEL_EVENTS))
+    write(os.path.join(out, "patches", "firstperson~1hm_behavior.xml"), gen_events(V_1HM, CANCEL_EVENTS))
     ch = gen_character()
     write(os.path.join(out, "patches", "defaultmale_character.xml"), ch)
     write(os.path.join(out, "patches", "defaultfemale_character.xml"), ch)

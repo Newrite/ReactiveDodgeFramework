@@ -479,8 +479,15 @@ def main():
         a, b = os.path.join(OUT, "baseline", CHAR, sub, f), os.path.join(OUT, "rdf", CHAR, sub, f)
         if md5(a) != md5(b):
             diffs.append(xstem(sub, f))
-    check("B  hkx changed only in 0_Master/DefaultMale/DefaultFemale and first-person 0_Master",
-          sorted(diffs) == ["0_Master", "DefaultFemale", "DefaultMale", "fp_0_Master"], str(diffs))
+    check("B  hkx changed only in 0_Master/DefaultMale/DefaultFemale/1hm_behavior and first-person 0_Master/1hm_behavior",
+          sorted(diffs) == ["0_Master", "1hm_behavior", "DefaultFemale", "DefaultMale", "fp_0_Master", "fp_1hm_behavior"], str(diffs))
+    # 1hm_behavior: only the dodge-cancel events of attack clips
+    for stem in ("1hm_behavior", "fp_1hm_behavior"):
+        h, hb = H.Graph(os.path.join(rdf_x, stem + ".xml")), H.Graph(os.path.join(base_x, stem + ".xml"))
+        check("C  %s: events %s present once, eventNames/eventInfos +%d, nothing else changed" % (stem, ", ".join(G.CANCEL_EVENTS), len(G.CANCEL_EVENTS)),
+              all(e in h.ev_index and len(h.ev_index[e]) == 1 and e not in hb.ev_index for e in G.CANCEL_EVENTS)
+              and len(h.event_names) == len(hb.event_names) + len(G.CANCEL_EVENTS) and h.n_event_infos == len(h.event_names)
+              and len(h.objs) == len(hb.objs) and h.variable_names == hb.variable_names)
 
     g = H.Graph(os.path.join(rdf_x, "0_Master.xml"))
     gb = H.Graph(os.path.join(base_x, "0_Master.xml"))

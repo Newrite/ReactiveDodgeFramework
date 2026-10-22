@@ -314,6 +314,14 @@ namespace rdf::game
 		s.suppressLegacyDodge = ReadBool("Compat", "bSuppressLegacyDodge", s.suppressLegacyDodge);
 		s.useTrueDirectionalMovement = ReadBool("Compat", "bUseTrueDirectionalMovement", s.useTrueDirectionalMovement);
 		s.usePrecision = ReadBool("Compat", "bUsePrecision", s.usePrecision);
+		auto& ac = s.attackCancel;
+		s.core.policy.cancelInRecovery = ReadBool("AttackCancel", "bDodgeInRecovery", s.core.policy.cancelInRecovery);
+		ac.recoveryEvents = Split(ReadString("AttackCancel", "sRecoveryEvents", Join(ac.recoveryEvents)));
+		ac.recoveryEndEvents = Split(ReadString("AttackCancel", "sRecoveryEndEvents", Join(ac.recoveryEndEvents)));
+		ac.recoveryVariables = Split(ReadString("AttackCancel", "sRecoveryVariables", Join(ac.recoveryVariables)));
+		ac.attackStartEvents = Split(ReadString("AttackCancel", "sAttackStartEvents", Join(ac.attackStartEvents)));
+		ac.anyTimeKeyword = ReadString("AttackCancel", "sAnyTimeKeyword", ac.anyTimeKeyword);
+		ac.anyTimePowerKeyword = ReadString("AttackCancel", "sAnyTimePowerKeyword", ac.anyTimePowerKeyword);
 		auto& pf = s.perfect;
 		pf.enabled = ReadBool("Perfect", "bPerfectDodge", pf.enabled);
 		pf.windowStart = ReadFloat("Perfect", "fPerfectWindowStart", pf.windowStart, 0.0f, 3.0f);

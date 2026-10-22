@@ -31,6 +31,17 @@ namespace rdf::game::graph
 	// RDF_* clip annotations seen since the last call, in WindowEvent order.
 	void DrainClipWindows(RE::Actor* actor, const std::function<void(WindowEvent)>& sink);
 	void ClearEvents(RE::Actor* actor);
+
+	// The actor's current attack as its graph reported it ([AttackCancel]): a recovery event seen (and no end since),
+	// and the attack clip's RDF_DodgeCancelOpen / Close state once it announced one.
+	struct AttackWindows
+	{
+		bool                recovery{ false };
+		std::optional<bool> clipCancel;
+	};
+	AttackWindows ReadAttack(RE::Actor* actor);
+	// A new attack started (or none runs): its recovery and clip windows start over.
+	void ResetAttack(RE::Actor* actor);
 	void ClearAll();  // load / new game
 
 	enum class DodgeEntry

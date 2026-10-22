@@ -6,6 +6,7 @@
 #include <chrono>
 #include <functional>
 #include <memory>
+#include <string>
 
 namespace rdf::game
 {
@@ -68,6 +69,7 @@ namespace rdf::game
 		void              MeasureMotion(RE::Actor* actor, float dt);
 		FrameInput        BuildFrame(RE::Actor* actor, float dt, const AgentInput& in);
 		void              HandleGraphEvents(RE::Actor* actor);
+		void              ReadAttack(RE::Actor* actor, std::uint8_t attackState, EngineView& view);
 		void              Execute(RE::Actor* actor, const Decision& d, const AgentInput& in);
 		graph::DodgeEntry EntryFor(RE::Actor* actor, bool chain) const;
 		void              TryStart(RE::Actor* actor, const Decision& d, const AgentInput& in);
@@ -107,6 +109,8 @@ namespace rdf::game
 		float           staggerAge_{ 0.0f };      // seconds the actor has been staggered
 		bool            escapeStagger_{ false };  // this tick a dodge may cut the stagger short
 		bool            perfectFired_{ false };   // the current dodge already counted a perfect dodge
+		std::uint8_t    prevAttackState_{ 0 };    // vanilla attack state last tick (a new attack passes into Draw)
+		std::string     lastAttackLog_;           // dev log: the attack-cancel inputs last printed
 		int             tailFrames_{ 0 };         // dev trace keeps running this many ticks after a dodge
 		bool            inStateB_{ true };        // dodge state used last; the first dodge goes to A
 		bool            moveHeld_{ false };

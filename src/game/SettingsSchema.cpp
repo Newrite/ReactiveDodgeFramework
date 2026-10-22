@@ -145,6 +145,7 @@ namespace rdf::game::schema
 				Float(Page::Rules, "Perfect", "fPerfectSlowMotionEaseIn", RDF_F(perfect.slowMotionEaseIn), 0.0f, 1.0f, "%.2f s"),
 				Float(Page::Rules, "Perfect", "fPerfectSlowMotionEaseOut", RDF_F(perfect.slowMotionEaseOut), 0.0f, 1.0f, "%.2f s"),
 				Float(Page::Rules, "Perfect", "fPerfectSlowMotionCooldown", RDF_F(perfect.slowMotionCooldown), 0.0f, 10.0f, "%.1f s"),
+				Bool(Page::Rules, "AttackCancel", "bDodgeInRecovery", RDF_B(core.policy.cancelInRecovery)),
 				Bool(Page::Rules, "Jump", "bBlockDuringDodge", RDF_B(blockJumpDuringDodge)),
 				Bool(Page::Rules, "Stagger", "bDodgeFromStagger", RDF_B(dodgeFromStagger)),
 				Float(Page::Rules, "Stagger", "fDodgeDelay", RDF_F(staggerDodgeDelay), 0.0f, 3.0f, "%.2f s"),

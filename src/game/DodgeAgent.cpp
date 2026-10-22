@@ -1,5 +1,6 @@
 #include "DodgeAgent.h"
 
+#include "AttackCancel.h"
 #include "Diagnostics.h"
 #include "Effects.h"
 #include "EngineState.h"
@@ -133,6 +134,7 @@ namespace rdf::game
 		}
 		view.attackState = state.attackState;
 		view.dodgeWindowOpen = graph::DodgeWindowOpen(actor);
+		ReadAttack(actor, state.attackState, view);
 		view.staminaOk = !settings.costResource || state.resource >= settings.minimum;
 		const Decision decision = core_->Evaluate(view);
 		if (decision.reject == RejectReason::StaminaLow) {
@@ -144,6 +146,41 @@ namespace rdf::game
 		Trace(actor);
 		prevRequestedDistance_ = requestedDistance_;
 		prevRequestedHeading_ = requestedHeading_;
+	}
+
+	// [AttackCancel] What the actor's attack allows (ActionArbiter.h DodgeCancelsAttack). A new attack starts over: the
+	// vanilla state passing into Draw is seen here before the new clip's annotations arrive (our tick runs in the actor's
+	// update, ahead of its graph update); the frameworks' own start events reset the graph side in event order.
+	void DodgeAgent::ReadAttack(RE::Actor* actor, std::uint8_t attackState, EngineView& view)
+	{
+		if (attackState != prevAttackState_ && (attackState == attack_state::kDraw || attackState == attack_state::kNone)) {
+			graph::ResetAttack(actor);
+		}
+		prevAttackState_ = attackState;
+		if (attackState == attack_state::kNone) {
+			return;
+		}
+		const auto windows = graph::ReadAttack(actor);
+		view.attackClipCancel = windows.clipCancel;
+		view.attackRecovery = windows.recovery;
+		for (const auto& name : Settings::Get().attackCancel.recoveryVariables) {
+			bool value = false;
+			if (!view.attackRecovery && actor->GetGraphVariableBool(name, value) && value) {
+				view.attackRecovery = true;
+			}
+		}
+		// The keyword walk (actor, worn items, active effects) only while a dodge press waits on it.
+		if (core_->Buffer().Peek(CommandKind::Dodge, core_->Now())) {
+			const bool power = actor->IsPowerAttacking();
+			view.cancelAnyTime = attack::AnyTime(actor, power);
+			const auto summary = std::format("state={} power={} anytime={} clip={} recovery={} window={}", attackState, power,
+				view.cancelAnyTime, view.attackClipCancel ? (*view.attackClipCancel ? "open" : "closed") : "-", view.attackRecovery,
+				view.dodgeWindowOpen);
+			if (summary != lastAttackLog_) {
+				lastAttackLog_ = summary;
+				DevLog("{:08X}: dodge pressed during an attack: {}", formID_, summary);
+			}
+		}
 	}
 
 	void DodgeAgent::Refresh3D(RE::Actor* actor)
@@ -353,6 +390,9 @@ namespace rdf::game
 			return;
 		}
 		lastReject_ = d.reject;
+		if (d.reject == RejectReason::None) {
+			lastAttackLog_.clear();
+		}
 		lastRejectCommand_ = d.rejectedCommand;
 		if (d.reject != RejectReason::None && d.reject != RejectReason::NoCommand) {
 			DevLog("{:08X}: rejected cmd={} reason={}", formID_, static_cast<int>(d.rejectedCommand), ToString(d.reject));

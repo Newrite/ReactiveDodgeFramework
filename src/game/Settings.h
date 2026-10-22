@@ -92,6 +92,23 @@ namespace rdf::game
 		// so turning the camera mid-dodge does not steer it (a locked target still does).
 		bool inputFromStartCamera{ false };
 
+		// [AttackCancel]: when a dodge may cancel the actor's own attack (beyond sAttackStates, see ActionArbiter.h).
+		struct AttackCancelSettings
+		{
+			// Attack frameworks: a recovery event opens the recovery until a recovery-end event or the next attack;
+			// a recovery variable (bool graph variable) counts while true.
+			std::vector<std::string> recoveryEvents{ "MCO_Recovery", "BFCO_DIY_recovery" };
+			std::vector<std::string> recoveryEndEvents{ "MCO_InputBuffer", "Bfco_AttackStartFX" };
+			std::vector<std::string> recoveryVariables{ "MCO_IsInRecovery" };
+			// Graph events of a new attack starting (besides the vanilla attack state passing through Draw):
+			// the attack's recovery and clip windows start over.
+			std::vector<std::string> attackStartEvents{ "MCO_AttackInitiate", "MCO_PowerAttackInitiate", "Bfco_AttackStartFX" };
+			// Keywords ("Plugin.esp|0xFormID" or an EditorID) on the actor, its worn items or its active magic effects:
+			// a dodge cancels its normal / power attacks at any moment.
+			std::string anyTimeKeyword;
+			std::string anyTimePowerKeyword;
+		} attackCancel;
+
 		// [Perfect]: a hit the i-frames dodge inside this part of the dodge (seconds from its start) is a perfect
 		// dodge. The window only counts where i-frames are active.
 		struct PerfectSettings

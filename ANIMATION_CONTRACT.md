@@ -173,3 +173,29 @@ section 1 are 3P only. See BEHAVIOR_INTEGRATION.md section 6.
 | `RDF_PerfectDodged` | the attacker | the same moment (humanoid graphs; creature graphs do not know the event) |
 Both are registered in the patch's event list, so behaviors, OAR conditions and other plugins' graph-event sinks can
 react to them. Papyrus gets the SKSE mod event `RDF_PerfectDodge` (sender = attacker, numArg = dodge time).
+
+## Attack clips: dodge-cancel windows
+
+An attack clip (any melee attack the actor plays, not ours) may say when a dodge cancels it:
+
+| annotation | meaning |
+|---|---|
+| `RDF_DodgeCancelOpen` | from here a dodge may cancel this attack |
+| `RDF_DodgeCancelClose` | from here it may not |
+
+Any number of windows per clip. Once a clip announced either one, its windows alone decide (the attack framework's
+recovery, `MCO_DodgeOpen`-style window events and `sAttackStates` no longer count for it). Until the first one fires
+the other rules apply, so put `RDF_DodgeCancelClose` at 0.0 to make the clip decide from its first frame. Examples:
+
+- feint only: `Open 0.0`, `Close 0.15`;
+- cancel anything after the swing, even without a recovery: `Close 0.0`, `Open 0.45`;
+- no cancel at all in this clip: `Close 0.0`.
+
+The windows start over with each attack (the vanilla attack state passing through Draw, or one of
+`[AttackCancel] sAttackStartEvents`). The anytime keywords (`[AttackCancel] sAnyTimeKeyword`, `sAnyTimePowerKeyword`) still
+override a closed window.
+
+An annotation only becomes an event when its text is an event of the behavior file that plays the clip. The patch
+registers both names in `1hm_behavior` (3rd and 1st person), where vanilla melee attacks and BFCO's attacks play.
+Attack clips of other behavior files (MCO's own `MCO_Attack.hkx`, `MCO_PowerAttack.hkx`, ...) need the two names in
+that file's event list; until then they fall back to the recovery rules (`MCO_IsInRecovery`).

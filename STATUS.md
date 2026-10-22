@@ -39,6 +39,10 @@
 * `RDF_ChainIndex` graph variable (0, 1, 2... per dodge of a chain, 0 when over); needs a Pandora / Nemesis re-run.
 * Dodge on any actor through the API (Papyrus `ReactiveDodge.Dodge`, C `RDF_RequestDodge`); never run on an NPC yet.
 
+* Dodge cancels attacks of MCO / BFCO from their recovery (`MCO_IsInRecovery`, `MCO_Recovery` .. `MCO_InputBuffer`,
+  `BFCO_DIY_recovery` .. next `Bfco_AttackStartFX`), attack clip annotations RDF_DodgeCancelOpen / Close (registered in
+  1hm_behavior), and the anytime keywords ([AttackCancel]). Needs a Pandora re-run; not yet tried with MCO or BFCO.
+
 ## Known limitations
 * A one-frame upper-body pop at dodge start, visible only in slow motion (parked; findings in JOURNAL.md).
 * Fixture animations are TUDM's clips (local only, not redistributable); visual quality is bounded by them, e.g. they

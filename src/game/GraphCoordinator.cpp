@@ -5,6 +5,7 @@
 #include <array>
 #include <atomic>
 #include <mutex>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 
@@ -16,6 +17,9 @@ namespace rdf::game::graph
 		{
 			RE::BSFixedString start, startB, chain, exit, entered, left, clip, speed, armBlend, isDodging, chainIndex;
 			std::vector<RE::BSFixedString> windowOpen, windowClose;
+			// [AttackCancel]
+			std::vector<RE::BSFixedString> recovery, recoveryEnd, attackStart;
+			RE::BSFixedString              cancelOpen{ "RDF_DodgeCancelOpen" }, cancelClose{ "RDF_DodgeCancelClose" };
 		};
 		Names g_names;
 
@@ -30,6 +34,9 @@ namespace rdf::game::graph
 			int           depth{ 0 };
 			bool          window{ false };
 			std::uint32_t clipWindows{ 0 };  // bit per WindowEvent seen since the last drain
+			// the actor's current attack (attack frameworks, attack clip annotations); start over with each attack
+			bool                attackRecovery{ false };
+			std::optional<bool> attackCancel;
 			// Several graphs (the player's first / third person): only this one counts; null = every graph.
 			const RE::BSTEventSource<RE::BSAnimationGraphEvent>* activeSource{ nullptr };
 		};
@@ -88,6 +95,18 @@ namespace rdf::game::graph
 					logger::info("graph event {:08X} {} '{}' (depth {})", event->holder->GetFormID(), event->tag.c_str(),
 						event->payload.c_str(), g.depth);
 				}
+				if (Contains(g_names.attackStart, event->tag)) {
+					g.attackRecovery = false;
+					g.attackCancel.reset();
+				} else if (Contains(g_names.recovery, event->tag)) {
+					g.attackRecovery = true;
+				} else if (Contains(g_names.recoveryEnd, event->tag)) {
+					g.attackRecovery = false;
+				} else if (event->tag == g_names.cancelOpen) {
+					g.attackCancel = true;
+				} else if (event->tag == g_names.cancelClose) {
+					g.attackCancel = false;
+				}
 				if (event->tag == g_names.entered) {
 					++g.entered;
 					++g.depth;
@@ -135,6 +154,16 @@ namespace rdf::game::graph
 		}
 		for (const auto& n : g.windowClose) {
 			g_names.windowClose.emplace_back(n);
+		}
+		const auto& ac = Settings::Get().attackCancel;
+		for (const auto& n : ac.recoveryEvents) {
+			g_names.recovery.emplace_back(n);
+		}
+		for (const auto& n : ac.recoveryEndEvents) {
+			g_names.recoveryEnd.emplace_back(n);
+		}
+		for (const auto& n : ac.attackStartEvents) {
+			g_names.attackStart.emplace_back(n);
 		}
 	}
 
@@ -237,6 +266,20 @@ namespace rdf::game::graph
 			const auto source = g.activeSource;
 			g = ActorGraph{};
 			g.activeSource = source;
+			return 0;
+		});
+	}
+
+	AttackWindows ReadAttack(RE::Actor* actor)
+	{
+		return WithActor(actor, [](ActorGraph& g) { return AttackWindows{ g.attackRecovery, g.attackCancel }; });
+	}
+
+	void ResetAttack(RE::Actor* actor)
+	{
+		WithActor(actor, [](ActorGraph& g) {
+			g.attackRecovery = false;
+			g.attackCancel.reset();
 			return 0;
 		});
 	}

@@ -1,0 +1,6 @@
+<patch>
+  <append path="#0085/eventNames"><hkcstring>RDF_DodgeCancelOpen</hkcstring></append>
+  <append path="#0087/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
+  <append path="#0085/eventNames"><hkcstring>RDF_DodgeCancelClose</hkcstring></append>
+  <append path="#0087/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
+</patch>

@@ -27,6 +27,9 @@ namespace rdf
 		EngineBlock  engine{ EngineBlock::None };
 		std::uint8_t attackState{ 0 };
 		bool         dodgeWindowOpen{ false };
+		bool         attackRecovery{ false };
+		std::optional<bool> attackClipCancel;
+		bool         cancelAnyTime{ false };
 		bool         staminaOk{ true };
 	};
 

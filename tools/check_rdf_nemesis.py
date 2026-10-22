@@ -199,6 +199,20 @@ def main():
         H.check(gb, repb)
         check("1P 0_master: hkxcheck no new errors / warnings vs vanilla (%d/%d)" % (len(rep.errors), len(rep.warns)),
               len(rep.errors) == len(repb.errors) and len(rep.warns) == len(repb.warns), "; ".join(rep.errors[:3]))
+    # --- 1hm_behavior (dodge-cancel events for attack clips), 3P and 1P
+    for folder, stem in (("1hm_behavior", "1hm_behavior"), (os.path.join("_1stperson", "1hm_behavior"), "fp_1hm_behavior")):
+        van, txt = apply(folder, G.V_1HM["STRING"])
+        back, vback = roundtrip(stem, txt), roundtrip(stem + "_vanilla", van)
+        if back and vback:
+            g, gb = H.Graph(back), H.Graph(vback)
+            check("%s: events +%d (%s), eventInfos match" % (folder, len(G.CANCEL_EVENTS), ", ".join(G.CANCEL_EVENTS)),
+                  len(g.event_names) == len(gb.event_names) + len(G.CANCEL_EVENTS) and all(e in g.ev_index for e in G.CANCEL_EVENTS)
+                  and g.n_event_infos == len(g.event_names))
+            rep, repb = H.Report(), H.Report()
+            H.check(g, rep)
+            H.check(gb, repb)
+            check("%s: hkxcheck no new errors / warnings vs vanilla" % folder,
+                  len(rep.errors) == len(repb.errors) and len(rep.warns) == len(repb.warns), "; ".join(rep.errors[:3]))
     # --- characters
     for ch in ("defaultmale", "defaultfemale"):
         van, txt = apply(ch, None)

@@ -68,10 +68,18 @@ namespace rdf
 		EngineBlock   engine{ EngineBlock::None };
 		std::uint8_t  attackState{ 0 };
 		bool          dodgeWindowOpen{ false };  // anim-event driven attack->dodge window
+		bool          attackRecovery{ false };   // the attack reached its recovery (MCO_IsInRecovery, BFCO_DIY_recovery, ...)
+		std::optional<bool> attackClipCancel;    // RDF_DodgeCancelOpen / Close of the attack's clip, once it announced one
+		bool          cancelAnyTime{ false };    // the actor's keyword lets it cancel this attack at any moment
 		bool          staminaOk{ true };
 		bool          moveHeld{ false };
 		std::optional<OpenWindows> annotated;  // windows announced by the clip; empty = ini timers
 	};
+
+	// May a dodge start during the attack described by `s`? Strongest rule first: no attack; the anytime keyword; the
+	// attack clip's own RDF_DodgeCancel windows (they replace everything below); a dodge window event; the attack
+	// framework's recovery; the vanilla attack states of sAttackStates.
+	bool DodgeCancelsAttack(const ActionPolicy& policy, const ArbiterState& s);
 
 	// Picks at most one action per call. Priority: forced interruption > dodge/chain > attack >
 	// block > locomotion exit. Pure: it never mutates the buffer; the caller consumes on success.

@@ -34,6 +34,17 @@ namespace rdf
 		return state.dodgeActive ? ArbitrateRunning(state, buffer, now) : ArbitrateIdle(state, buffer, now);
 	}
 
+	bool DodgeCancelsAttack(const ActionPolicy& policy, const ArbiterState& s)
+	{
+		if (s.attackState == attack_state::kNone || s.cancelAnyTime) {
+			return true;
+		}
+		if (s.attackClipCancel) {
+			return *s.attackClipCancel;
+		}
+		return s.dodgeWindowOpen || (policy.cancelInRecovery && s.attackRecovery) || policy.DodgeAllowedFromAttackState(s.attackState);
+	}
+
 	Decision ActionArbiter::ArbitrateIdle(const ArbiterState& state, const InputBuffer& buffer, double now) const
 	{
 		Decision d;
@@ -46,7 +57,7 @@ namespace rdf
 			NoteReject(d, RejectReason::EngineBlocked, cmd->kind);
 		} else if (!state.staminaOk) {
 			NoteReject(d, RejectReason::StaminaLow, cmd->kind);
-		} else if (!state.dodgeWindowOpen && !policy_.DodgeAllowedFromAttackState(state.attackState)) {
+		} else if (!DodgeCancelsAttack(policy_, state)) {
 			NoteReject(d, RejectReason::AttackStateBlocked, cmd->kind);
 		} else {
 			d.kind = DecisionKind::StartDodge;

@@ -44,6 +44,48 @@ TEST(arbiter_idle_start_and_reject_reasons)
 	CHECK(arb.Arbitrate(s, b, 0.0).kind == DecisionKind::StartDodge);
 }
 
+TEST(attack_cancel_rules_in_order)
+{
+	ActionPolicy p;
+	ArbiterState s;
+	CHECK(DodgeCancelsAttack(p, s));  // no attack
+
+	s.attackState = attack_state::kHit;  // MCO / BFCO attacks sit here: their clips have no vanilla windows
+	CHECK(!DodgeCancelsAttack(p, s));
+	s.attackRecovery = true;
+	CHECK(DodgeCancelsAttack(p, s));
+	p.cancelInRecovery = false;
+	CHECK(!DodgeCancelsAttack(p, s));
+	p.cancelInRecovery = true;
+
+	// The attack clip's own windows replace recovery, dodge windows and attack states ...
+	s.attackClipCancel = false;
+	s.dodgeWindowOpen = true;
+	CHECK(!DodgeCancelsAttack(p, s));
+	s.attackState = attack_state::kFollowThrough;
+	CHECK(!DodgeCancelsAttack(p, s));
+	s.attackClipCancel = true;
+	s.attackRecovery = false;
+	s.dodgeWindowOpen = false;
+	s.attackState = attack_state::kDraw;  // an early (feint) window
+	CHECK(DodgeCancelsAttack(p, s));
+
+	// ... and the anytime keyword beats everything.
+	s.attackClipCancel = false;
+	s.cancelAnyTime = true;
+	CHECK(DodgeCancelsAttack(p, s));
+
+	// Through the arbiter: refused, then allowed by the recovery.
+	ActionArbiter arb{ ActionPolicy{} };
+	InputBuffer   b(0.2f, 0.0f);
+	b.Push(CommandKind::Dodge, 0.0);
+	ArbiterState  a;
+	a.attackState = attack_state::kHit;
+	CHECK(arb.Arbitrate(a, b, 0.0).reject == RejectReason::AttackStateBlocked);
+	a.attackRecovery = true;
+	CHECK(arb.Arbitrate(a, b, 0.0).kind == DecisionKind::StartDodge);
+}
+
 TEST(arbiter_ignores_attack_and_block_when_not_dodging)
 {
 	ActionArbiter arb{ ActionPolicy{} };

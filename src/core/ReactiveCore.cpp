@@ -52,6 +52,9 @@ namespace rdf
 		s.engine = engine.engine;
 		s.attackState = engine.attackState;
 		s.dodgeWindowOpen = engine.dodgeWindowOpen;
+		s.attackRecovery = engine.attackRecovery;
+		s.attackClipCancel = engine.attackClipCancel;
+		s.cancelAnyTime = engine.cancelAnyTime;
 		s.staminaOk = engine.staminaOk;
 		s.annotated = windows_.Annotated();
 		s.moveHeld = MoveHeld();

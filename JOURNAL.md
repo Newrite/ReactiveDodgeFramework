@@ -322,3 +322,14 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   press direction; a chain without input keeps the running heading and stays directional. FaceMotion (turn to the path)
   still plays the forward roll. Pandora staged 229/229, Nemesis 33/33, 74/74 tests. The MO2 RDF folder got rdf_*_n as
   copies of the annotated rdf_*_b.
+* Attack cancels for MCO / BFCO (2026-10-22, user: allow the dodge from their recovery, regulate cancels with annotations,
+  two keywords for cancelling light / power attacks at any time): findings in REVERSE_ENGINEERING.md. Rule order
+  (core DodgeCancelsAttack, tested): no attack > anytime keyword (sAnyTimeKeyword / sAnyTimePowerKeyword by power-ness,
+  on the actor, its race, a worn item through the engine's VisitWornItems, or an active effect through VisitEffects) >
+  the attack clip's RDF_DodgeCancelOpen / Close (replace everything below once announced) > dodge window events >
+  recovery (events MCO_Recovery / BFCO_DIY_recovery until MCO_InputBuffer / Bfco_AttackStartFX, or the variable
+  MCO_IsInRecovery) > sAttackStates. Per-attack state lives in the graph sink (event order) and starts over on the
+  frameworks' start events and when the vanilla state passes into Draw (seen in our tick, before the graph update that
+  plays the new clip's annotations). The two annotation events are registered in 1hm_behavior 3P / 1P (Pandora staged
+  231/231, Nemesis 49/49 with BFCO's patch among the originals' witnesses); MCO's own behavior files cannot be patched
+  that way, so MCO clips rely on MCO_IsInRecovery. 75/75 tests.

@@ -125,3 +125,26 @@ Primary vtables are CommonLib's `VTABLE_*Projectile[0]` (each class also has a s
   (`FUN_14073b510`). RDF answers "no line of sight" for an invulnerable player, which skips damage, spell and knockdown.
 - An Explosion keeps no link to the projectile that spawned it (CommonLib layout, IDA), so a dodged fireball's blast is
   only covered by the i-frame window at the moment it goes off.
+
+## Attack frameworks (MCO / BFCO) and attack cancels (2026-10-22)
+
+Sources: `S:\AI Agent Skyrim\Attack Frameworks` (Attack MCO-DXP, BFCO 3.x Nemesis patches); MCO_Attack.hkx dumped
+with serde-hkx into `_work/attackfw`.
+
+- Why the vanilla gate failed: MCO / BFCO attack clips carry their own annotations (MCO_WinOpen, BFCO_NextWinStart...)
+  and few or none of the vanilla AttackWinStart / AttackWinEnd ones, so `ATTACK_STATE_ENUM` never reaches NextAttack /
+  FollowThrough and `sAttackStates` refused every dodge until the attack ended.
+- MCO (`MCO_Attack.hkx` and its siblings, behavior files of their own): an `hkbEventDrivenModifier` activated by
+  `MCO_Recovery` (event 1225) and deactivated by `MCO_InputBuffer` (1218) wraps a `BSIsActiveModifier` "IAM_Recovery"
+  whose bIsActive0 is bound to `MCO_IsInRecovery` (variable 234): the variable is true from the clip's MCO_Recovery
+  annotation until the next attack's input buffer, and false once the generator is left.
+- BFCO (Nemesis patch of 1hm_behavior): no recovery variable. `BFCO_DIY_recovery` is a clip annotation (or a clip trigger
+  0.2 s before the end); BFCO's own transitions use it as a trigger interval [BFCO_DIY_recovery, Bfco_AttackStartFX]
+  (#4802), so the recovery lasts until the next attack starts. It also deactivates the NPC bAnimationDriven modifier
+  (#bfco$931, activated by BFCO_NPCAttackStart).
+- `Actor::IsPowerAttacking` = 37639 (0x140627500): melee attack state != 0 (actorState1 & 0xF0000000) and the current
+  BGSAttackData has kPowerAttack (flags & 4); CommonLib's wrapper uses the same id.
+- `InventoryChanges::VisitWornItems` = 15856 (0x1401E51D0): walks entryList, keeps entries whose extra lists say worn,
+  calls the visitor's vfunc 1 (Visit) and stops on anything but 1 (kContinue); the WornHasKeyword condition's visitor
+  vtable 0x1415483D8 has dtor, Visit, ShouldVisit, Unk_03 in CommonLib's order.
+- `VATS::SetMagicTimeSlowdown` = 43103 (0x140759360), see the perfect-dodge entry in JOURNAL.md.
