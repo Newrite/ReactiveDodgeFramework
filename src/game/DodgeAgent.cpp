@@ -142,9 +142,9 @@ namespace rdf::game
 		EngineView  view;
 		view.engine = state.block;
 		staggerAge_ = state.block == EngineBlock::Staggered ? staggerAge_ + dt : 0.0f;
-		// [Stagger] bDodgeFromStagger: a dodge may cut the stagger short once fDodgeDelay has passed.
-		escapeStagger_ = !ownDodge && state.block == EngineBlock::Staggered && settings.dodgeFromStagger &&
-		                 staggerAge_ >= settings.staggerDodgeDelay;
+		// [Stagger] a dodge may cut the stagger short (StaggerEscape); the rules are only asked while a dodge press waits.
+		escapeStagger_ = !ownDodge && state.block == EngineBlock::Staggered && core_->Buffer().Peek(CommandKind::Dodge, core_->Now()) &&
+		                 StaggerEscape(actor);
 		if (escapeStagger_) {
 			view.engine = EngineBlock::None;
 		}
@@ -255,6 +255,35 @@ namespace rdf::game
 		f.cameraYaw = in.cameraYaw;
 		moveHeld_ = Length(f.move) > Settings::Get().core.steering.deadzone;
 		return f;
+	}
+
+	// [Stagger] Whether the dodge pressed now may cut the actor's stagger short. The first rule that decides wins: the
+	// no-escape keyword, the any-time keyword, the stagger framework's recovery window, the delay.
+	bool DodgeAgent::StaggerEscape(RE::Actor* actor)
+	{
+		const auto& settings = Settings::Get();
+		const char* why = nullptr;
+		bool        allowed = false;
+		if (!settings.dodgeFromStagger) {
+			why = "bDodgeFromStagger=0";
+		} else if (attack::StaggerNoEscape(actor)) {
+			why = "no-escape keyword";
+		} else if (attack::StaggerAnyTime(actor)) {
+			allowed = true;
+			why = "any-time keyword";
+		} else if (graph::StaggerRecoveryOpen(actor)) {
+			allowed = true;
+			why = "recovery window";
+		} else {
+			const float delay = attack::StaggerDelayOverride(actor).value_or(settings.staggerDodgeDelay);
+			allowed = delay >= 0.0f && staggerAge_ >= delay;
+			why = delay < 0.0f ? "no time rule, window closed" : allowed ? "delay passed" : "before the delay";
+		}
+		if (why != lastStaggerRule_) {
+			lastStaggerRule_ = why;
+			DevLog("{:08X}: dodge out of the stagger at {:.2f}s: {} ({})", formID_, staggerAge_, allowed ? "allowed" : "refused", why);
+		}
+		return allowed;
 	}
 
 	void DodgeAgent::HandleGraphEvents(RE::Actor* actor)
@@ -512,8 +541,12 @@ namespace rdf::game
 			DevLog("{:08X}: dodge out of stagger after {:.2f}s", formID_, staggerAge_);
 		}
 		graph::LogEvents(settings.devLog);
-		effects::ChargeCost(actor, settings.cost);
-		charged_ = settings.cost;
+		float cost = settings.cost;
+		if (escapeStagger_) {   // [Stagger] the price of leaving a stagger
+			cost += std::max(0.0f, settings.stagger.escapeCost + attack::StaggerEscapeCostBonus(actor));
+		}
+		effects::ChargeCost(actor, cost);
+		charged_ = cost;
 		core_->Apply(d, true);
 		awaitingEnter_ = true;
 		enterFrames_ = 0;

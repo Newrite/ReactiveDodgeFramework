@@ -237,3 +237,16 @@ condition comparing the graph variable:
 step, 2 / 10 = right, 16 / 17 = neutral...). Give the submod a higher priority than the ordinary replacer of the same
 clip. OAR evaluates conditions when the clip starts; the plugin writes both variables before the attack starts and
 clears them when it is over, so the next attack of a combo plays its normal clip.
+
+## Stagger clips: the dodge's escape window
+
+`[Stagger]` decides when a dodge may cut a stagger short (first rule that decides wins: `sNoEscapeKeyword` never,
+`sAnyTimeKeyword` always, the stagger framework's recovery window, `fDodgeDelay` / an effect with `sDelayKeyword`). The
+recovery window is a bool graph variable (`sRecoveryVariables`, default `MSL_IsStaggerRecovery`: Modern Stagger Lock, set
+by its clips and by Rim Combat) or open / close events (`sRecoveryOpenEvents` / `sRecoveryCloseEvents`, default
+`MSL_RecovWinOpen` / `MSL_RecovWinClose` and our own `RDF_StaggerEscapeOpen` / `RDF_StaggerEscapeClose`); a new stagger
+(`sStaggerStartEvents`) closes it. A stagger clip annotated with `RDF_StaggerEscapeOpen` .. `RDF_StaggerEscapeClose`
+opens the escape for that part of the clip, but an annotation reaches the plugin only when the behavior file that plays
+the clip registers it as an event: the RDF patch does not add them to the stagger behaviors (MSL's own behavior file is
+prebuilt), so a clip author who wants them registers them in that behavior. The dodge out of a stagger costs `[Cost]
+fCost + fEscapeCost` plus the magnitudes of active effects with `sEscapeCostKeyword`.

@@ -41,6 +41,9 @@ namespace rdf::game::graph
 		std::uint32_t       starts{ 0 };  // attack-start events seen so far (changes when a new attack starts)
 	};
 	AttackWindows ReadAttack(RE::Actor* actor);
+	// [Stagger] the stagger framework's recovery window: an open event since the stagger started (and no close), or a
+	// recovery variable true.
+	bool StaggerRecoveryOpen(RE::Actor* actor);
 	// A new attack started (or none runs): its recovery and clip windows start over.
 	void ResetAttack(RE::Actor* actor);
 	void ClearAll();  // load / new game

@@ -487,3 +487,13 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   block press, and our block clears the handler's stale left press (PlayerControls+0x1B8 -> attackType +0x28, IDA). An
   attack let out of the dodge while the block is held (the game's button, or wantBlocking raised by Input Support) sets
   wantBlocking first (AgentDriver::PrepareBash): a tap bashes, a power attack power-bashes, as without a dodge.
+* [Stagger] rules (2026-10-23, user: a combined design as for attack cancels, keywords, annotations, time through a magic
+  effect, an extra price): with bDodgeFromStagger off nothing escaped Rim Combat's staggers. Rim Combat staggers through
+  Modern Stagger Lock (github max-su-2019/ModernStaggerLock): its NotifyAnimationGraph hook sends StaggerStop before a
+  "quick recovery" event while the actor is staggering and MSL_IsStaggerRecovery is true; its clips open / close that
+  window with MSL_RecovWinOpen / MSL_RecovWinClose, Rim Combat sets the variable by timer or for its special staggers. The
+  escape now asks, in order: sNoEscapeKeyword (never), sAnyTimeKeyword (always), the recovery window (sRecoveryVariables,
+  sRecoveryOpenEvents / CloseEvents incl. our RDF_StaggerEscapeOpen / Close, closed again by sStaggerStartEvents),
+  fDodgeDelay (-1 = no time rule; an active effect with sDelayKeyword sets it by its magnitude, the lowest wins). Price:
+  fEscapeCost + the magnitudes of effects with sEscapeCostKeyword on top of fCost. Asked only while a dodge press waits.
+  Shipped default: bDodgeFromStagger=1, fDodgeDelay=-1 (only the recovery window); live inis keep their values.

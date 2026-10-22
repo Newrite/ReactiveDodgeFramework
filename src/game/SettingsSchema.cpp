@@ -150,7 +150,8 @@ namespace rdf::game::schema
 				Bool(Page::Rules, "AttackCancel", "bDodgeInRecovery", RDF_B(core.policy.cancelInRecovery)),
 				Bool(Page::Rules, "Jump", "bBlockDuringDodge", RDF_B(blockJumpDuringDodge)),
 				Bool(Page::Rules, "Stagger", "bDodgeFromStagger", RDF_B(dodgeFromStagger)),
-				Float(Page::Rules, "Stagger", "fDodgeDelay", RDF_F(staggerDodgeDelay), 0.0f, 3.0f, "%.2f s"),
+				Float(Page::Rules, "Stagger", "fDodgeDelay", RDF_F(staggerDodgeDelay), -1.0f, 3.0f, "%.2f s"),
+				Float(Page::Rules, "Stagger", "fEscapeCost", RDF_F(stagger.escapeCost), 0.0f, 100.0f, "%.0f"),
 				// --- debug
 				Bool(Page::Debug, "Dev", "bDevLog", RDF_B(devLog)),
 			};

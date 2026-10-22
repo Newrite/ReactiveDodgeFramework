@@ -319,7 +319,19 @@ namespace rdf::game
 		s.allowFirstPerson = ReadBool("Compat", "bAllowFirstPerson", s.allowFirstPerson);
 		s.blockJumpDuringDodge = ReadBool("Jump", "bBlockDuringDodge", s.blockJumpDuringDodge);
 		s.dodgeFromStagger = ReadBool("Stagger", "bDodgeFromStagger", s.dodgeFromStagger);
-		s.staggerDodgeDelay = ReadFloat("Stagger", "fDodgeDelay", s.staggerDodgeDelay, 0.0f, 10.0f);
+		s.staggerDodgeDelay = ReadFloat("Stagger", "fDodgeDelay", s.staggerDodgeDelay, -1.0f, 10.0f);
+		{
+			auto& st = s.stagger;
+			st.noEscapeKeyword = ReadString("Stagger", "sNoEscapeKeyword", st.noEscapeKeyword);
+			st.anyTimeKeyword = ReadString("Stagger", "sAnyTimeKeyword", st.anyTimeKeyword);
+			st.delayKeyword = ReadString("Stagger", "sDelayKeyword", st.delayKeyword);
+			st.recoveryVariables = Split(ReadString("Stagger", "sRecoveryVariables", Join(st.recoveryVariables)));
+			st.recoveryOpenEvents = Split(ReadString("Stagger", "sRecoveryOpenEvents", Join(st.recoveryOpenEvents)));
+			st.recoveryCloseEvents = Split(ReadString("Stagger", "sRecoveryCloseEvents", Join(st.recoveryCloseEvents)));
+			st.staggerStartEvents = Split(ReadString("Stagger", "sStaggerStartEvents", Join(st.staggerStartEvents)));
+			st.escapeCost = ReadFloat("Stagger", "fEscapeCost", st.escapeCost, 0.0f, 1000.0f);
+			st.escapeCostKeyword = ReadString("Stagger", "sEscapeCostKeyword", st.escapeCostKeyword);
+		}
 		s.suppressLegacyDodge = ReadBool("Compat", "bSuppressLegacyDodge", s.suppressLegacyDodge);
 		s.useTrueDirectionalMovement = ReadBool("Compat", "bUseTrueDirectionalMovement", s.useTrueDirectionalMovement);
 		s.usePrecision = ReadBool("Compat", "bUsePrecision", s.usePrecision);

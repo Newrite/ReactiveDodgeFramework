@@ -84,9 +84,28 @@ namespace rdf::game
 		// [Jump]
 		bool blockJumpDuringDodge{ true };  // a jump may leave a dodge only once its exit window is open
 
-		// [Stagger]
-		bool  dodgeFromStagger{ false };  // a dodge may cut a stagger short (meant to be unlocked later)
-		float staggerDodgeDelay{ 0.0f };  // seconds of stagger before that dodge is allowed
+		// [Stagger] when a dodge may cut a stagger short (DodgeAgent::StaggerEscape), first rule that decides wins:
+		// the no-escape keyword never, the any-time keyword always, the stagger framework's recovery window, the delay.
+		bool  dodgeFromStagger{ true };   // master switch: 0 = never
+		float staggerDodgeDelay{ -1.0f }; // seconds of stagger after which it is allowed anyway; < 0 = no time rule
+		struct StaggerSettings
+		{
+			// Keywords ("Plugin.esp|0xFormID" or an EditorID) on the actor, its race, a worn item or an active magic effect.
+			std::string noEscapeKeyword;
+			std::string anyTimeKeyword;
+			// An active magic effect with this keyword: its magnitude is the delay in seconds (the lowest one wins).
+			std::string delayKeyword;
+			// The stagger framework's recovery window: bool graph variables (true = open), or open / close events
+			// (also the RDF_StaggerEscapeOpen / Close clip annotations of a stagger clip). A new stagger closes it.
+			std::vector<std::string> recoveryVariables{ "MSL_IsStaggerRecovery" };
+			std::vector<std::string> recoveryOpenEvents{ "MSL_RecovWinOpen", "RDF_StaggerEscapeOpen" };
+			std::vector<std::string> recoveryCloseEvents{ "MSL_RecovWinClose", "RDF_StaggerEscapeClose" };
+			std::vector<std::string> staggerStartEvents{ "staggerStart", "StaggerPlayer" };
+			// The price: fEscapeCost on top of [Cost] fCost (same resource), plus the magnitudes of the active magic effects
+			// carrying sEscapeCostKeyword (negative ones make it cheaper; the total never goes below 0).
+			float       escapeCost{ 0.0f };
+			std::string escapeCostKeyword;
+		} stagger;
 
 		// [IFrames]
 		bool  iFrames{ true };

@@ -22,6 +22,8 @@ namespace rdf::game::graph
 			// [AttackCancel]
 			std::vector<RE::BSFixedString> recovery, recoveryEnd, attackStart;
 			RE::BSFixedString              cancelOpen{ "RDF_DodgeCancelOpen" }, cancelClose{ "RDF_DodgeCancelClose" };
+			// [Stagger]
+			std::vector<RE::BSFixedString> staggerOpen, staggerClose, staggerStart;
 		};
 		Names g_names;
 
@@ -44,6 +46,7 @@ namespace rdf::game::graph
 			std::optional<bool> attackCancel;
 			std::uint32_t       attackStarts{ 0 };  // attacks started (a new attack after a known one)
 			std::chrono::steady_clock::time_point lastAttackStart{};
+			bool                                  staggerRecovery{ false };  // the stagger's recovery window is open
 			// Several graphs (the player's first / third person): only this one counts; null = every graph.
 			const RE::BSTEventSource<RE::BSAnimationGraphEvent>* activeSource{ nullptr };
 		};
@@ -121,6 +124,11 @@ namespace rdf::game::graph
 				} else if (event->tag == g_names.cancelClose) {
 					g.attackCancel = false;
 				}
+				if (Contains(g_names.staggerStart, event->tag) || Contains(g_names.staggerClose, event->tag)) {
+					g.staggerRecovery = false;
+				} else if (Contains(g_names.staggerOpen, event->tag)) {
+					g.staggerRecovery = true;
+				}
 				if (event->tag == g_names.entered) {
 					++g.entered;
 					++g.depth;
@@ -179,6 +187,19 @@ namespace rdf::game::graph
 		}
 		for (const auto& n : ac.recoveryEndEvents) {
 			g_names.recoveryEnd.emplace_back(n);
+		}
+		const auto& st = Settings::Get().stagger;
+		g_names.staggerOpen.clear();
+		g_names.staggerClose.clear();
+		g_names.staggerStart.clear();
+		for (const auto& n : st.recoveryOpenEvents) {
+			g_names.staggerOpen.emplace_back(n);
+		}
+		for (const auto& n : st.recoveryCloseEvents) {
+			g_names.staggerClose.emplace_back(n);
+		}
+		for (const auto& n : st.staggerStartEvents) {
+			g_names.staggerStart.emplace_back(n);
 		}
 		for (const auto& n : ac.attackStartEvents) {
 			g_names.attackStart.emplace_back(n);
@@ -291,6 +312,20 @@ namespace rdf::game::graph
 	AttackWindows ReadAttack(RE::Actor* actor)
 	{
 		return WithActor(actor, [](ActorGraph& g) { return AttackWindows{ g.attackRecovery, g.attackCancel, g.attackStarts }; });
+	}
+
+	bool StaggerRecoveryOpen(RE::Actor* actor)
+	{
+		if (WithActor(actor, [](ActorGraph& g) { return g.staggerRecovery ? 1 : 0; })) {
+			return true;
+		}
+		for (const auto& name : Settings::Get().stagger.recoveryVariables) {
+			bool open = false;
+			if (actor->GetGraphVariableBool(name, open) && open) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	void ResetAttack(RE::Actor* actor)

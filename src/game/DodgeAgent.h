@@ -80,6 +80,7 @@ namespace rdf::game
 		void              CancelInto(RE::Actor* actor, const Decision& d);
 		bool              CancelInPlace(RE::Actor* actor, const Decision& d);
 		void              GateGraphEvents(RE::Actor* actor);
+		bool              StaggerEscape(RE::Actor* actor);
 		void              RetryDeferred(RE::Actor* actor);
 		void              VerifyAttack(RE::Actor* actor, float dt, std::uint8_t attackState);
 		void              TrackAttackFromDodge(RE::Actor* actor);
@@ -135,6 +136,7 @@ namespace rdf::game
 		float           orphanTime_{ 0.0f };      // graph in a dodge state we do not own, seconds
 		float           staggerAge_{ 0.0f };      // seconds the actor has been staggered
 		bool            escapeStagger_{ false };  // this tick a dodge may cut the stagger short
+		const char*     lastStaggerRule_{ nullptr };  // dev log: the [Stagger] rule last reported
 		bool            perfectFired_{ false };   // the current dodge already counted a perfect dodge
 		std::uint8_t    prevAttackState_{ 0 };    // vanilla attack state last tick (a new attack passes into Draw)
 		std::string     lastAttackLog_;           // dev log: the attack-cancel inputs last printed

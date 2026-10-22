@@ -38,7 +38,7 @@ namespace rdf::game::attack
 			RE::BGSKeyword* keyword{ nullptr };
 			bool            resolved{ false };
 		};
-		Cached g_light, g_power, g_noDodge;
+		Cached g_light, g_power, g_noDodge, g_staggerNo, g_staggerAny, g_staggerDelay, g_staggerCost;
 
 		RE::BGSKeyword* Resolve(Cached& c, const std::string& text)
 		{
@@ -110,6 +110,23 @@ namespace rdf::game::attack
 			}
 			return found;
 		}
+
+		// Active, not dispelled magic effects of the actor whose base effect carries the keyword.
+		template <class F>
+		void ForEffectsWith(RE::Actor* actor, RE::BGSKeyword* keyword, F&& f)
+		{
+			auto* target = actor ? actor->AsMagicTarget() : nullptr;
+			if (!keyword || !target) {
+				return;
+			}
+			target->VisitActiveEffects([&](RE::ActiveEffect* effect) {
+				const auto* base = effect ? effect->GetBaseObject() : nullptr;
+				if (base && !effect->flags.any(RE::ActiveEffect::Flag::kInactive, RE::ActiveEffect::Flag::kDispelled) && base->HasKeyword(keyword)) {
+					f(effect->GetMagnitude());
+				}
+				return RE::BSContainer::ForEachResult::kContinue;
+			});
+		}
 	}
 
 	bool AnyTime(RE::Actor* actor, bool power)
@@ -123,5 +140,33 @@ namespace rdf::game::attack
 	{
 		auto* keyword = Resolve(g_noDodge, Settings::Get().attackCancel.noDodgeKeyword);
 		return keyword && actor && HasKeyword(actor, keyword);
+	}
+
+	bool StaggerNoEscape(RE::Actor* actor)
+	{
+		auto* keyword = Resolve(g_staggerNo, Settings::Get().stagger.noEscapeKeyword);
+		return keyword && actor && HasKeyword(actor, keyword);
+	}
+
+	bool StaggerAnyTime(RE::Actor* actor)
+	{
+		auto* keyword = Resolve(g_staggerAny, Settings::Get().stagger.anyTimeKeyword);
+		return keyword && actor && HasKeyword(actor, keyword);
+	}
+
+	std::optional<float> StaggerDelayOverride(RE::Actor* actor)
+	{
+		std::optional<float> lowest;
+		ForEffectsWith(actor, Resolve(g_staggerDelay, Settings::Get().stagger.delayKeyword), [&](float magnitude) {
+			lowest = lowest ? std::min(*lowest, magnitude) : magnitude;
+		});
+		return lowest;
+	}
+
+	float StaggerEscapeCostBonus(RE::Actor* actor)
+	{
+		float sum = 0.0f;
+		ForEffectsWith(actor, Resolve(g_staggerCost, Settings::Get().stagger.escapeCostKeyword), [&](float magnitude) { sum += magnitude; });
+		return sum;
 	}
 }

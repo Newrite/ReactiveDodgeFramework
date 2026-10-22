@@ -1,5 +1,7 @@
 #pragma once
 
+#include <optional>
+
 namespace rdf::game::attack
 {
 	// [AttackCancel] sAnyTimeKeyword / sAnyTimePowerKeyword: whether `actor` may cancel its current attack (a power
@@ -8,4 +10,12 @@ namespace rdf::game::attack
 	bool AnyTime(RE::Actor* actor, bool power);
 	// [Rules] sNoDodgeKeyword on the actor (same sources): it cannot dodge.
 	bool DodgeForbidden(RE::Actor* actor);
+
+	// [Stagger] keywords (same sources as above).
+	bool StaggerNoEscape(RE::Actor* actor);
+	bool StaggerAnyTime(RE::Actor* actor);
+	// The lowest magnitude among the actor's active magic effects with sDelayKeyword (none: no override).
+	std::optional<float> StaggerDelayOverride(RE::Actor* actor);
+	// The summed magnitudes of the actor's active magic effects with sEscapeCostKeyword.
+	float StaggerEscapeCostBonus(RE::Actor* actor);
 }
