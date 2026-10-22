@@ -48,6 +48,12 @@
   <append path="#0095/variableNames"><hkcstring>RDF_ChainIndex</hkcstring></append>
   <append path="#0096/wordVariableValues"><hkobject><hkparam name="value">0</hkparam></hkobject></append>
   <append path="#0097/variableInfos"><hkobject><hkparam name="role"><hkobject><hkparam name="role">ROLE_DEFAULT</hkparam><hkparam name="flags">0</hkparam></hkobject></hkparam><hkparam name="type">VARIABLE_TYPE_INT32</hkparam></hkobject></append>
+  <append path="#0095/variableNames"><hkcstring>RDF_AttackFromDodge</hkcstring></append>
+  <append path="#0096/wordVariableValues"><hkobject><hkparam name="value">0</hkparam></hkobject></append>
+  <append path="#0097/variableInfos"><hkobject><hkparam name="role"><hkobject><hkparam name="role">ROLE_DEFAULT</hkparam><hkparam name="flags">0</hkparam></hkobject></hkparam><hkparam name="type">VARIABLE_TYPE_INT32</hkparam></hkobject></append>
+  <append path="#0095/variableNames"><hkcstring>RDF_AttackFromDodgeClip</hkcstring></append>
+  <append path="#0096/wordVariableValues"><hkobject><hkparam name="value">0</hkparam></hkobject></append>
+  <append path="#0097/variableInfos"><hkobject><hkparam name="role"><hkobject><hkparam name="role">ROLE_DEFAULT</hkparam><hkparam name="flags">0</hkparam></hkobject></hkparam><hkparam name="type">VARIABLE_TYPE_INT32</hkparam></hkobject></append>
   <insert path="">
     <hkobject name="#rdf$0" class="hkbBlendingTransitionEffect" signature="0xfd8584fe">
     <hkparam name="variableBindingSet">null</hkparam>

@@ -15,7 +15,7 @@ namespace rdf::game::graph
 	{
 		struct Names
 		{
-			RE::BSFixedString start, startB, chain, exit, entered, left, clip, speed, armBlend, isDodging, chainIndex;
+			RE::BSFixedString start, startB, chain, exit, entered, left, clip, speed, armBlend, isDodging, chainIndex, attackFromDodge, attackFromDodgeClip;
 			std::vector<RE::BSFixedString> windowOpen, windowClose;
 			// [AttackCancel]
 			std::vector<RE::BSFixedString> recovery, recoveryEnd, attackStart;
@@ -37,6 +37,7 @@ namespace rdf::game::graph
 			// the actor's current attack (attack frameworks, attack clip annotations); start over with each attack
 			bool                attackRecovery{ false };
 			std::optional<bool> attackCancel;
+			std::uint32_t       attackStarts{ 0 };  // attack-start events seen (a new attack after a known one)
 			// Several graphs (the player's first / third person): only this one counts; null = every graph.
 			const RE::BSTEventSource<RE::BSAnimationGraphEvent>* activeSource{ nullptr };
 		};
@@ -98,6 +99,7 @@ namespace rdf::game::graph
 				if (Contains(g_names.attackStart, event->tag)) {
 					g.attackRecovery = false;
 					g.attackCancel.reset();
+					++g.attackStarts;
 				} else if (Contains(g_names.recovery, event->tag)) {
 					g.attackRecovery = true;
 				} else if (Contains(g_names.recoveryEnd, event->tag)) {
@@ -146,6 +148,8 @@ namespace rdf::game::graph
 		g_names.armBlend = g.armBlend;
 		g_names.isDodging = g.isDodging;
 		g_names.chainIndex = g.chainIndex;
+		g_names.attackFromDodge = g.attackFromDodge;
+		g_names.attackFromDodgeClip = g.attackFromDodgeClip;
 		for (std::size_t i = 0; i < kWindowEventNames.size(); ++i) {
 			g_windowNames[i] = kWindowEventNames[i];
 		}
@@ -272,7 +276,7 @@ namespace rdf::game::graph
 
 	AttackWindows ReadAttack(RE::Actor* actor)
 	{
-		return WithActor(actor, [](ActorGraph& g) { return AttackWindows{ g.attackRecovery, g.attackCancel }; });
+		return WithActor(actor, [](ActorGraph& g) { return AttackWindows{ g.attackRecovery, g.attackCancel, g.attackStarts }; });
 	}
 
 	void ResetAttack(RE::Actor* actor)
@@ -313,6 +317,12 @@ namespace rdf::game::graph
 	void SetChainIndex(RE::Actor* actor, int chainIndex)
 	{
 		actor->SetGraphVariableInt(g_names.chainIndex, chainIndex);
+	}
+
+	void SetAttackFromDodge(RE::Actor* actor, int kind, int clip)
+	{
+		actor->SetGraphVariableInt(g_names.attackFromDodge, kind);
+		actor->SetGraphVariableInt(g_names.attackFromDodgeClip, clip);
 	}
 
 	void SendExit(RE::Actor* actor)

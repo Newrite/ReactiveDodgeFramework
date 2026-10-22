@@ -96,6 +96,7 @@ namespace rdf::game
 		}
 		if (actor) {
 			graph::SetChainIndex(actor, 0);
+			ClearAttackFromDodge(actor);
 			effects::SetInvulnerable(actor, false);
 			graph::UnregisterSink(actor);
 			effects::TakeDodgedHit(actor);
@@ -133,6 +134,7 @@ namespace rdf::game
 		const auto  state = engine::Read(actor, ownDodge);
 		const auto& settings = Settings::Get();
 		VerifyAttack(actor, dt, state.attackState);
+		TrackAttackFromDodge(actor);
 		EngineView  view;
 		view.engine = state.block;
 		staggerAge_ = state.block == EngineBlock::Staggered ? staggerAge_ + dt : 0.0f;
@@ -208,6 +210,8 @@ namespace rdf::game
 			AbandonGraph(actor, "3D reloaded");
 		} else {
 			graph::SetChainIndex(actor, 0);  // a loaded graph may carry a saved mid-chain value
+			fromDodge_.active = true;  // ... and a saved attack-from-dodge value
+			ClearAttackFromDodge(actor);
 		}
 	}
 
@@ -475,6 +479,8 @@ namespace rdf::game
 		}
 		inStateB_ = entry == graph::DodgeEntry::Chain ? !inStateB_ : entry == graph::DodgeEntry::StartB;
 		perfectFired_ = false;
+		lastClip_ = clip;
+		ClearAttackFromDodge(actor);
 		intoAttack_ = false;
 		pendingAttack_.reset();
 		if (escapeStagger_) {
@@ -517,6 +523,9 @@ namespace rdf::game
 			// graph into idle and back into a move start, which refuses attacks for ~0.25 s; the dodge's own speed made
 			// BFCO pick its sprint power attack.
 			intoAttack_ = true;
+			// For OAR conditions on the attack's clip: set before the attack starts (next tick, PerformPendingAttack).
+			graph::SetAttackFromDodge(actor, d.kind == DecisionKind::PowerAttack ? 2 : 1, lastClip_);
+			fromDodge_ = FromDodge{ true, false, 0 };
 			if (moveHeld_) {
 				carry_ = Settings::Get().core.motion.runSpeed;
 			}
@@ -547,6 +556,8 @@ namespace rdf::game
 		bool attacking = false;
 		actor->GetGraphVariableBool("IsAttacking"sv, attacking);
 		if (attacking) {  // ours, or one the framework started from a press after the dodge let go
+			fromDodge_.started = true;
+			fromDodge_.starts = graph::ReadAttack(actor).starts;
 			DevLog("{:08X}: {} from the dodge started after {:.3f}s ({} attempt(s), attack state {})", formID_, ToString(p.decision.kind),
 				p.age, p.attempts, attackState);
 			pendingAttack_.reset();
@@ -558,6 +569,7 @@ namespace rdf::game
 			logger::info("{:08X}: {} from the dodge never started ({} attempt(s) in {:.2f}s, attack state {}); the graph refused it",
 				formID_, ToString(p.decision.kind), p.attempts, p.age, attackState);
 			pendingAttack_.reset();
+			ClearAttackFromDodge(actor);
 			return;
 		}
 		// Only once the graph left our states (RDF_DodgeLeft): the attack then reaches the attack behaviors like any
@@ -576,6 +588,29 @@ namespace rdf::game
 		const bool performed = replayed || (driver_ && driver_->PerformAction(actor, p.decision));
 		DevLog("{:08X}: {} from the dodge, attempt #{} at {:.3f}s: {} {}", formID_, ToString(p.decision.kind), p.attempts, p.age,
 			replayed ? "replayed" : "own action", performed ? "accepted" : "refused");
+	}
+
+	// RDF_AttackFromDodge lasts for the attack the dodge became: it ends with that attack, or when the next one starts (a
+	// combo going on from it is made of ordinary attacks).
+	void DodgeAgent::TrackAttackFromDodge(RE::Actor* actor)
+	{
+		if (!fromDodge_.active || !fromDodge_.started) {
+			return;
+		}
+		bool attacking = false;
+		actor->GetGraphVariableBool("IsAttacking"sv, attacking);
+		if (!attacking || graph::ReadAttack(actor).starts != fromDodge_.starts) {
+			DevLog("{:08X}: the attack out of the dodge is over ({})", formID_, attacking ? "next attack" : "attack ended");
+			ClearAttackFromDodge(actor);
+		}
+	}
+
+	void DodgeAgent::ClearAttackFromDodge(RE::Actor* actor)
+	{
+		if (fromDodge_.active && actor) {
+			graph::SetAttackFromDodge(actor, 0, 0);
+		}
+		fromDodge_ = {};
 	}
 
 	void DodgeAgent::RetryDeferred(RE::Actor* actor)

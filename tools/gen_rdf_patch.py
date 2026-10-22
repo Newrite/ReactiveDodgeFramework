@@ -43,7 +43,9 @@ VARIABLES = [("RDF_DodgeClip", "VARIABLE_TYPE_INT32", 0),
              ("RDF_DodgeSpeed", "VARIABLE_TYPE_REAL", 1.0),
              ("RDF_IsDodging", "VARIABLE_TYPE_BOOL", 0),
              ("RDF_ArmBlend", "VARIABLE_TYPE_REAL", 0.0),    # 0 = arms follow the dodge clip, 1 = arms hold the weapon stance
-             ("RDF_ChainIndex", "VARIABLE_TYPE_INT32", 0)]   # which dodge of a chain: 0 first, 1 second, ...; 0 again after it
+             ("RDF_ChainIndex", "VARIABLE_TYPE_INT32", 0),   # which dodge of a chain: 0 first, 1 second, ...; 0 again after it
+             ("RDF_AttackFromDodge", "VARIABLE_TYPE_INT32", 0),      # the attack playing came out of a dodge: 1 attack, 2 power attack
+             ("RDF_AttackFromDodgeClip", "VARIABLE_TYPE_INT32", 0)]  # ... and that dodge's RDF_DodgeClip (valid while the above > 0)
 # variables that are only bound if they already exist in the CURRENT output 0_master (checked by the caller)
 OPTIONAL_BIND_VARS = ["DF_IsDodging"]          # TDM; not present in this modlist -> not created, not bound
 EXISTING_VARS = {"bAnimationDriven"}           # must already exist in vanilla 0_master (index 81)

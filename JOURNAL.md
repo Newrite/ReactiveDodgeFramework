@@ -421,3 +421,9 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   conditions hold now: its siblings in the idle tree, or for a top-level idle (BFCO's script idles have no parent) the
   other top-level idles of the same plugin, attacks of the same kind only (cached per idle), as BFCO does by calling
   conditions.IsTrue on its candidates.
+* RDF_AttackFromDodge / RDF_AttackFromDodgeClip (2026-10-22, user: a unique dodge attack with BFCO / MCO through OAR
+  conditions): RDF_IsDodging is already false when the attack out of a dodge starts (the attack waits for the graph to
+  leave the dodge), so two int variables (0_master 3P and 1P, Pandora staged 235/235, Nemesis 49/49) carry it: set at the
+  cancel, before the attack is performed one update later; cleared when IsAttacking drops, when an attack-start event
+  ([AttackCancel] sAttackStartEvents) comes after the one counted when the attack showed, when the attack never starts,
+  at a new dodge, on release and on a 3D (re)load. OAR example in ANIMATION_CONTRACT.md "Dodge attacks".

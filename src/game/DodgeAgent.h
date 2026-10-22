@@ -77,6 +77,8 @@ namespace rdf::game
 		void              CancelInto(RE::Actor* actor, const Decision& d);
 		void              RetryDeferred(RE::Actor* actor);
 		void              VerifyAttack(RE::Actor* actor, float dt, std::uint8_t attackState);
+		void              TrackAttackFromDodge(RE::Actor* actor);
+		void              ClearAttackFromDodge(RE::Actor* actor);
 		void              RollbackStart(RE::Actor* actor);
 		void              EndByGraph(const char* why);
 		void              AbandonGraph(RE::Actor* actor, const char* why);
@@ -110,6 +112,15 @@ namespace rdf::game
 			int      attempts{ 0 };  // 0 = not performed yet (the graph is still in the dodge)
 		};
 		std::optional<PendingAttack> pendingAttack_;
+		// RDF_AttackFromDodge is set for the attack the dodge became
+		struct FromDodge
+		{
+			bool          active{ false };   // the variable is set
+			bool          started{ false };  // the attack shows (IsAttacking)
+			std::uint32_t starts{ 0 };       // attack-start events seen when it did
+		};
+		FromDodge fromDodge_;
+		int       lastClip_{ 0 };  // RDF_DodgeClip of the current / last dodge
 
 		// bookkeeping
 		RE::NiAVObject* last3D_{ nullptr };

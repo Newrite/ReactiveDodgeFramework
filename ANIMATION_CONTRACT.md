@@ -77,6 +77,8 @@ Variables (appended to 0_master):
 | `RDF_IsDodging` | bool | false | bound to the state's BSIsActiveModifier; the plugin sets it true before `RDF_DodgeStart` and false after `RDF_DodgeLeft` |
 | `RDF_ArmBlend` | float | 0.0 | arm stance layer weight: 0 = arms follow the dodge clip, 1 = arms hold the current weapon stance (iRightHandType / iLeftHandType), linear in between. Write it before the dodge starts. 1 for side/back steps, 0 for rolls. See BEHAVIOR_INTEGRATION.md section 5 |
 | `RDF_ChainIndex` | int | 0 | which dodge of a chain is playing: 0 the first, 1 the second, 2 the third, ... Written by the plugin before `RDF_DodgeStart` / `RDF_DodgeStartB` / `RDF_DodgeChain` (so a clip generator or a transition condition sees the new value when the state is entered), and set back to 0 when the dodge is over however it ended (clip end, cancel into an attack / block, stagger, graph left, rollback, camera switch, the actor's agent released, a loaded save). Read-only for the graph: use it to swap clips or branch on the second / third dodge |
+| `RDF_AttackFromDodge` | int | 0 | the attack playing came out of a dodge: 1 attack, 2 power attack, 0 otherwise. Written by the plugin before that attack starts (one update after the graph left the dodge), back to 0 when the attack ends, when the next attack starts (a combo going on from it is made of ordinary attacks) or when a dodge starts. Meant for OAR conditions on attack clips, see "Dodge attacks" below |
+| `RDF_AttackFromDodgeClip` | int | 0 | the `RDF_DodgeClip` of that dodge (0..7 rolls F FR R BR B BL L FL, 8..15 steps, 16 / 17 neutral); valid while `RDF_AttackFromDodge` > 0 |
 | `bAnimationDriven` | bool (vanilla, index 81) | - | bound to bIsActive0 |
 | `DF_IsDodging` | - | - | TDM's variable. It does NOT exist in this modlist's 0_master, so it is neither created nor bound. If it ever exists, generate with `--with-df` and it is bound to bIsActive2. |
 
@@ -199,3 +201,24 @@ An annotation only becomes an event when its text is an event of the behavior fi
 registers both names in `1hm_behavior` (3rd and 1st person), where vanilla melee attacks and BFCO's attacks play.
 Attack clips of other behavior files (MCO's own `MCO_Attack.hkx`, `MCO_PowerAttack.hkx`, ...) need the two names in
 that file's event list; until then they fall back to the recovery rules (`MCO_IsInRecovery`).
+
+## Dodge attacks (OAR)
+
+A unique attack out of a dodge needs no behavior work: the attack the framework plays (vanilla, MCO, BFCO, any) is
+replaced by Open Animation Replacer while `RDF_AttackFromDodge` says it came out of a dodge. In the OAR submod that
+replaces the attack clip (for BFCO e.g. `BFCO_PowerAttackA.hkx`, for vanilla `1HM_AttackPowerForward.hkx`) add a
+condition comparing the graph variable:
+
+```json
+{
+    "condition": "CompareValues",
+    "Value A": { "graphVariable": "RDF_AttackFromDodge", "graphVariableType": "Int" },
+    "Comparison": "==",
+    "Value B": { "value": 2 }
+}
+```
+
+(2 = power attack, 1 = attack.) Add `RDF_AttackFromDodgeClip` for per-direction variants (4 / 12 = backward roll /
+step, 2 / 10 = right, 16 / 17 = neutral...). Give the submod a higher priority than the ordinary replacer of the same
+clip. OAR evaluates conditions when the clip starts; the plugin writes both variables before the attack starts and
+clears them when it is over, so the next attack of a combo plays its normal clip.

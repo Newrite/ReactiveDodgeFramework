@@ -38,6 +38,7 @@ namespace rdf::game::graph
 	{
 		bool                recovery{ false };
 		std::optional<bool> clipCancel;
+		std::uint32_t       starts{ 0 };  // attack-start events seen so far (changes when a new attack starts)
 	};
 	AttackWindows ReadAttack(RE::Actor* actor);
 	// A new attack started (or none runs): its recovery and clip windows start over.
@@ -56,6 +57,8 @@ namespace rdf::game::graph
 	bool SendStart(RE::Actor* actor, DodgeEntry entry, int clip, float animSpeed, float armStance, int chainIndex);
 	// RDF_ChainIndex alone: restored after a refused chain, 0 once no dodge runs.
 	void SetChainIndex(RE::Actor* actor, int chainIndex);
+	// RDF_AttackFromDodge (0 none, 1 attack, 2 power attack) and RDF_AttackFromDodgeClip.
+	void SetAttackFromDodge(RE::Actor* actor, int kind, int clip);
 	// The graph value of RDF_ArmBlend that gives `stanceShare` of the stance on the arms.
 	float ArmBlendWeight(float stanceShare);
 	void SendExit(RE::Actor* actor);

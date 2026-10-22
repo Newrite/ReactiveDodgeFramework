@@ -1475,6 +1475,8 @@
 				<hkcstring>RDF_IsDodging</hkcstring>
 				<hkcstring>RDF_ArmBlend</hkcstring>
 				<hkcstring>RDF_ChainIndex</hkcstring>
+				<hkcstring>RDF_AttackFromDodge</hkcstring>
+				<hkcstring>RDF_AttackFromDodgeClip</hkcstring>
 <!-- CLOSE -->
 			</hkparam>
 			<hkparam name="characterPropertyNames" numelements="15">

@@ -258,6 +258,8 @@ namespace rdf::game
 			g.armBlend = ReadString("Graph", "sVarArmBlend", g.armBlend);
 			g.isDodging = ReadString("Graph", "sVarIsDodging", g.isDodging);
 			g.chainIndex = ReadString("Graph", "sVarChainIndex", g.chainIndex);
+			g.attackFromDodge = ReadString("Graph", "sVarAttackFromDodge", g.attackFromDodge);
+			g.attackFromDodgeClip = ReadString("Graph", "sVarAttackFromDodgeClip", g.attackFromDodgeClip);
 			g.windowOpen = Split(ReadString("Graph", "sDodgeWindowOpenEvents", Join(g.windowOpen)));
 			g.windowClose = Split(ReadString("Graph", "sDodgeWindowCloseEvents", Join(g.windowClose)));
 			s.clipLength = ReadFloat("Graph", "fClipLength", s.clipLength, 0.05f, 10.0f);
