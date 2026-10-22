@@ -497,3 +497,8 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   fDodgeDelay (-1 = no time rule; an active effect with sDelayKeyword sets it by its magnitude, the lowest wins). Price:
   fEscapeCost + the magnitudes of effects with sEscapeCostKeyword on top of fCost. Asked only while a dodge press waits.
   Shipped default: bDodgeFromStagger=1, fDodgeDelay=-1 (only the recovery window); live inis keep their values.
+* Bow block button out of a dodge did nothing (2026-10-23): with a bow / crossbow the game's left button bashes
+  (1HM_Ready_State: bashStart for iRightHandType 7 / 12, blockStart excludes left hand 7 / 12). The block-button fix had
+  made LeftAttack of an empty left hand a block press and raised our blockStart, which the graph refuses with a bow. Now a
+  bow / crossbow in the right hand makes the left button an attack (replayed: tap = bash, hold = power bash) and
+  PrepareBash leaves wantBlocking alone for them.

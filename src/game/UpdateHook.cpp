@@ -253,6 +253,12 @@ namespace rdf::game::update
 		// an attack go: that attack is a bash. A tap or a power attack decides bash or power bash, as without a dodge.
 		bool Player::PrepareBash(RE::Actor* actor)
 		{
+			// A bow / crossbow bashes with the left button itself (an attack, replayed as such): no block to raise.
+			const auto* right = actor->GetEquippedObject(false);
+			const auto* weap = right ? right->As<RE::TESObjectWEAP>() : nullptr;
+			if (weap && (weap->IsBow() || weap->IsCrossbow())) {
+				return false;
+			}
 			auto&      state = actor->AsActorState()->actorState2;
 			const bool key = input::BlockHeld();
 			if (!key && !state.wantBlocking) {

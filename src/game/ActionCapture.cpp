@@ -81,12 +81,19 @@ namespace rdf::game::capture
 		// (pa_*) are paired idles, never held back.
 		Kind AttackKindOf(RE::Actor* actor, const RE::BSFixedString& animEvent);
 
-		// The left hand attacks only with a one-handed weapon or a staff in it (dual wield). Otherwise (empty, shield, torch, a
-		// two-handed weapon, bow, crossbow) the game's left button blocks: AttackBlockHandler 0x1407096B0 makes LeftAttack on
+		// The left hand attacks with a one-handed weapon or a staff in it (dual wield), and bashes with a bow / crossbow in the
+		// right one. Otherwise (empty, shield, torch, a two-handed weapon) the game's left button blocks: AttackBlockHandler 0x1407096B0 makes LeftAttack on
 		// the press and LeftPowerAttack once held past the power-attack delay, and the idle tree turns them into blockStart /
 		// a bash. Held back as attacks they came out of the dodge as a (power) bash.
 		bool LeftHandAttacks(RE::Actor* actor)
 		{
+			// With a bow or a crossbow the game's left button bashes (1HM_Ready_State: bashStart for iRightHandType 7 / 12;
+			// its blockStart excludes them): an attack to replay as it was, a tap bashing, a hold power-bashing.
+			const auto* right = actor->GetEquippedObject(false);
+			const auto* rightWeap = right ? right->As<RE::TESObjectWEAP>() : nullptr;
+			if (rightWeap && (rightWeap->IsBow() || rightWeap->IsCrossbow())) {
+				return true;
+			}
 			const auto* weapon = actor->GetEquippedObject(true);
 			const auto* weap = weapon ? weapon->As<RE::TESObjectWEAP>() : nullptr;
 			if (!weap) {
