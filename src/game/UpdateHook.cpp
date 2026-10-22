@@ -197,8 +197,7 @@ namespace rdf::game::update
 		motion::Reset();
 		graph::ClearEvents();
 		lockon::ReleaseYaw();
-		effects::SetInvulnerable(false);
-		effects::TakeDodgedHit();
+		effects::ClearInvulnerable();
 		UpdateSlowMotion(true);
 		perfectFired_ = false;
 		awaitingEnter_ = false;
@@ -438,7 +437,7 @@ namespace rdf::game::update
 	void Controller::HandleDodgedHits(RE::PlayerCharacter* player)
 	{
 		UpdateSlowMotion();
-		const auto attacker = effects::TakeDodgedHit();
+		const auto attacker = effects::TakeDodgedHit(player);
 		const auto& p = Settings::Get().perfect;
 		if (!attacker || !p.enabled || perfectFired_ || !core_->DodgeRunning()) {
 			return;
@@ -714,7 +713,7 @@ namespace rdf::game::update
 		requestedDistance_ = step.command.speed * dt;
 		requestedHeading_ = core_->Heading();
 
-		effects::SetInvulnerable(settings.iFrames && core_->Invulnerable(settings.iFrameStart, settings.iFrameEnd));
+		effects::SetInvulnerable(player, settings.iFrames && core_->Invulnerable(settings.iFrameStart, settings.iFrameEnd));
 
 		if (step.completed && !exitSent_) {
 			graph::SendExit(player);
@@ -735,7 +734,7 @@ namespace rdf::game::update
 		}
 		tailFrames_ = 30;  // follow the hand-over into locomotion in the dev trace
 		lockon::ReleaseYaw();
-		effects::SetInvulnerable(false);
+		effects::SetInvulnerable(RE::PlayerCharacter::GetSingleton(), false);
 		awaitingEnter_ = false;
 		charged_ = 0.0f;
 		DevLog("dodge stopped (phase {})", ToString(core_->Phase()));

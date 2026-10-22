@@ -6,9 +6,11 @@
 
 #include <algorithm>
 #include <atomic>
-#include <chrono>
 #include <cstring>
 #include <mutex>
+#include <shared_mutex>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace rdf::game::effects
@@ -18,16 +20,37 @@ namespace rdf::game::effects
 		constexpr std::uint32_t  kMeleeHitFunctionId = 37673;
 		constexpr std::ptrdiff_t kHitCallOffset = 0x3C0;
 
-		std::atomic<bool> g_invulnerable{ false };
+		// Everything here is per actor and keyed by Bethesda handles (native ref handles): a handle that once resolves
+		// to null stays null, so dead projectiles / actors are dropped by resolving, and NPC dodgers need nothing new.
 
-		// The last hit the i-frames dodged (any thread), for the perfect-dodge check on the main thread.
-		std::atomic<bool>          g_dodgedHit{ false };
-		std::atomic<std::uint32_t> g_dodgedHitAttacker{ 0 };  // ref handle, 0 = unknown
-
-		void NoteDodgedHit(std::uint32_t attackerHandle)
+		std::uint32_t HandleOf(const RE::TESObjectREFR* ref)
 		{
-			g_dodgedHitAttacker.store(attackerHandle, std::memory_order_relaxed);
-			g_dodgedHit.store(true, std::memory_order_release);
+			return ref ? const_cast<RE::TESObjectREFR*>(ref)->GetHandle().native_handle() : 0;
+		}
+
+		// ---- actors with active i-frames (main thread writes, hooks on any thread read)
+		std::shared_mutex          g_invulnerableLock;
+		std::vector<std::uint32_t> g_invulnerable;
+		std::atomic<int>           g_invulnerableCount{ 0 };  // lock-free "nobody is invulnerable" fast path
+
+		bool IsInvulnerable(const RE::TESObjectREFR* ref)
+		{
+			if (!ref || g_invulnerableCount.load(std::memory_order_acquire) == 0) {
+				return false;
+			}
+			const auto       handle = HandleOf(ref);
+			std::shared_lock lock(g_invulnerableLock);
+			return std::ranges::find(g_invulnerable, handle) != g_invulnerable.end();
+		}
+
+		// ---- hits the i-frames dodged, per dodger (any thread), for the perfect-dodge check on the main thread
+		std::mutex                                       g_dodgedHitsLock;
+		std::unordered_map<std::uint32_t, std::uint32_t> g_dodgedHits;  // dodger handle -> attacker handle (0 = unknown)
+
+		void NoteDodgedHit(const RE::TESObjectREFR* dodger, std::uint32_t attackerHandle)
+		{
+			std::scoped_lock lock(g_dodgedHitsLock);
+			g_dodgedHits.insert_or_assign(HandleOf(dodger), attackerHandle);
 		}
 
 		using ProcessHit_t = void (*)(RE::Actor*, RE::HitData*);
@@ -35,8 +58,8 @@ namespace rdf::game::effects
 
 		void HitThunk(RE::Actor* victim, RE::HitData* hit)
 		{
-			if (victim && victim->IsPlayerRef() && g_invulnerable.load(std::memory_order_acquire)) {
-				NoteDodgedHit(hit ? hit->aggressor.native_handle() : 0);
+			if (IsInvulnerable(victim)) {
+				NoteDodgedHit(victim, hit ? hit->aggressor.native_handle() : 0);
 				return;
 			}
 			g_originalHit(victim, hit);
@@ -54,73 +77,75 @@ namespace rdf::game::effects
 			const RE::NiPoint3*, RE::hkpCollidable*, std::int32_t, std::uint32_t);
 		using HandleHits_t = void (*)(RE::Projectile*, RE::hkpAllCdPointCollector*);
 
-		// A single projectile (arrow, bolt, fireball, grenade) that passed through the player during the i-frames keeps
-		// ignoring the player for the rest of its life, so i-frames ending while it still overlaps the player's
-		// collision do not land a late hit. Continuous ones (beams, flames, cones, barriers) are not remembered: they
-		// hurt again once the i-frames are over, as a stream should.
-		struct Dodged
-		{
-			const RE::Projectile*                 projectile;
-			RE::FormID                            formID;  // the pointer alone could be a new projectile later
-			std::chrono::steady_clock::time_point until;
-		};
-		constexpr auto      kRemember = std::chrono::seconds(30);  // longer than any projectile's flight
-		std::mutex          g_dodgedLock;
-		std::vector<Dodged> g_dodged;
+		// A projectile that passed through a dodger during its i-frames keeps ignoring that dodger for the rest of its
+		// life (arrows, bolts, missiles, grenades, cones), so i-frames ending while it still overlaps the dodger's
+		// collision do not land a late hit. Streams (beams, flames, barriers) are not remembered: they hurt again once
+		// the i-frames are over. Key: projectile handle << 32 | dodger handle; an entry goes once its projectile's
+		// handle resolves to null (the projectile is gone, and a dead handle never comes back).
+		std::mutex                        g_dodgedLock;
+		std::unordered_set<std::uint64_t> g_dodged;
+		std::atomic<bool>                 g_anyDodged{ false };
 
-		bool Remembered(const RE::Projectile* p)
+		std::uint64_t DodgedKey(std::uint32_t projectile, std::uint32_t dodger)
 		{
-			const auto       now = std::chrono::steady_clock::now();
-			std::scoped_lock lock(g_dodgedLock);
-			std::erase_if(g_dodged, [&](const Dodged& d) { return d.until < now; });
-			return std::ranges::any_of(g_dodged, [&](const Dodged& d) { return d.projectile == p && d.formID == p->GetFormID(); });
+			return (static_cast<std::uint64_t>(projectile) << 32) | dodger;
 		}
 
-		void Remember(const RE::Projectile* p)
+		bool Remembered(std::uint32_t projectile, std::uint32_t dodger)
+		{
+			if (!g_anyDodged.load(std::memory_order_acquire)) {
+				return false;
+			}
+			std::scoped_lock lock(g_dodgedLock);
+			return g_dodged.contains(DodgedKey(projectile, dodger));
+		}
+
+		void Remember(const RE::Projectile* p, std::uint32_t projectile, std::uint32_t dodger)
 		{
 			{
 				std::scoped_lock lock(g_dodgedLock);
-				for (const auto& d : g_dodged) {
-					if (d.projectile == p && d.formID == p->GetFormID()) {
-						return;
-					}
+				if (!g_dodged.insert(DodgedKey(projectile, dodger)).second) {
+					return;
 				}
-				g_dodged.push_back({ p, p->GetFormID(), std::chrono::steady_clock::now() + kRemember });
+				std::erase_if(g_dodged, [](std::uint64_t key) {
+					return !RE::TESObjectREFR::LookupByHandle(static_cast<RE::RefHandle>(key >> 32));
+				});
+				g_anyDodged.store(!g_dodged.empty(), std::memory_order_release);
 			}
-			DevLog("i-frames: projectile {:08X} passed through the player, ignored for the rest of its life", p->GetFormID());
+			DevLog("i-frames: projectile {:08X} passed through {:08X}, ignored by it for the rest of its life", p->GetFormID(), dodger);
 		}
 
 		std::atomic<const void*> g_lastStream{ nullptr };
 
-		// True: the projectile must not hit `target` now. `remember`: once through, it never hits the player again.
+		// True: projectile `p` must not hit `target` now. `remember`: once through, it never hits that target again.
 		bool Ignore(RE::Projectile* p, const RE::TESObjectREFR* target, bool remember)
 		{
-			if (!p || !target || !target->IsPlayerRef()) {
+			if (!p || !target) {
 				return false;
 			}
-			if (g_invulnerable.load(std::memory_order_acquire)) {
+			if (IsInvulnerable(target)) {
+				const auto dodger = HandleOf(target);
 				if (remember) {
-					Remember(p);
+					Remember(p, HandleOf(p), dodger);
 				} else if (g_lastStream.exchange(p) != p) {
-					DevLog("i-frames: stream projectile {:08X} skips the player while invulnerable", p->GetFormID());
+					DevLog("i-frames: stream projectile {:08X} skips {:08X} while invulnerable", p->GetFormID(), target->GetFormID());
 				}
-				NoteDodgedHit(p->GetProjectileRuntimeData().shooter.native_handle());
+				NoteDodgedHit(target, p->GetProjectileRuntimeData().shooter.native_handle());
 				return true;
 			}
-			return remember && Remembered(p);
+			return remember && g_anyDodged.load(std::memory_order_acquire) && Remembered(HandleOf(p), HandleOf(target));
 		}
 
-		RE::TESObjectREFR* PlayerIn(const RE::hkpAllCdPointCollector& collector)
+		// HandleHits: does this contact point touch an actor the projectile must not hit?
+		bool PointIgnored(RE::Projectile* p, const RE::hkpRootCdPoint& point)
 		{
-			for (const auto& hit : collector.hits) {
-				for (const auto* root : { hit.rootCollidableA, hit.rootCollidableB }) {
-					auto* ref = root ? RE::TESHavokUtilities::FindCollidableRef(*root) : nullptr;
-					if (ref && ref->IsPlayerRef()) {
-						return ref;
-					}
+			for (const auto* root : { point.rootCollidableA, point.rootCollidableB }) {
+				auto* ref = root ? RE::TESHavokUtilities::FindCollidableRef(*root) : nullptr;
+				if (ref && ref->Is(RE::FormType::ActorCharacter) && Ignore(p, ref, true)) {
+					return true;
 				}
 			}
-			return nullptr;
+			return false;
 		}
 
 		template <int Kind>
@@ -135,14 +160,36 @@ namespace rdf::game::effects
 				return addImpact(p, ref, loc, vel, collidable, shapeKey, flag);
 			}
 
+			// Only the contacts with actors the projectile must not hit are removed: one arrow can pass through several
+			// dodgers and still hit whoever stands behind them in the same step. The collector's points are compacted
+			// in place (hits._data / _size, 0x40 per hkpRootCdPoint as HandleHits itself indexes them) for the call and
+			// restored afterwards.
 			static void HandleHits(RE::Projectile* p, RE::hkpAllCdPointCollector* collector)
 			{
-				if (collector) {
-					if (auto* player = PlayerIn(*collector); player && Ignore(p, player, true)) {
-						return;  // this step's contacts are dropped; the projectile keeps flying
+				if (!collector || collector->hits._size <= 0 ||
+					(g_invulnerableCount.load(std::memory_order_acquire) == 0 && !g_anyDodged.load(std::memory_order_acquire))) {
+					handleHits(p, collector);
+					return;
+				}
+				auto&                             hits = collector->hits;
+				const std::int32_t                count = hits._size;
+				std::vector<RE::hkpRootCdPoint>   saved(hits._data, hits._data + count);
+				std::int32_t                      kept = 0;
+				for (std::int32_t i = 0; i < count; ++i) {
+					if (!PointIgnored(p, saved[i])) {
+						hits._data[kept++] = saved[i];
 					}
 				}
-				handleHits(p, collector);
+				if (kept == count) {
+					handleHits(p, collector);
+					return;
+				}
+				if (kept > 0) {
+					hits._size = kept;
+					handleHits(p, collector);  // the projectile keeps flying through the dodgers
+				}
+				std::copy(saved.begin(), saved.end(), hits._data);
+				hits._size = count;
 			}
 
 			static inline bool         remember = false;
@@ -150,7 +197,7 @@ namespace rdf::game::effects
 			static inline HandleHits_t handleHits = nullptr;
 		};
 
-		// `remember`: a projectile that passed through keeps ignoring the player (arrows, missiles, grenades, cones:
+		// `remember`: a projectile that passed through keeps ignoring that dodger (arrows, missiles, grenades, cones:
 		// a shout or breath cone outlives any i-frames). `contacts`: also drop the contact step (single-target types
 		// whose base HandleHits applies damage itself; never for cones, which hit several actors per step).
 		template <int Kind>
@@ -167,7 +214,7 @@ namespace rdf::game::effects
 
 		// ---- explosions: Explosion::ApplyToTargets (42677) asks HasLineOfSight (42680) per actor before it applies
 		// the explosion's HitData, casts its spell / enchantment on the actor and knocks it down. Answering "no line of
-		// sight" for an invulnerable player skips all three, the same as a wall in between.
+		// sight" for an invulnerable actor skips all three, the same as a wall in between.
 		constexpr std::uint32_t  kExplosionApplyId = 42677;
 		constexpr std::ptrdiff_t kLineOfSightCall = 0x38C;  // 0x1407399BC in 1.5.97
 		constexpr std::uint32_t  kLineOfSightId = 42680;
@@ -176,28 +223,28 @@ namespace rdf::game::effects
 
 		bool LineOfSightThunk(RE::Explosion* explosion, RE::NiPoint3* from, RE::Actor* target)
 		{
-			if (target && target->IsPlayerRef() && g_invulnerable.load(std::memory_order_acquire)) {
-				DevLog("i-frames: explosion {:08X} skips the player", explosion ? explosion->GetFormID() : 0u);
-				NoteDodgedHit(explosion ? explosion->GetExplosionRuntimeData().actorOwner.native_handle() : 0);
+			if (IsInvulnerable(target)) {
+				DevLog("i-frames: explosion {:08X} skips {:08X}", explosion ? explosion->GetFormID() : 0u, target->GetFormID());
+				NoteDodgedHit(target, explosion ? explosion->GetExplosionRuntimeData().actorOwner.native_handle() : 0);
 				return false;
 			}
 			return g_lineOfSight(explosion, from, target);
 		}
 	}
 
-	void ChargeCost(RE::PlayerCharacter* player, float cost)
+	void ChargeCost(RE::Actor* actor, float cost)
 	{
 		const auto resource = Settings::Get().costResource;
 		if (resource && cost > 0.0f) {
-			player->AsActorValueOwner()->DamageActorValue(*resource, cost);
+			actor->AsActorValueOwner()->DamageActorValue(*resource, cost);
 		}
 	}
 
-	void RefundCost(RE::PlayerCharacter* player, float cost)
+	void RefundCost(RE::Actor* actor, float cost)
 	{
 		const auto resource = Settings::Get().costResource;
 		if (resource && cost > 0.0f) {
-			player->AsActorValueOwner()->RestoreActorValue(*resource, cost);
+			actor->AsActorValueOwner()->RestoreActorValue(*resource, cost);
 		}
 	}
 
@@ -257,9 +304,9 @@ namespace rdf::game::effects
 		}
 		const auto result = api->AddPreHitCallback(SKSE::GetPluginHandle(), [](const PRECISION_API::PrecisionHitData& hit) {
 			PRECISION_API::PreHitCallbackReturn ret;
-			if (hit.target && hit.target->IsPlayerRef() && g_invulnerable.load(std::memory_order_acquire)) {
+			if (IsInvulnerable(hit.target)) {
 				ret.bIgnoreHit = true;
-				NoteDodgedHit(hit.attacker ? hit.attacker->GetHandle().native_handle() : 0);
+				NoteDodgedHit(hit.target, HandleOf(hit.attacker));
 				DevLog("i-frames: Precision hit from {:08X} ignored", hit.attacker ? hit.attacker->GetFormID() : 0u);
 			}
 			return ret;
@@ -267,16 +314,40 @@ namespace rdf::game::effects
 		logger::info("Precision pre-hit callback: {}", result == PRECISION_API::APIResult::OK ? "registered" : "already registered");
 	}
 
-	std::optional<std::uint32_t> TakeDodgedHit()
+	std::optional<std::uint32_t> TakeDodgedHit(RE::Actor* dodger)
 	{
-		if (!g_dodgedHit.exchange(false, std::memory_order_acq_rel)) {
+		std::scoped_lock lock(g_dodgedHitsLock);
+		const auto       it = g_dodgedHits.find(HandleOf(dodger));
+		if (it == g_dodgedHits.end()) {
 			return std::nullopt;
 		}
-		return g_dodgedHitAttacker.load(std::memory_order_relaxed);
+		const auto attacker = it->second;
+		g_dodgedHits.erase(it);
+		return attacker;
 	}
 
-	void SetInvulnerable(bool invulnerable)
+	void SetInvulnerable(RE::Actor* actor, bool invulnerable)
 	{
-		g_invulnerable.store(invulnerable, std::memory_order_release);
+		const auto       handle = HandleOf(actor);
+		std::unique_lock lock(g_invulnerableLock);
+		const auto       it = std::ranges::find(g_invulnerable, handle);
+		if (invulnerable && it == g_invulnerable.end() && handle) {
+			g_invulnerable.push_back(handle);
+		} else if (!invulnerable && it != g_invulnerable.end()) {
+			g_invulnerable.erase(it);
+		}
+		g_invulnerableCount.store(static_cast<int>(g_invulnerable.size()), std::memory_order_release);
 	}
+
+	void ClearInvulnerable()
+	{
+		{
+			std::unique_lock lock(g_invulnerableLock);
+			g_invulnerable.clear();
+			g_invulnerableCount.store(0, std::memory_order_release);
+		}
+		std::scoped_lock lock(g_dodgedHitsLock);
+		g_dodgedHits.clear();
+	}
+
 }

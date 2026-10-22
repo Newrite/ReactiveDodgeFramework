@@ -284,3 +284,9 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   Precision attacker, projectile shooter, explosion actorOwner); the controller counts the first one inside the
   perfect window per dodge. BSTimer::SetGlobalTimeMultiplier (66988) checked in IDA before use (target and current
   multiplier at 0x141E05B2C / 0x141E05B28). Events added to the patch: 223/223 Pandora, 33/33 Nemesis.
+* Per-actor hit side (2026-10-22, user guidance: Bethesda handles as keys, a dead handle stays dead; mechanics for NPCs
+  too): effects keeps the invulnerable actors as handles (shared_mutex + a count for the lock-free empty case), the
+  remembered projectiles as projectile<<32|dodger keys pruned by LookupByHandle returning null (no timer), and the
+  dodged hits per dodger. HandleHits no longer drops a whole contact step: it compacts the collector's points in place
+  without the ignored actors' contacts (hits._data/_size, 0x40 stride as HandleHits indexes them), calls the original,
+  and restores the points, so one projectile can pass several dodgers and still hit the one behind them.

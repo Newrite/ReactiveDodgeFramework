@@ -82,3 +82,12 @@
    perk / keyword gating through item 7.
 10. Lock-on style option: Souls-like FaceMotion rolls under lock-on (turn to the path, roll forward, turn back to the
     target in the recovery) next to today's directional clips.
+11. NPC dodges. The hit side is already per actor (2026-10-22): i-frames are a set of actor handles, remembered
+    projectiles are keyed by (projectile handle, dodger handle) and dropped when the projectile's handle resolves to
+    null, dodged hits are reported per dodger, a contact step only loses the dodgers' contacts (one arrow can pass
+    several dodgers and still hit the actor behind them). Still player-only: the Controller (input, camera, TDM,
+    FLICK), ReactiveCore owned by it, the motion hook's single command slot (MotionCommand has ownerFormId already),
+    the speed floor. Next: an actor-agnostic dodge component (one core per dodging actor, motion commands keyed by
+    actor handle), an AI side that decides when an NPC dodges (attack start / projectile launch events), and the
+    graph side for NPCs (humanoids share 0_master, so the states are already there).
+

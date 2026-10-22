@@ -5,8 +5,8 @@
 namespace rdf::game::effects
 {
 	// Spend / give back the configured dodge cost resource (no-op when the dodge is free).
-	void ChargeCost(RE::PlayerCharacter* player, float cost);
-	void RefundCost(RE::PlayerCharacter* player, float cost);
+	void ChargeCost(RE::Actor* actor, float cost);
+	void RefundCost(RE::Actor* actor, float cost);
 
 	// Melee hit hook (ID 37673 + 0x3C0): while invulnerable, hits on the player are dropped.
 	bool InstallIFrames();
@@ -21,10 +21,12 @@ namespace rdf::game::effects
 	// Precision's pre-hit callback (API V4): its hits on an invulnerable player are ignored before
 	// any hitstop or impact. Call once Precision is loaded (kPostPostLoad or later).
 	void InstallPrecisionIFrames();
-	// Main thread; read by the hit hook.
-	void SetInvulnerable(bool invulnerable);
-	// The last hit the i-frames dodged since the previous call (melee, Precision, projectile, explosion), as the
-	// attacker's ref handle (0 = unknown); nullopt when there was none. A projectile that is ignored because it
-	// already passed through does not count. Main thread.
-	std::optional<std::uint32_t> TakeDodgedHit();
+	// I-frames are per actor (player or NPC): the hooks drop hits on an actor while it is marked invulnerable.
+	// Main thread; read by the hooks on any thread.
+	void SetInvulnerable(RE::Actor* actor, bool invulnerable);
+	void ClearInvulnerable();  // every actor (load / reset)
+	// The last hit the i-frames dodged for `dodger` since the previous call (melee, Precision, projectile, explosion),
+	// as the attacker's ref handle (0 = unknown); nullopt when there was none. A projectile ignored because it already
+	// passed through does not count. Main thread.
+	std::optional<std::uint32_t> TakeDodgedHit(RE::Actor* dodger);
 }
