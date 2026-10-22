@@ -461,3 +461,13 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   "moving"; 8C5 needs no movement (IsSprinting == 0, not blocking). So [Input] sIdleReplayChains lists such chains
   (BFCO's by default); a held idle in a chain is chosen again from the start of its chain at the replay, an idle with a
   parent from its siblings in tree order, any other idle only replays itself. TopLevelIdles is gone.
+* Dodge inside 1hm_behavior, graph prototype (2026-10-23, user: try DMCO's way so attacks need no capture / replay): IDA
+  shows the graph accepts an action only when its event triggers a transition (BShkbAnimationGraph 0x140AEFEB0, hkbContext
+  flag), and DMCO's dodge sits in 1HM_Behavior with transitions on the attack events. `gen_rdf_patch.py --onehand` adds
+  RDF_1H_Dodge_A/B to 1HM_Behavior whose transitions are 1HM_Ready_State's own array (#4872), so every framework's exits
+  from Ready (BFCO, MCO...) leave the dodge too, plus start / exit wildcards. Embedded rather than a BRG file (Pandora would
+  not see a prebuilt hkx); not a switch in Ready's generator (SCAR and Nemesis zcbe replace those params). stage_pandora.py
+  gained --instance vanillalike (rdf already ticked there: its entry is switched, not duplicated); validate_onehand.py 63/63
+  on STB and VanillaLike; validate_rdf.py normalises interval event ids now (235/235). The plugin side is not written.
+  STB's bash key (STB.dll TKDodge::BashKey): attackStop if attacking, wantBlocking + blockStart, then DoAction RightAttack +
+  RightRelease once IsBlocking (retries blockStart up to 0.3 s); no power bash.

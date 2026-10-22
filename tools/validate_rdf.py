@@ -71,7 +71,7 @@ def md5(p):
     return hashlib.md5(open(p, "rb").read()).hexdigest()
 
 
-EVENT_ID_PARAMS = {"eventId", "id"}
+EVENT_ID_PARAMS = {"eventId", "id", "enterEventId", "exitEventId"}   # the last two: transition intervals
 VARIABLE_ID_PARAMS = {"variableIndex"}
 
 
@@ -101,6 +101,15 @@ def canon(g):
         c[key] += 1
         ex.setdefault(key, o)
     return c, ex
+
+
+def canon_class(g, cls):
+    """canon() restricted to the objects of one class."""
+    c = collections.Counter()
+    for o in g.order:
+        if o.cls == cls:
+            c[(o.cls, tuple((k, param_text(g, p)) for k, p in o.params.items()))] += 1
+    return c
 
 
 def sm_stats(g):

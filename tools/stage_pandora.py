@@ -36,6 +36,19 @@ PANDORA_MOD = "Pandora Behaviour Engine Plus"
 REAL_OUT = os.path.join(MODS, "Pandora")
 STAGE = os.path.join(ROOT, "_work", "pandora_stage")
 OUT_ROOT = os.path.join(ROOT, "_work", "pandora_test_out")
+# --instance: which MO2 instance the stage mirrors (MO2 folder, profile, Pandora output mod). Each has its own stage folder.
+INSTANCES = {
+    "stb": (MO2, "STB", "Pandora", STAGE),
+    "vanillalike": (r"F:\MO2 - Skyrim - VanillaLike", "Vanilla", "Output_Pandora", os.path.join(ROOT, "_work", "pandora_stage_vl")),
+}
+
+
+def use_instance(name):
+    global MO2, MODS, PROFILE, REAL_OUT, STAGE
+    MO2, profile, out_mod, STAGE = INSTANCES[name]
+    MODS = os.path.join(MO2, "mods")
+    PROFILE = os.path.join(MO2, "profiles", profile, "modlist.txt")
+    REAL_OUT = os.path.join(MODS, out_mod)
 
 FNIS_GLOBS = [  # relative to a mod folder; depth-limited on purpose (walking every mesh folder would take ages)
     "meshes/actors/*/animations/*/FNIS_*",
@@ -135,7 +148,9 @@ def main():
     ap.add_argument("--rebuild-base", action="store_true")
     ap.add_argument("--no-run", action="store_true")
     ap.add_argument("--timeout", type=int, default=900)
+    ap.add_argument("--instance", choices=sorted(INSTANCES), default="stb")
     a = ap.parse_args()
+    use_instance(a.instance)
 
     guard = [os.path.join(REAL_OUT, "Engine.log"), os.path.join(REAL_OUT, "Pandora_Engine", "ActiveMods.json"),
              os.path.join(REAL_OUT, "meshes", "actors", "character", "Behaviors", "0_Master.hkx")]
@@ -151,7 +166,10 @@ def main():
     # seed ActiveMods.json from the real one (same on/off + priorities), optionally add rdf
     real_am = os.path.join(REAL_OUT, "Pandora_Engine", "ActiveMods.json")
     am = json.load(open(real_am))
-    if a.rdf:
+    mine = [e for e in am if e["code"] == "rdf"]   # an instance where rdf is already ticked: switch that entry
+    for e in mine:
+        e["active"] = bool(a.rdf)
+    if a.rdf and not mine:
         am.append({"code": "rdf", "active": True, "priority": max(e["priority"] for e in am) + 1})
     json.dump(am, open(os.path.join(out, "Pandora_Engine", "ActiveMods.json"), "w"), indent=2)
 

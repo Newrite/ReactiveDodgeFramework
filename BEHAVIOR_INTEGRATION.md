@@ -255,3 +255,44 @@ objects lost = only the five modified nodes, hkxcheck equal to baseline, FirstPe
 byte-identical to the baseline run.
 Not tested in game: how the 1P arms look when entering/leaving the dodge pose, and whether the game reads the hand-type variables in
 the 1P graph as it does in 3P (they are vanilla variables used by the 1P graph itself).
+
+## 7. Prototype: the dodge inside 1hm_behavior (`--onehand`, not shipped)
+
+Why: the engine accepts an action only when its event triggers a transition among the graph's active nodes
+(`BShkbAnimationGraph` 0x140AEFEB0 calls the graph's `handleEvent` synchronously and reports the `hkbContext` flag "an event
+triggered a transition"). Our root-level dodge states switch 1hm_behavior off, so an attack pressed during them has no
+transition and is refused; that is why the plugin waits for the graph to leave the dodge and replays the attack. DMCO puts
+its dodge state inside `1HM_Behavior`, next to `AttackState`, with transitions on the attack events (straight into the nested
+attack state), so its attacks start at the press.
+
+What `python tools/gen_rdf_patch.py <out> --onehand` writes into `1hm_behavior` (3P; 313 nodes; the 0_master part is the
+regular one):
+- our events (all of `EVENTS`, `RDF_DodgeStart1H`, `RDF_DodgeStartB1H`, the cancel events) and variables (`VARIABLES`): the
+  clips play inside 1hm now, so their annotations must be 1hm events, and the bindings 1hm variables (shared by name);
+- `1HM_Behavior` (#4876) states `RDF_1H_Dodge_A` 9701 / `RDF_1H_Dodge_B` 9702: the same generator as the root states (arm
+  masks bound to 1hm's own character properties 7 RightArm / 5 LeftArm), and `transitions` = **1HM_Ready_State's own array
+  #4872**. Every exit an attack framework adds to Ready therefore also leaves the dodge (VanillaLike: BFCO's
+  `BFCOAttackstart_0` / `BfcoAttackSwim` and its nested attack states, MCO's sprint attacks, vanilla attacks of every hand and
+  direction, block, bash / power bash, bow, crossbow, shout). Vanilla references whole state machines from several parents
+  the same way (1hm `CrossBow_ReloadStandingBehavior` has 4), so a shared array is a known shape for Havok;
+- `1HM_Behavior` wildcards (#0088): `RDF_DodgeStart1H` -> 9701, `RDF_DodgeStartB1H` -> 9702 (a chain is the start of the
+  other state), `RDF_DodgeExit` -> Ready (0) under `RDF_IsDodging == 1`.
+
+Not a separate behavior file through a BRG (the first idea): Pandora only builds animation data and checks for the files it
+patches, a prebuilt hkx would be invisible to it; embedding reuses the generator and the staged validation as they are.
+Not a switch inside Ready's own generator either: SCAR replaces `#4874.generator` and Nemesis' core patch `zcbe` replaces
+`#3974.generator`; a new state only appends to lists, which merge.
+
+Validation: `tools/stage_pandora.py [--instance stb|vanillalike] --label <ref> --rdf behavior/Pandora_Engine/mod/rdf`, the same
+with `--label <proto> --rdf _work/proto_1hm/rdf`, then `tools/validate_onehand.py --ref <ref> --label <proto>`: 63/63 on STB
+(Ready has 40 transitions there) and on VanillaLike (60, BFCO / MCO / SCAR / Precision installed).
+
+What the plugin still has to do before this can run in game (none of it written yet):
+- send `RDF_DodgeStart1H` / `RDF_DodgeStartB1H` first and the root `RDF_DodgeStart` / `B` only when the 1H event is not
+  accepted (1hm not active: sheathed, magic, first person);
+- gate what reaches the graph during the dodge's locked part: actions are already held back (capture), but some mods send
+  graph events directly (InputSupport's and STB's `blockStart`), and `1HM_Behavior`'s wildcards (recoil, Precision's
+  `Collision_Recoil`, combat idles, BFCO / MCO sprint-attack wildcards) now apply to the dodge as well;
+- a held-back attack replayed at its window is accepted at once (no waiting for the graph to leave the dodge), and an attack
+  pressed inside the window simply passes;
+- first person and the Nemesis variant are not covered.
