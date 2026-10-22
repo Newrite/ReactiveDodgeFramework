@@ -60,8 +60,8 @@
    spec / build_clip_set.py ("n" direction, falling back to "b"), annotate_clips.py and ANIMATION_CONTRACT.md.
 5. Projectiles, every type (built 2026-10-22, waiting for an in-game check): AddImpact (vfunc 189) hooked on all seven
    projectile vtables, HandleHits (190) on the single ones; arrows, missiles and grenades that passed through during
-   i-frames are remembered and never hit the player late; beams, flames, cones and barriers skip the player only while
-   invulnerable. Test: arrows / firebolts through a dodge, a dodge late in a bolt's flight, Flames and Sparks streams,
+   i-frames are remembered and never hit the player late, and so are cones (shouts, breath: a cone outlives any
+   i-frames), per target only; beams, flames and barriers skip the player only while invulnerable. Test: arrows / firebolts through a dodge, a dodge late in a bolt's flight, Flames and Sparks streams,
    a Wall of Flames, a thrown grenade if any mod has one.
 6. Explosions (built 2026-10-22, waiting for an in-game check): Explosion::ApplyToTargets' line-of-sight check says
    "blocked" for an invulnerable player (no damage, spell or knockdown). Test: fireball blast during i-frames vs after,
@@ -74,7 +74,11 @@
    descriptor annotation at 0.0 (versioned, e.g. RDF_Clip.v1|dur=..|dist=..|motion=root) and a root-motion mode that
    follows the clip's own animmotion. Per actor / NPCs later.
 8. Exit speed from the real locomotion speed (movement type run/walk speed x SpeedMult, sprint) instead of fRunSpeed.
-9. Perfect dodge: a hit inside the first part of the i-frames (or measured from the attacker's swing start) sends
-   graph events to both actors and a hook for slow motion; perk / keyword gated through item 7.
+9. Perfect dodge, base (built 2026-10-22, waiting for an in-game check): a hit the i-frames dodged (melee, Precision,
+   projectile, explosion) inside [fPerfectWindowStart, fPerfectWindowEnd] counts once per dodge: graph events
+   RDF_PerfectDodge (player) / RDF_PerfectDodged (attacker, both registered in the patch), the SKSE mod event
+   RDF_PerfectDodge (sender = attacker, numArg = dodge time), optional slow motion ([Perfect], FLICK Rules page).
+   Next: a window measured from the attacker's swing start (reaction-based), clip annotations RDF_PerfectStart/End,
+   perk / keyword gating through item 7.
 10. Lock-on style option: Souls-like FaceMotion rolls under lock-on (turn to the path, roll forward, turn back to the
     target in the recovery) next to today's directional clips.

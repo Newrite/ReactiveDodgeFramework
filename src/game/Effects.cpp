@@ -20,12 +20,23 @@ namespace rdf::game::effects
 
 		std::atomic<bool> g_invulnerable{ false };
 
+		// The last hit the i-frames dodged (any thread), for the perfect-dodge check on the main thread.
+		std::atomic<bool>          g_dodgedHit{ false };
+		std::atomic<std::uint32_t> g_dodgedHitAttacker{ 0 };  // ref handle, 0 = unknown
+
+		void NoteDodgedHit(std::uint32_t attackerHandle)
+		{
+			g_dodgedHitAttacker.store(attackerHandle, std::memory_order_relaxed);
+			g_dodgedHit.store(true, std::memory_order_release);
+		}
+
 		using ProcessHit_t = void (*)(RE::Actor*, RE::HitData*);
 		ProcessHit_t g_originalHit = nullptr;
 
 		void HitThunk(RE::Actor* victim, RE::HitData* hit)
 		{
 			if (victim && victim->IsPlayerRef() && g_invulnerable.load(std::memory_order_acquire)) {
+				NoteDodgedHit(hit ? hit->aggressor.native_handle() : 0);
 				return;
 			}
 			g_originalHit(victim, hit);
@@ -81,21 +92,22 @@ namespace rdf::game::effects
 
 		std::atomic<const void*> g_lastStream{ nullptr };
 
-		// True: the projectile must not hit `target` now.
-		bool Ignore(RE::Projectile* p, const RE::TESObjectREFR* target, bool single)
+		// True: the projectile must not hit `target` now. `remember`: once through, it never hits the player again.
+		bool Ignore(RE::Projectile* p, const RE::TESObjectREFR* target, bool remember)
 		{
 			if (!p || !target || !target->IsPlayerRef()) {
 				return false;
 			}
 			if (g_invulnerable.load(std::memory_order_acquire)) {
-				if (single) {
+				if (remember) {
 					Remember(p);
 				} else if (g_lastStream.exchange(p) != p) {
 					DevLog("i-frames: stream projectile {:08X} skips the player while invulnerable", p->GetFormID());
 				}
+				NoteDodgedHit(p->GetProjectileRuntimeData().shooter.native_handle());
 				return true;
 			}
-			return single && Remembered(p);
+			return remember && Remembered(p);
 		}
 
 		RE::TESObjectREFR* PlayerIn(const RE::hkpAllCdPointCollector& collector)
@@ -117,7 +129,7 @@ namespace rdf::game::effects
 			static RE::Projectile::ImpactData* AddImpact(RE::Projectile* p, RE::TESObjectREFR* ref, const RE::NiPoint3* loc,
 				const RE::NiPoint3* vel, RE::hkpCollidable* collidable, std::int32_t shapeKey, std::uint32_t flag)
 			{
-				if (Ignore(p, ref, single)) {
+				if (Ignore(p, ref, remember)) {
 					return nullptr;
 				}
 				return addImpact(p, ref, loc, vel, collidable, shapeKey, flag);
@@ -133,21 +145,24 @@ namespace rdf::game::effects
 				handleHits(p, collector);
 			}
 
-			static inline bool         single = false;
+			static inline bool         remember = false;
 			static inline AddImpact_t  addImpact = nullptr;
 			static inline HandleHits_t handleHits = nullptr;
 		};
 
+		// `remember`: a projectile that passed through keeps ignoring the player (arrows, missiles, grenades, cones:
+		// a shout or breath cone outlives any i-frames). `contacts`: also drop the contact step (single-target types
+		// whose base HandleHits applies damage itself; never for cones, which hit several actors per step).
 		template <int Kind>
-		void HookProjectile(REL::VariantID vtableId, const char* name, bool single)
+		void HookProjectile(REL::VariantID vtableId, const char* name, bool remember, bool contacts)
 		{
 			REL::Relocation<std::uintptr_t> vtbl{ vtableId };
-			ProjectileHooks<Kind>::single = single;
+			ProjectileHooks<Kind>::remember = remember;
 			ProjectileHooks<Kind>::addImpact = reinterpret_cast<AddImpact_t>(vtbl.write_vfunc(kAddImpactVfunc, ProjectileHooks<Kind>::AddImpact));
-			if (single) {
+			if (contacts) {
 				ProjectileHooks<Kind>::handleHits = reinterpret_cast<HandleHits_t>(vtbl.write_vfunc(kHandleHitsVfunc, ProjectileHooks<Kind>::HandleHits));
 			}
-			logger::info("projectile i-frames: {} ({})", name, single ? "single: AddImpact + HandleHits, remembered" : "stream: AddImpact");
+			logger::info("projectile i-frames: {} (AddImpact{}{})", name, contacts ? " + HandleHits" : "", remember ? ", remembered" : ", while invulnerable");
 		}
 
 		// ---- explosions: Explosion::ApplyToTargets (42677) asks HasLineOfSight (42680) per actor before it applies
@@ -163,6 +178,7 @@ namespace rdf::game::effects
 		{
 			if (target && target->IsPlayerRef() && g_invulnerable.load(std::memory_order_acquire)) {
 				DevLog("i-frames: explosion {:08X} skips the player", explosion ? explosion->GetFormID() : 0u);
+				NoteDodgedHit(explosion ? explosion->GetExplosionRuntimeData().actorOwner.native_handle() : 0);
 				return false;
 			}
 			return g_lineOfSight(explosion, from, target);
@@ -187,13 +203,13 @@ namespace rdf::game::effects
 
 	void InstallProjectileIFrames()
 	{
-		HookProjectile<0>(RE::VTABLE_ArrowProjectile[0], "ArrowProjectile", true);
-		HookProjectile<1>(RE::VTABLE_MissileProjectile[0], "MissileProjectile", true);
-		HookProjectile<2>(RE::VTABLE_GrenadeProjectile[0], "GrenadeProjectile", true);
-		HookProjectile<3>(RE::VTABLE_BeamProjectile[0], "BeamProjectile", false);
-		HookProjectile<4>(RE::VTABLE_ConeProjectile[0], "ConeProjectile", false);
-		HookProjectile<5>(RE::VTABLE_FlameProjectile[0], "FlameProjectile", false);
-		HookProjectile<6>(RE::VTABLE_BarrierProjectile[0], "BarrierProjectile", false);
+		HookProjectile<0>(RE::VTABLE_ArrowProjectile[0], "ArrowProjectile", true, true);
+		HookProjectile<1>(RE::VTABLE_MissileProjectile[0], "MissileProjectile", true, true);
+		HookProjectile<2>(RE::VTABLE_GrenadeProjectile[0], "GrenadeProjectile", true, true);
+		HookProjectile<3>(RE::VTABLE_ConeProjectile[0], "ConeProjectile", true, false);
+		HookProjectile<4>(RE::VTABLE_BeamProjectile[0], "BeamProjectile", false, false);
+		HookProjectile<5>(RE::VTABLE_FlameProjectile[0], "FlameProjectile", false, false);
+		HookProjectile<6>(RE::VTABLE_BarrierProjectile[0], "BarrierProjectile", false, false);
 	}
 
 	bool InstallExplosionIFrames()
@@ -243,11 +259,20 @@ namespace rdf::game::effects
 			PRECISION_API::PreHitCallbackReturn ret;
 			if (hit.target && hit.target->IsPlayerRef() && g_invulnerable.load(std::memory_order_acquire)) {
 				ret.bIgnoreHit = true;
+				NoteDodgedHit(hit.attacker ? hit.attacker->GetHandle().native_handle() : 0);
 				DevLog("i-frames: Precision hit from {:08X} ignored", hit.attacker ? hit.attacker->GetFormID() : 0u);
 			}
 			return ret;
 		});
 		logger::info("Precision pre-hit callback: {}", result == PRECISION_API::APIResult::OK ? "registered" : "already registered");
+	}
+
+	std::optional<std::uint32_t> TakeDodgedHit()
+	{
+		if (!g_dodgedHit.exchange(false, std::memory_order_acq_rel)) {
+			return std::nullopt;
+		}
+		return g_dodgedHitAttacker.load(std::memory_order_relaxed);
 	}
 
 	void SetInvulnerable(bool invulnerable)

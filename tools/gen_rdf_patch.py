@@ -27,6 +27,9 @@ EVENTS = ["RDF_DodgeStart", "RDF_DodgeStartB", "RDF_DodgeChain", "RDF_DodgeExit"
 ANNOTATION_EVENTS = ["RDF_Windows", "RDF_IFrameStart", "RDF_IFrameEnd", "RDF_ChainOpen",
                      "RDF_AttackOpen", "RDF_BlockOpen", "RDF_ExitOpen"]
 EVENTS += ANNOTATION_EVENTS
+# Sent by the plugin on a perfect dodge (to the player and to the attacker); registered so behaviors, OAR and other
+# plugins' graph-event sinks receive them (NotifyAnimationGraph drops a name the graph does not know).
+EVENTS += ["RDF_PerfectDodge", "RDF_PerfectDodged"]
 # (name, type, initial value)
 VARIABLES = [("RDF_DodgeClip", "VARIABLE_TYPE_INT32", 0),
              ("RDF_DodgeSpeed", "VARIABLE_TYPE_REAL", 1.0),

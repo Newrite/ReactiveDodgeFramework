@@ -157,3 +157,11 @@ The same events/variables work in first person: send `RDF_DodgeStart`/`StartB`/`
 current weapon-ready 1P idle (no dodge clips), sets `bAnimationDriven` while `RDF_IsDodging` is true, sends `RDF_DodgeEntered` /
 `RDF_DodgeLeft`. `RDF_DodgeClip`, `RDF_DodgeSpeed`, `RDF_ArmBlend` exist in the 1P graph but are not used. The clip-set files in
 section 1 are 3P only. See BEHAVIOR_INTEGRATION.md section 6.
+
+## Perfect dodge events (plugin -> graphs)
+| event | sent to | when |
+|---|---|---|
+| `RDF_PerfectDodge` | the player | a hit the i-frames dodged inside the perfect window, once per dodge |
+| `RDF_PerfectDodged` | the attacker | the same moment (humanoid graphs; creature graphs do not know the event) |
+Both are registered in the patch's event list, so behaviors, OAR conditions and other plugins' graph-event sinks can
+react to them. Papyrus gets the SKSE mod event `RDF_PerfectDodge` (sender = attacker, numArg = dodge time).

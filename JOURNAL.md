@@ -278,3 +278,9 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   Explosion::ApplyToTargets (42677+0x38C) answers "blocked" for an invulnerable player. IDA db annotated (13 names).
   Side note: the plugin's VTABLE_*[0] are the primary vtables; the last VariantID of CommonLib's arrays is the +0x38
   subobject's vtable (a lookup mistake of mine while checking, not a plugin bug).
+* Cones remembered, perfect-dodge base (2026-10-22): cones are shouts and breath (user: without memory they cannot be
+  dodged), so they are remembered like arrows but only through AddImpact (they hit several actors per step).
+  Every hook that drops a hit because of the i-frames reports the attacker's handle (melee HitData aggressor,
+  Precision attacker, projectile shooter, explosion actorOwner); the controller counts the first one inside the
+  perfect window per dodge. BSTimer::SetGlobalTimeMultiplier (66988) checked in IDA before use (target and current
+  multiplier at 0x141E05B2C / 0x141E05B28). Events added to the patch: 223/223 Pandora, 33/33 Nemesis.

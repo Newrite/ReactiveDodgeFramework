@@ -313,6 +313,15 @@ namespace rdf::game
 		s.suppressLegacyDodge = ReadBool("Compat", "bSuppressLegacyDodge", s.suppressLegacyDodge);
 		s.useTrueDirectionalMovement = ReadBool("Compat", "bUseTrueDirectionalMovement", s.useTrueDirectionalMovement);
 		s.usePrecision = ReadBool("Compat", "bUsePrecision", s.usePrecision);
+		auto& pf = s.perfect;
+		pf.enabled = ReadBool("Perfect", "bPerfectDodge", pf.enabled);
+		pf.windowStart = ReadFloat("Perfect", "fPerfectWindowStart", pf.windowStart, 0.0f, 3.0f);
+		pf.windowEnd = ReadFloat("Perfect", "fPerfectWindowEnd", pf.windowEnd, 0.0f, 3.0f);
+		pf.slowMotion = ReadFloat("Perfect", "fPerfectSlowMotion", pf.slowMotion, 0.05f, 1.0f);
+		pf.slowMotionDuration = ReadFloat("Perfect", "fPerfectSlowMotionDuration", pf.slowMotionDuration, 0.0f, 5.0f);
+		pf.playerEvent = ReadString("Perfect", "sPlayerEvent", pf.playerEvent);
+		pf.attackerEvent = ReadString("Perfect", "sAttackerEvent", pf.attackerEvent);
+		pf.modEvent = ReadString("Perfect", "sModEvent", pf.modEvent);
 		s.devLog = ReadBool("Dev", "bDevLog", s.devLog);
 		Commit(s);
 

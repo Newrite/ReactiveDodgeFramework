@@ -11,6 +11,7 @@
 #include "Settings.h"
 #include "core/ReactiveCore.h"
 
+#include <chrono>
 #include <memory>
 
 // wingdi.h defines GetObject as a macro, which breaks BGSDefaultObjectManager::GetObject.
@@ -64,6 +65,9 @@ namespace rdf::game::update
 			void       EndByGraph(const char* why);
 			void       AbandonGraph(RE::PlayerCharacter* player, const char* why);
 			void       ReleaseOrphanedState(RE::PlayerCharacter* player, float dt);
+			void       HandleDodgedHits(RE::PlayerCharacter* player);
+			void       StartSlowMotion();
+			void       UpdateSlowMotion(bool force = false);
 			void       StepAndPublish(RE::PlayerCharacter* player, float dt);
 			void       OnStopped();
 			void       Trace(RE::PlayerCharacter* player);
@@ -88,13 +92,17 @@ namespace rdf::game::update
 			float           charged_{ 0.0f };
 			RejectReason    lastReject_{ RejectReason::None };
 			CommandKind     lastRejectCommand_{ CommandKind::Dodge };
-			float           orphanTime_{ 0.0f };
+			float           orphanTime_{ 0.0f };       // graph in a dodge state we do not own, seconds
 			std::uint32_t   seenGeneration_{ 0 };
-			float           staggerAge_{ 0.0f };
+			float           staggerAge_{ 0.0f };       // seconds the player has been staggered
 			float           startCameraYaw_{ 0.0f };   // camera yaw when the current dodge started
 			bool            freeRotation_{ false };    // TDM 360, sampled while no dodge runs
-			const char*     modeName_{ "" };       // seconds the player has been staggered
-			bool            escapeStagger_{ false };   // this tick a dodge may cut the stagger short  // graph in a dodge state we do not own, seconds
+			const char*     modeName_{ "" };
+			bool            escapeStagger_{ false };   // this tick a dodge may cut the stagger short
+			bool            perfectFired_{ false };    // the current dodge already counted a perfect dodge
+			bool            slowMotion_{ false };      // perfect-dodge slow motion running
+			float           slowMotionRestore_{ 1.0f };
+			std::chrono::steady_clock::time_point slowMotionUntil_{};
 			int             tailFrames_{ 0 };   // dev trace keeps running this many ticks after a dodge
 			bool            inStateB_{ true };  // dodge state used last; the first dodge goes to A
 			bool            moveHeld_{ false };
@@ -190,6 +198,9 @@ namespace rdf::game::update
 		graph::ClearEvents();
 		lockon::ReleaseYaw();
 		effects::SetInvulnerable(false);
+		effects::TakeDodgedHit();
+		UpdateSlowMotion(true);
+		perfectFired_ = false;
 		awaitingEnter_ = false;
 		exitSent_ = true;
 		wasRunning_ = false;
@@ -226,6 +237,7 @@ namespace rdf::game::update
 		MaintainBlock(player);
 		HandleGraphEvents(player);
 		ReleaseOrphanedState(player, dt);
+		HandleDodgedHits(player);
 		RetryDeferred(player);
 
 		const bool           ownDodge = core_->DodgeRunning() || awaitingEnter_;
@@ -421,6 +433,72 @@ namespace rdf::game::update
 		}
 	}
 
+	// Perfect dodge: a hit the i-frames dodged (melee, Precision, projectile, explosion) inside [fPerfectWindowStart,
+	// fPerfectWindowEnd] of the dodge, once per dodge. It tells both graphs and Papyrus, and can slow time down.
+	void Controller::HandleDodgedHits(RE::PlayerCharacter* player)
+	{
+		UpdateSlowMotion();
+		const auto attacker = effects::TakeDodgedHit();
+		const auto& p = Settings::Get().perfect;
+		if (!attacker || !p.enabled || perfectFired_ || !core_->DodgeRunning()) {
+			return;
+		}
+		const float t = core_->ActionTime();
+		if (t < p.windowStart || t > p.windowEnd) {
+			DevLog("dodged a hit at t={:.3f}, outside the perfect window [{:.2f}, {:.2f}]", t, p.windowStart, p.windowEnd);
+			return;
+		}
+		perfectFired_ = true;
+		const auto ref = *attacker ? RE::TESObjectREFR::LookupByHandle(*attacker) : RE::NiPointer<RE::TESObjectREFR>{};
+		auto*      actor = ref ? ref->As<RE::Actor>() : nullptr;
+		logger::info("perfect dodge at t={:.3f} against {:08X}", t, ref ? ref->GetFormID() : 0u);
+		if (!p.playerEvent.empty()) {
+			player->NotifyAnimationGraph(p.playerEvent);
+		}
+		if (actor && !p.attackerEvent.empty()) {
+			actor->NotifyAnimationGraph(p.attackerEvent);
+		}
+		if (!p.modEvent.empty()) {
+			if (auto* source = SKSE::GetModCallbackEventSource()) {
+				SKSE::ModCallbackEvent event{ p.modEvent, RE::BSFixedString(), t, ref.get() };
+				source->SendEvent(&event);
+			}
+		}
+		if (p.slowMotion < 1.0f && p.slowMotionDuration > 0.0f) {
+			StartSlowMotion();
+		}
+	}
+
+	// BSTimer::SetGlobalTimeMultiplier (66988, verified in IDA: sets the target multiplier and, unless the ini asks
+	// for a slow change, the current one). The duration is wall-clock time, so the slow motion does not stretch itself.
+	void Controller::StartSlowMotion()
+	{
+		const auto& p = Settings::Get().perfect;
+		auto*       timer = RE::BSTimer::GetSingleton();
+		if (!timer) {
+			return;
+		}
+		if (!slowMotion_) {
+			slowMotionRestore_ = RE::BSTimer::QGlobalTimeMultiplier();
+		}
+		timer->SetGlobalTimeMultiplier(p.slowMotion * slowMotionRestore_, true);
+		slowMotion_ = true;
+		slowMotionUntil_ = std::chrono::steady_clock::now() +
+		                   std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<float>(p.slowMotionDuration));
+		DevLog("perfect dodge slow motion x{:.2f} for {:.2f}s", p.slowMotion, p.slowMotionDuration);
+	}
+
+	void Controller::UpdateSlowMotion(bool force)
+	{
+		if (!slowMotion_ || (!force && std::chrono::steady_clock::now() < slowMotionUntil_)) {
+			return;
+		}
+		if (auto* timer = RE::BSTimer::GetSingleton()) {
+			timer->SetGlobalTimeMultiplier(slowMotionRestore_, true);
+		}
+		slowMotion_ = false;
+	}
+
 	int Controller::ClipIndex(float angleDeg, bool keepFacing)
 	{
 		if (!keepFacing) {
@@ -536,6 +614,7 @@ namespace rdf::game::update
 			return;
 		}
 		inStateB_ = entry == graph::DodgeEntry::Chain ? !inStateB_ : entry == graph::DodgeEntry::StartB;
+		perfectFired_ = false;
 		if (firstPerson) {
 			DevLog("1P dodge: mouse turn rate {:.3f} rad/s x {:.2f}", engine::LookTurnRate(player), settings.firstPersonLookScale);
 		}

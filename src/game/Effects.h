@@ -1,5 +1,7 @@
 #pragma once
 
+#include <optional>
+
 namespace rdf::game::effects
 {
 	// Spend / give back the configured dodge cost resource (no-op when the dodge is free).
@@ -21,4 +23,8 @@ namespace rdf::game::effects
 	void InstallPrecisionIFrames();
 	// Main thread; read by the hit hook.
 	void SetInvulnerable(bool invulnerable);
+	// The last hit the i-frames dodged since the previous call (melee, Precision, projectile, explosion), as the
+	// attacker's ref handle (0 = unknown); nullopt when there was none. A projectile that is ignored because it
+	// already passed through does not count. Main thread.
+	std::optional<std::uint32_t> TakeDodgedHit();
 }

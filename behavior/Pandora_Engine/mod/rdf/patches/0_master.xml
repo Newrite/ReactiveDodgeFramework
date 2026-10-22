@@ -25,6 +25,10 @@
   <append path="#0108/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
   <append path="#0106/eventNames"><hkcstring>RDF_ExitOpen</hkcstring></append>
   <append path="#0108/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
+  <append path="#0106/eventNames"><hkcstring>RDF_PerfectDodge</hkcstring></append>
+  <append path="#0108/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
+  <append path="#0106/eventNames"><hkcstring>RDF_PerfectDodged</hkcstring></append>
+  <append path="#0108/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
   <append path="#0106/variableNames"><hkcstring>RDF_DodgeClip</hkcstring></append>
   <append path="#0107/wordVariableValues"><hkobject><hkparam name="value">0</hkparam></hkobject></append>
   <append path="#0108/variableInfos"><hkobject><hkparam name="role"><hkobject><hkparam name="role">ROLE_DEFAULT</hkparam><hkparam name="flags">0</hkparam></hkobject></hkparam><hkparam name="type">VARIABLE_TYPE_INT32</hkparam></hkobject></append>

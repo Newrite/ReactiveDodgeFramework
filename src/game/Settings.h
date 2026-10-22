@@ -91,6 +91,20 @@ namespace rdf::game
 		// so turning the camera mid-dodge does not steer it (a locked target still does).
 		bool inputFromStartCamera{ false };
 
+		// [Perfect]: a hit the i-frames dodge inside this part of the dodge (seconds from its start) is a perfect
+		// dodge. The window only counts where i-frames are active.
+		struct PerfectSettings
+		{
+			bool        enabled{ true };
+			float       windowStart{ 0.0f };
+			float       windowEnd{ 0.15f };
+			float       slowMotion{ 1.0f };          // time multiplier on a perfect dodge; 1 = none
+			float       slowMotionDuration{ 0.4f };  // wall-clock seconds
+			std::string playerEvent{ "RDF_PerfectDodge" };     // graph event on the player
+			std::string attackerEvent{ "RDF_PerfectDodged" };  // graph event on the attacker
+			std::string modEvent{ "RDF_PerfectDodge" };        // SKSE mod event (Papyrus RegisterForModEvent)
+		} perfect;
+
 		// [Dev]
 		bool devLog{ false };
 
