@@ -521,6 +521,10 @@ namespace rdf::game
 			// The attempt the dodge held back, exactly as it was made (a framework's idle or action); else our own action.
 			capture::SetCapturing(formID_, false);
 			capture::FinishSprint(actor, false);  // the attack the dodge became is not a sprint attack
+			// Nor a moving one: the graph still carries the dodge's speed from the last frame, and attack frameworks
+			// pick sprint / moving variants from it (the engine writes it again from the next movement update).
+			actor->SetGraphVariableFloat("Speed"sv, 0.0f);
+			actor->SetGraphVariableFloat("SpeedSampled"sv, 0.0f);
 			performed = capture::Replay(actor, d.kind == DecisionKind::PowerAttack) || (driver_ && driver_->PerformAction(actor, d));
 		}
 		if (d.kind != DecisionKind::Block) {

@@ -93,6 +93,7 @@ namespace rdf::game::schema
 				Float(Page::Timing, "Timing", "fRecovery", RDF_F(core.timing.recovery), 0.0f, 1.0f, "%.3f s"),
 				Float(Page::Timing, "Timing", "fExitBlend", RDF_F(core.timing.exitBlend), 0.02f, 1.0f, "%.2f s"),
 				Float(Page::Timing, "Timing", "fActionExitBlend", RDF_F(core.timing.actionExitBlend), 0.02f, 1.0f, "%.2f s"),
+				Float(Page::Timing, "Timing", "fAttackExitBlend", RDF_F(core.timing.attackExitBlend), 0.0f, 1.0f, "%.2f s"),
 				Float(Page::Timing, "Timing", "fChainFrom", RDF_F(core.policy.chainFrom), 0.0f, 1.5f, "%.2f s"),
 				Float(Page::Timing, "Timing", "fAttackFrom", RDF_F(core.policy.attackFrom), 0.0f, 1.5f, "%.2f s"),
 				Float(Page::Timing, "Timing", "fBlockFrom", RDF_F(core.policy.blockFrom), 0.0f, 1.5f, "%.2f s"),

@@ -182,8 +182,10 @@ TEST(failed_side_effect_keeps_press_until_expiry)
 TEST(attack_from_dodge_only_after_window_and_cancels_action)
 {
 	// The cancel happens exactly when the window opens; the dodge's momentum then runs out over
-	// actionExitBlend instead of stopping dead, decreasing every frame, and the dodge is over after it.
-	Sim s(ExactConfig());
+	// attackExitBlend instead of stopping dead, decreasing every frame, and the dodge is over after it.
+	auto cfg = ExactConfig();
+	cfg.timing.attackExitBlend = 0.15f;
+	Sim s(cfg);
 	s.Frame(kDt64, Dir(0), { CommandKind::Dodge });
 	int   attackFrame = -1;
 	float lastSpeed = 1e9f;
@@ -202,6 +204,24 @@ TEST(attack_from_dodge_only_after_window_and_cancels_action)
 		}
 	}
 	CHECK(attackFrame == 20);  // 0.3125 s
+	CHECK(!s.core.DodgeRunning());
+}
+
+TEST(attack_cancel_hands_motion_to_the_attack_at_once_by_default)
+{
+	Sim s(ExactConfig());
+	s.Frame(kDt64, Dir(0), { CommandKind::Dodge });
+	bool cancelled = false;
+	for (int n = 1; n < 40 && !cancelled; ++n) {
+		const auto f = n == 10 ? s.Frame(kDt64, Dir(0), { CommandKind::Attack }) : s.Frame(kDt64, Dir(0));
+		if (f.decision.kind == DecisionKind::Attack) {
+			cancelled = true;
+			CHECK(!f.cmd.active || f.cmd.speed == 0.0f);
+		}
+	}
+	CHECK(cancelled);
+	const auto next = s.Frame(kDt64, Dir(0));
+	CHECK(!next.cmd.active);
 	CHECK(!s.core.DodgeRunning());
 }
 

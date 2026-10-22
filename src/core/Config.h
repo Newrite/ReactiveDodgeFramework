@@ -48,7 +48,10 @@ namespace rdf
 		float active{ 0.30f };
 		float recovery{ 0.32f };
 		float exitBlend{ 0.25f };        // blend-out length when a dodge is cancelled into locomotion
-		float actionExitBlend{ 0.15f };  // momentum carried into an attack/block cancel, decaying to zero
+		float actionExitBlend{ 0.15f };  // momentum carried into a block cancel, decaying to zero
+		// ... and into an attack cancel. 0 = the attack's own root motion takes over at once: attack frameworks pick
+		// moving / sprint variants from the graph's Speed, and the dodge's momentum would make them do that.
+		float attackExitBlend{ 0.0f };
 		float Total() const { return startup + active + recovery; }
 		// Playback multiplier that makes a clip of `clipLength` seconds (at speed 1) end with the recovery.
 		float PlaybackSpeed(float clipLength, float multiplier) const

@@ -380,3 +380,11 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   idle (queued) reached the graph; a sprint start slipped in between and BFCO took its sprint power attack. Sprint
   starts now stay held back while the attack the dodge became has not shown (IsAttacking). In-place power attacks out
   of a dodge (attackPowerStartInPlace, idle 0x8C5) were captured and replayed fine in the same log.
+* The real cause of the sprint / dropped power attacks out of a dodge (2026-10-22, traces): at the cancel the graph's
+  Speed was ~300-500 and the dodge kept driving the actor for fActionExitBlend (0.15 s). BFCO picked its attacks from
+  that speed: out of a directional dodge the sprint power attack (attackPowerStart_2HMSprint / attackStartSprint
+  events), out of an in-place dodge a moving variant the graph dropped into tailCombatIdle + attackStop one frame
+  after the dodge stopped and Speed reached 0. Light attacks have no speed variants, hence fine. New [Timing]
+  fAttackExitBlend (default 0): a cancel into an attack hands the motion to the attack at once; fActionExitBlend now
+  only applies to blocks. Speed / SpeedSampled are also zeroed on the graph right before the attack is replayed.
+  The sprint hold-back (previous entries) stays: it was a real but smaller effect.

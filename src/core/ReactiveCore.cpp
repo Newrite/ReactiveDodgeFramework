@@ -194,8 +194,11 @@ namespace rdf
 		case DecisionKind::Block:
 			// The action owns the actor from now on; the dodge only lets its momentum run out.
 			Consume(d);
-			action_.RequestExit(cfg_.timing.actionExitBlend);
-			driver_.BeginStop(action_.Time(), cfg_.timing.actionExitBlend);
+			{
+				const float blend = d.kind == DecisionKind::Block ? cfg_.timing.actionExitBlend : cfg_.timing.attackExitBlend;
+				action_.RequestExit(blend);
+				driver_.BeginStop(action_.Time(), blend);
+			}
 			intoAction_ = true;
 			break;
 		case DecisionKind::LocomotionExit:
