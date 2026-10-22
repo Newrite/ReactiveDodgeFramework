@@ -35,6 +35,9 @@ namespace rdf::game
 		virtual void OnDodgeStopped(RE::Actor*) {}
 		// Perform an attack / block decision the dodge was cancelled into. False = it did not happen (retried).
 		virtual bool PerformAction(RE::Actor*, const Decision&) { return false; }
+		// Right before an attack the dodge was cancelled into: true = the block is held, so the attack is raised as a bash
+		// (wantBlocking set: the idle tree turns an attack into bashStart, a power attack into bashPowerStart).
+		virtual bool PrepareBash(RE::Actor*) { return false; }
 		virtual void OnPerfectDodge(RE::Actor*, float /*actionTime*/) {}
 	};
 

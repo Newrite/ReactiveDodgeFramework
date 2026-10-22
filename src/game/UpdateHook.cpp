@@ -47,9 +47,23 @@ namespace rdf::game::update
 			return blocking;
 		}
 
+		// The game's left button pressed during the dodge was held back while wantBlocking was 0, so AttackBlockHandler took it
+		// for a left attack (attackType kLeft, 0x1407096B0) and, still held, would send LeftPowerAttack once past the power
+		// delay: a power bash out of a plain block. Our block replaces that press. (PlayerControls+0x1B8, attackType +0x28:
+		// checked in IDA, the constructor 0x1407073B0 and the handler's own accesses.)
+		void ClearStaleLeftPress()
+		{
+			auto* controls = RE::PlayerControls::GetSingleton();
+			auto* handler = controls ? controls->attackBlockHandler : nullptr;
+			if (handler && handler->attackType == RE::AttackBlockHandler::AttackType::kLeft) {
+				handler->attackType = RE::AttackBlockHandler::AttackType::kRight;   // 0: no attack pending
+			}
+		}
+
 		// Raised block without an action record: wantBlocking + the vanilla graph event.
 		bool StartBlock(RE::Actor* actor)
 		{
+			ClearStaleLeftPress();
 			actor->AsActorState()->actorState2.wantBlocking = 1;
 			if (gate::Send(actor, "blockStart"sv)) {
 				return true;
@@ -90,6 +104,7 @@ namespace rdf::game::update
 			void OnDodgeStarted(RE::Actor* actor, bool ownsYaw) override;
 			void OnDodgeStopped(RE::Actor*) override { lockon::ReleaseYaw(); }
 			bool PerformAction(RE::Actor* actor, const Decision& d) override;
+			bool PrepareBash(RE::Actor* actor) override;
 			void OnPerfectDodge(RE::Actor*, float) override;
 
 		private:
@@ -232,6 +247,25 @@ namespace rdf::game::update
 			default:
 				return PlayAction(actor, RE::DEFAULT_OBJECT::kActionRightAttack);
 			}
+		}
+
+		// Block held (the game's block button, or a mod that raises wantBlocking itself such as Input Support) as the dodge lets
+		// an attack go: that attack is a bash. A tap or a power attack decides bash or power bash, as without a dodge.
+		bool Player::PrepareBash(RE::Actor* actor)
+		{
+			auto&      state = actor->AsActorState()->actorState2;
+			const bool key = input::BlockHeld();
+			if (!key && !state.wantBlocking) {
+				return false;
+			}
+			state.wantBlocking = 1;
+			ClearStaleLeftPress();
+			if (key) {   // our block afterwards: kept while the button is down (a mod's own block is the mod's)
+				blockHolding_ = true;
+				blockAge_ = 0;
+			}
+			DevLog("{}", "block held: the attack out of the dodge is a bash");
+			return true;
 		}
 
 		// The game's block handler never saw a button-down that came during the dodge, so it would drop

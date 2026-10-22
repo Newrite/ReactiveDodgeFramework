@@ -479,3 +479,11 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   sends them at a 1hm dodge's block window / after a root dodge, and the driver's own blockStart / blockStop bypass it.
   The 1hm patch part is now shipped (gen_rdf_patch.py; --no-onehand to leave it out); validate_rdf 236/236, Nemesis
   54/54, validate_onehand 63/63 on STB and VanillaLike against a --no-onehand run. Not yet run in game.
+* Block held through a dodge came out as a bash (2026-10-23, user: the game's block button; Input Support's block fine):
+  the game's block is an action, AttackBlockHandler 0x1407096B0 makes LeftAttack on the press (the idle tree turns it into
+  blockStart) and, with wantBlocking still 0 because the press was held back, arms attackType = left and sends
+  LeftPowerAttack once held past the power delay. Both were held back as attacks and replayed: a (power) bash. Now
+  LeftAttack / LeftPowerAttack of a left hand that does not attack (no one-handed weapon or staff in it) are held back as a
+  block press, and our block clears the handler's stale left press (PlayerControls+0x1B8 -> attackType +0x28, IDA). An
+  attack let out of the dodge while the block is held (the game's button, or wantBlocking raised by Input Support) sets
+  wantBlocking first (AgentDriver::PrepareBash): a tap bashes, a power attack power-bashes, as without a dodge.

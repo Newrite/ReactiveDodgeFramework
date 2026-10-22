@@ -71,6 +71,7 @@ namespace rdf::game::capture
 		enum class Kind
 		{
 			None,
+			Block,   // the left button of a left hand that does not attack: the game's block (LeftAttack -> blockStart)
 			Attack,
 			Power,
 		};
@@ -80,6 +81,30 @@ namespace rdf::game::capture
 		// (pa_*) are paired idles, never held back.
 		Kind AttackKindOf(RE::Actor* actor, const RE::BSFixedString& animEvent);
 
+		// The left hand attacks only with a one-handed weapon or a staff in it (dual wield). Otherwise (empty, shield, torch, a
+		// two-handed weapon, bow, crossbow) the game's left button blocks: AttackBlockHandler 0x1407096B0 makes LeftAttack on
+		// the press and LeftPowerAttack once held past the power-attack delay, and the idle tree turns them into blockStart /
+		// a bash. Held back as attacks they came out of the dodge as a (power) bash.
+		bool LeftHandAttacks(RE::Actor* actor)
+		{
+			const auto* weapon = actor->GetEquippedObject(true);
+			const auto* weap = weapon ? weapon->As<RE::TESObjectWEAP>() : nullptr;
+			if (!weap) {
+				return false;
+			}
+			using T = RE::WEAPON_TYPE;
+			switch (weap->GetWeaponType()) {
+			case T::kOneHandSword:
+			case T::kOneHandDagger:
+			case T::kOneHandAxe:
+			case T::kOneHandMace:
+			case T::kStaff:
+				return true;
+			default:
+				return false;
+			}
+		}
+
 		Kind Classify(RE::Actor* actor, const RE::BGSActionData* data)
 		{
 			using D = RE::DEFAULT_OBJECT;
@@ -88,6 +113,11 @@ namespace rdf::game::capture
 			static const std::array<RE::BGSAction*, 3> normal{ DefaultAction(D::kActionRightAttack), DefaultAction(D::kActionLeftAttack),
 				DefaultAction(D::kActionDualAttack) };
 			if (data->action) {
+				static const auto* left = DefaultAction(D::kActionLeftAttack);
+				static const auto* leftPower = DefaultAction(D::kActionLeftPowerAttack);
+				if ((data->action == left || data->action == leftPower) && !LeftHandAttacks(actor)) {
+					return Kind::Block;
+				}
 				if (std::find(power.begin(), power.end(), data->action) != power.end()) {
 					return Kind::Power;
 				}
@@ -230,6 +260,10 @@ namespace rdf::game::capture
 			}
 			std::scoped_lock lock(g_lock);
 			auto& s = g_actors[id];
+			if (kind == Kind::Block) {   // a block press: the dodge raises its own block at the block window, nothing to replay
+				s.fresh.push_back(CommandKind::Block);
+				return true;
+			}
 			s.fresh.push_back(attempt.power ? CommandKind::PowerAttack : CommandKind::Attack);
 			s.last[attempt.power ? 1 : 0] = attempt;
 			return true;
@@ -240,7 +274,7 @@ namespace rdf::game::capture
 		{
 			if (HoldBack(data)) {
 				const auto* ref = data->source.get();
-				DevLog("{:08X}: attack attempt held back by the dodge (action {:08X}, event '{}', idle {:08X})", ref ? ref->GetFormID() : 0u,
+				DevLog("{:08X}: attack / block attempt held back by the dodge (action {:08X}, event '{}', idle {:08X})", ref ? ref->GetFormID() : 0u,
 					data->action ? data->action->GetFormID() : 0u, data->animEvent.c_str(), data->animObjIdle ? data->animObjIdle->GetFormID() : 0u);
 				return false;
 			}

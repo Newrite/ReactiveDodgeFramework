@@ -125,7 +125,8 @@ namespace rdf::game
 		// attack attempts the dodge held back (any source: input, attack frameworks, AI) are attack presses
 		for (const auto kind : capture::TakeNew(formID_)) {
 			core_->Press(kind, {});
-			DevLog("{:08X}: held-back {} buffered", formID_, kind == CommandKind::PowerAttack ? "power attack" : "attack");
+			DevLog("{:08X}: held-back {} buffered", formID_,
+				kind == CommandKind::PowerAttack ? "power attack" : kind == CommandKind::Block ? "block" : "attack");
 		}
 		HandleGraphEvents(actor);
 		GateGraphEvents(actor);
@@ -580,11 +581,12 @@ namespace rdf::game
 			DevLog("{:08X}: block straight out of the 1hm dodge", formID_);
 			return true;
 		}
+		const bool bash = driver_ && driver_->PrepareBash(actor);
 		const bool replayed = capture::Replay(actor, d.kind == DecisionKind::PowerAttack);
 		capture::SetCapturing(formID_, false);
 		const bool performed = replayed || (driver_ && driver_->PerformAction(actor, d));
-		DevLog("{:08X}: {} straight out of the 1hm dodge: {} {}", formID_, ToString(d.kind), replayed ? "replayed" : "own action",
-			performed ? "accepted" : "refused");
+		DevLog("{:08X}: {}{} straight out of the 1hm dodge: {} {}", formID_, ToString(d.kind), bash ? " (bash)" : "",
+			replayed ? "replayed" : "own action", performed ? "accepted" : "refused");
 		if (!performed) {
 			return false;   // the root path: exit, then attempts once the graph has left
 		}
@@ -659,6 +661,9 @@ namespace rdf::game
 		++p.attempts;
 		// The first time the attempt the dodge held back, exactly as it was made (a framework's idle or action); after
 		// that, or without one, our own action.
+		if (p.attempts == 1 && driver_) {
+			driver_->PrepareBash(actor);
+		}
 		const bool replayed = p.attempts == 1 && capture::Replay(actor, p.decision.kind == DecisionKind::PowerAttack);
 		const bool performed = replayed || (driver_ && driver_->PerformAction(actor, p.decision));
 		DevLog("{:08X}: {} from the dodge, attempt #{} at {:.3f}s: {} {}", formID_, ToString(p.decision.kind), p.attempts, p.age,
