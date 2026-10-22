@@ -24,8 +24,9 @@ what is still waiting.
 
 * Hook sites checked in `F:\STB\Skyrim\SkyrimSE.exe` 1.5.97 and in IDA: `41160+0x111` = `E8 6A 41 DE FF`
   → 31949 `ProcessMotionData` (only call site); `37673+0x3C0` → 37633 (hit processing, same site
-  Precision/MaxsuOnHitAnimFW use); `TESActionData` vfunc 5 → 40551. The plugin re-verifies the motion
-  site bytes and call target at runtime and refuses to install on mismatch.
+  Precision/MaxsuOnHitAnimFW use); `TESActionData` vfunc 5 → 40551. The plugin requires CALL rel32
+  (E8) at the motion site and preserves its current target, including another plugin's trampoline,
+  for calls outside RDF motion ownership. Chaining with the reported third-party hook awaits an in-game test.
 * Real Pandora run on a staged copy of every enabled STB mod's patch inputs (baseline reproduces the live
   output byte-for-byte for all 57 hkx), with the output redirected to `_work`: `validate_rdf.py` 80/80 —
   events/variables resolved (no −1), states 9701/9702 and every transition/effect as designed, vanilla

@@ -8,7 +8,8 @@ namespace rdf::game::motion
 {
 	// Replaces the single call to Character::ProcessMotionData inside
 	// MovementTweenerAgentAnimationDriven::BuildOutput. Returns false (and installs nothing)
-	// when the bytes at the call site are not the expected 1.5.97 call.
+	// when the site is not CALL rel32 (E8). Chains to the current target outside RDF
+	// motion ownership, including a previously installed plugin hook.
 	bool Install();
 	// MovementControllerNPC vfunc 7 (the controls-driven movement payload): applies the published
 	// speed floor for the owner after a dodge.

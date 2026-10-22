@@ -14,7 +14,7 @@ namespace rdf::game::motion
 	namespace
 	{
 		constexpr std::uint32_t kBuildOutputId = 41160;       // MovementTweenerAgentAnimationDriven::BuildOutput
-		constexpr std::uint32_t kProcessMotionDataId = 31949;  // Character::ProcessMotionData
+		constexpr std::uint32_t kProcessMotionDataId = 31949;  // Character::ProcessMotionData (diagnostics only)
 		constexpr std::ptrdiff_t kCallOffset = 0x111;          // 0x1407021F1 in 1.5.97
 
 		Seqlock<MotionCommand>     g_box;
@@ -136,19 +136,32 @@ namespace rdf::game::motion
 			logger::error("motion hook: expected CALL (E8) at the site, not installing");
 			return false;
 		}
-		std::int32_t disp;
-		std::memcpy(&disp, bytes + 1, sizeof(disp));
-		const auto target = site + 5 + disp;
-		const REL::Relocation<std::uintptr_t> expectedTarget{ REL::ID(kProcessMotionDataId) };
-		if (target != expectedTarget.address()) {
-			logger::error("motion hook: call target {:#x} is not ProcessMotionData {:#x}, not installing", target, expectedTarget.address());
-			return false;
-		}
-
 		g_yawFactor.store(static_cast<float>(Settings::Get().yawSign), std::memory_order_relaxed);
 		REL::Relocation<std::uintptr_t> callSite{ site };
+		// Preserve the current CALL target, including another plugin's trampoline. Thunk
+		// chains to it whenever RDF does not own this actor's dodge motion.
 		g_original = reinterpret_cast<ProcessMotionData_t>(callSite.write_call<5>(Thunk));
-		logger::info("motion hook installed (original {:#x})", reinterpret_cast<std::uintptr_t>(g_original));
+		const REL::Relocation<std::uintptr_t> vanilla{ REL::ID(kProcessMotionDataId) };
+		const auto                           chained = reinterpret_cast<std::uintptr_t>(g_original);
+		if (chained == vanilla.address()) {
+			logger::info("motion hook installed (calls the game's ProcessMotionData {:#x})", chained);
+		} else {
+			// An SKSE branch trampoline (jmp [rip+0] + absolute address) lives outside any module: follow it once.
+			auto        target = chained;
+			const auto* code = reinterpret_cast<const std::uint8_t*>(chained);
+			if (code[0] == 0xFF && code[1] == 0x25 && code[2] == 0 && code[3] == 0 && code[4] == 0 && code[5] == 0) {
+				std::memcpy(&target, code + 6, sizeof(target));
+			}
+			HMODULE owner = nullptr;
+			char    path[MAX_PATH]{};
+			if (::GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+					reinterpret_cast<LPCSTR>(target), &owner) && owner) {
+				::GetModuleFileNameA(owner, path, MAX_PATH);
+			}
+			const char* name = std::strrchr(path, '\\');
+			logger::info("motion hook installed over another plugin's hook: chains to {:#x} ({}), not the game's {:#x}", chained,
+				name ? name + 1 : (path[0] ? path : "unknown module"), vanilla.address());
+		}
 		return true;
 	}
 
