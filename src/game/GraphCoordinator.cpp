@@ -14,7 +14,7 @@ namespace rdf::game::graph
 	{
 		struct Names
 		{
-			RE::BSFixedString start, startB, chain, exit, entered, left, clip, speed, armBlend, isDodging;
+			RE::BSFixedString start, startB, chain, exit, entered, left, clip, speed, armBlend, isDodging, chainIndex;
 			std::vector<RE::BSFixedString> windowOpen, windowClose;
 		};
 		Names g_names;
@@ -126,6 +126,7 @@ namespace rdf::game::graph
 		g_names.speed = g.speed;
 		g_names.armBlend = g.armBlend;
 		g_names.isDodging = g.isDodging;
+		g_names.chainIndex = g.chainIndex;
 		for (std::size_t i = 0; i < kWindowEventNames.size(); ++i) {
 			g_windowNames[i] = kWindowEventNames[i];
 		}
@@ -253,9 +254,10 @@ namespace rdf::game::graph
 		return std::clamp(stanceShare, 0.0f, 1.0f);
 	}
 
-	bool SendStart(RE::Actor* actor, DodgeEntry entry, int clip, float animSpeed, float armStance)
+	bool SendStart(RE::Actor* actor, DodgeEntry entry, int clip, float animSpeed, float armStance, int chainIndex)
 	{
 		actor->SetGraphVariableInt(g_names.clip, clip);
+		actor->SetGraphVariableInt(g_names.chainIndex, chainIndex);
 		actor->SetGraphVariableFloat(g_names.speed, animSpeed);
 		actor->SetGraphVariableFloat(g_names.armBlend, ArmBlendWeight(armStance));
 		switch (entry) {
@@ -263,6 +265,11 @@ namespace rdf::game::graph
 		case DodgeEntry::StartB: return actor->NotifyAnimationGraph(g_names.startB);
 		default: return actor->NotifyAnimationGraph(g_names.start);
 		}
+	}
+
+	void SetChainIndex(RE::Actor* actor, int chainIndex)
+	{
+		actor->SetGraphVariableInt(g_names.chainIndex, chainIndex);
 	}
 
 	void SendExit(RE::Actor* actor)

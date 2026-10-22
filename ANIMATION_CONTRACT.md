@@ -70,10 +70,11 @@ Variables (appended to 0_master):
 | `RDF_DodgeSpeed` | float | 1.0 | clip playback speed multiplier |
 | `RDF_IsDodging` | bool | false | bound to the state's BSIsActiveModifier; the plugin sets it true before `RDF_DodgeStart` and false after `RDF_DodgeLeft` |
 | `RDF_ArmBlend` | float | 0.0 | arm stance layer weight: 0 = arms follow the dodge clip, 1 = arms hold the current weapon stance (iRightHandType / iLeftHandType), linear in between. Write it before the dodge starts. 1 for side/back steps, 0 for rolls. See BEHAVIOR_INTEGRATION.md section 5 |
+| `RDF_ChainIndex` | int | 0 | which dodge of a chain is playing: 0 the first, 1 the second, 2 the third, ... Written by the plugin before `RDF_DodgeStart` / `RDF_DodgeStartB` / `RDF_DodgeChain` (so a clip generator or a transition condition sees the new value when the state is entered), and set back to 0 when the dodge is over however it ended (clip end, cancel into an attack / block, stagger, graph left, rollback, camera switch, the actor's agent released, a loaded save). Read-only for the graph: use it to swap clips or branch on the second / third dodge |
 | `bAnimationDriven` | bool (vanilla, index 81) | - | bound to bIsActive0 |
 | `DF_IsDodging` | - | - | TDM's variable. It does NOT exist in this modlist's 0_master, so it is neither created nor bound. If it ever exists, generate with `--with-df` and it is bound to bIsActive2. |
 
-Order for a dodge from C++: set `RDF_DodgeClip`, set `RDF_DodgeSpeed`, set `RDF_ArmBlend` (0 or 1), set `RDF_IsDodging` true, send `RDF_DodgeStart`.
+Order for a dodge from C++: set `RDF_DodgeClip`, set `RDF_DodgeSpeed`, set `RDF_ArmBlend` (0 or 1), set `RDF_ChainIndex`, set `RDF_IsDodging` true, send `RDF_DodgeStart`.
 Chained dodge: set clip/speed, send `RDF_DodgeChain`. End: wait for `RDF_DodgeLeft` (or send `RDF_DodgeExit`), set
 `RDF_IsDodging` false.
 

@@ -23,6 +23,7 @@ namespace rdf::game
 		std::string speed{ "RDF_DodgeSpeed" };
 		std::string armBlend{ "RDF_ArmBlend" };  // weight of the arm-stance layer over the dodge clip
 		std::string isDodging{ "RDF_IsDodging" };
+		std::string chainIndex{ "RDF_ChainIndex" };  // which dodge of a chain: 0 first, 1 second, ...; 0 when none runs
 		std::vector<std::string> windowOpen{ "MCO_DodgeOpen" };
 		std::vector<std::string> windowClose{ "MCO_DodgeClose" };
 	};

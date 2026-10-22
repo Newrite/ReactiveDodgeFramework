@@ -39,9 +39,12 @@ namespace rdf::game::graph
 		StartB,  // root wildcard into dodge state B
 		Chain,   // from the dodge state the graph is in to the other one
 	};
-	// Sets RDF_DodgeClip / RDF_DodgeSpeed, then sends the entry event. False = the graph refused it.
-	// armStance: share (0..1) of the current weapon stance on the arms, over the dodge clip.
-	bool SendStart(RE::Actor* actor, DodgeEntry entry, int clip, float animSpeed, float armStance);
+	// Sets RDF_DodgeClip / RDF_DodgeSpeed / RDF_ArmBlend / RDF_ChainIndex, then sends the entry event. False = the
+	// graph refused it. armStance: share (0..1) of the current weapon stance on the arms, over the dodge clip.
+	// chainIndex: which dodge of the chain this is (0 = the first).
+	bool SendStart(RE::Actor* actor, DodgeEntry entry, int clip, float animSpeed, float armStance, int chainIndex);
+	// RDF_ChainIndex alone: restored after a refused chain, 0 once no dodge runs.
+	void SetChainIndex(RE::Actor* actor, int chainIndex);
 	// The graph value of RDF_ArmBlend that gives `stanceShare` of the stance on the arms.
 	float ArmBlendWeight(float stanceShare);
 	void SendExit(RE::Actor* actor);

@@ -8,7 +8,7 @@ weapon / sheathed / magic sub-graphs, so it works with every weapon type and fro
 `0_master` (Nemesis ids in brackets):
 - events (`#0106/eventNames`, `#0108/eventInfos`): `RDF_DodgeStart/StartB/Chain/Exit/Entered/Left` and the clip annotation events
   `RDF_Windows/IFrameStart/IFrameEnd/ChainOpen/AttackOpen/BlockOpen/ExitOpen`
-- variables (`#0106`, `#0107`, `#0108`): `RDF_DodgeClip` int 0, `RDF_DodgeSpeed` float 1.0, `RDF_IsDodging` bool, `RDF_ArmBlend` float 0.0
+- variables (`#0106`, `#0107`, `#0108`): `RDF_DodgeClip` int 0, `RDF_DodgeSpeed` float 1.0, `RDF_IsDodging` bool, `RDF_ArmBlend` float 0.0, `RDF_ChainIndex` int 0
 - `RootBehaviorGraph` (`#0340`): new states `RDF_Dodge_A` (stateId 9701) and `RDF_Dodge_B` (9702). Each is
   `hkbModifierGenerator{ BSIsActiveModifier(bAnimationDriven, RDF_IsDodging), arm-stance blender }` (section 5), enter notify
   `RDF_DodgeEntered`, exit notify `RDF_DodgeLeft`. The dodge clips are a `hkbManualSelectorGenerator(RDF_DodgeClip)` over
@@ -213,7 +213,7 @@ validate in game before converting them too).
   12 `CrossBow_IdleHeld`. Spells/staffs are drawn by `magicbehavior` (`MRh_Idle`, `MLh_Idle`, `StaffRight_Idle`, `Staff_Idle`).
 
 ### 6.2 What the patch adds (365 new nodes)
-Same events (13), variables (4: `RDF_DodgeClip/DodgeSpeed/IsDodging/ArmBlend`), blends, wildcards, exit/stagger transitions and conditional
+Same events (13), variables (5: `RDF_DodgeClip/DodgeSpeed/IsDodging/ArmBlend/ChainIndex`), blends, wildcards, exit/stagger transitions and conditional
 return as 3P (with the 1P ids above). Per state:
 `ModifierGenerator{ BSIsActiveModifier(bAnimationDriven, RDF_IsDodging), Blend{ body mask: DodgeSM, arm mask: Blend(blendParameter <- RDF_ArmBlend){ 0: DodgeSM copy, 1: DrawnSM } } }`, the 3P layout. The 1P skeleton (vanilla `skeletonfirst.hkx`) has the same 99 bones as the vanilla 3P one; the arm mask is `FP_ARM_BONES` (clavicles, arms, twists, hands, fingers, pauldrons, magic and weapon/shield nodes), so the clip moves torso, head and camera while the arms hold the stance.
 `DodgeSM = hkbStateMachine, startStateId <- RDF_DodgeClip`, 16 states like 3P, playing Bethesda's own 1P dodge clips (vanilla, already in

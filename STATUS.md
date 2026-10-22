@@ -36,6 +36,7 @@
 * FLICK menu (F7): seven pages, live edits, save to ini, dodge button rebinding.
 * Nemesis patch (`Nemesis_Engine/mod/rdfm`): offline check 33/33, never run through Nemesis itself.
 * Motion hook chains behind another plugin's hook on the same call (user fix); not yet seen with one installed.
+* `RDF_ChainIndex` graph variable (0, 1, 2... per dodge of a chain, 0 when over); needs a Pandora / Nemesis re-run.
 * Dodge on any actor through the API (Papyrus `ReactiveDodge.Dodge`, C `RDF_RequestDodge`); never run on an NPC yet.
 
 ## Known limitations

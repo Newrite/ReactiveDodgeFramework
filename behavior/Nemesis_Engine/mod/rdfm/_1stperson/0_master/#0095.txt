@@ -1472,6 +1472,7 @@
 				<hkcstring>RDF_DodgeSpeed</hkcstring>
 				<hkcstring>RDF_IsDodging</hkcstring>
 				<hkcstring>RDF_ArmBlend</hkcstring>
+				<hkcstring>RDF_ChainIndex</hkcstring>
 <!-- CLOSE -->
 			</hkparam>
 			<hkparam name="characterPropertyNames" numelements="15">

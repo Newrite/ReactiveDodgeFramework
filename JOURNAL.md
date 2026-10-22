@@ -299,3 +299,9 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   registry keyed by actor handle, ticked from PlayerCharacter::Update with the player's dt, and are released (exit,
   motion slot, graph sink, i-frames) a second after the dodge or when the handle resolves to null / the actor unloads
   or dies. Requests are queued under a mutex because Papyrus natives do not run on the main thread.
+* RDF_ChainIndex (2026-10-22, user: animators want to swap the clip on the 2nd / 3rd dodge, "and it must clear
+  correctly"): int variable appended to 3P and 1P 0_master (Pandora staged 225/225, Nemesis offline 33/33). The agent
+  writes it with the clip before the entry event (chain ? ChainCount : 0, ChainCount being 1-based), restores the
+  running dodge's index when the graph refuses a chain, and writes 0 in OnStopped (every end goes through it: clip end,
+  cancel, stagger, graph left, rollback, abandon), in the orphaned-state watchdog, on Release, and on a 3D (re)load
+  with no dodge running (the player's graph variables come back from the save).

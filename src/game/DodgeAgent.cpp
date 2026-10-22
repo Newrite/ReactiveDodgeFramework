@@ -90,6 +90,7 @@ namespace rdf::game
 			graph::SendExit(actor);
 		}
 		if (actor) {
+			graph::SetChainIndex(actor, 0);
 			effects::SetInvulnerable(actor, false);
 			graph::UnregisterSink(actor);
 			effects::TakeDodgedHit(actor);
@@ -154,6 +155,8 @@ namespace rdf::game
 		graph::RegisterSink(actor);
 		if (core_->DodgeRunning() || awaitingEnter_) {
 			AbandonGraph(actor, "3D reloaded");
+		} else {
+			graph::SetChainIndex(actor, 0);  // a loaded graph may carry a saved mid-chain value
 		}
 	}
 
@@ -279,6 +282,7 @@ namespace rdf::game
 		if (orphanTime_ >= 0.6f) {
 			logger::info("{:08X}: graph stuck in a dodge state we do not own; sending {}", formID_, Settings::Get().graph.exit);
 			graph::SendExit(actor);
+			graph::SetChainIndex(actor, 0);
 			orphanTime_ = 0.0f;  // retry after another grace period if it did not take
 		}
 	}
@@ -402,8 +406,11 @@ namespace rdf::game
 		const float stance = in.firstPerson ? settings.armStanceFirstPerson : clip >= kFirstStepClip ? settings.armStanceStep : settings.armStanceRoll;
 		const float armStance = HasStanceToKeep(actor) ? stance : 0.0f;
 		const float clipLength = in.firstPerson ? settings.clipLengthFirstPerson : settings.clipLength;
-		if (!graph::SendStart(actor, entry, clip, settings.core.timing.PlaybackSpeed(clipLength, settings.animSpeed), armStance)) {
+		// RDF_ChainIndex: 0 for a fresh dodge, the running dodge's index + 1 for a chain (ChainCount is 1-based).
+		const int   chainIndex = chain ? core_->ChainCount() : 0;
+		if (!graph::SendStart(actor, entry, clip, settings.core.timing.PlaybackSpeed(clipLength, settings.animSpeed), armStance, chainIndex)) {
 			DevLog("{:08X}: graph refused {} (clip {}); press stays buffered", formID_, chain ? "chain" : "start", clip);
+			graph::SetChainIndex(actor, core_->DodgeRunning() ? core_->ChainCount() - 1 : 0);  // the dodge that keeps playing
 			core_->Apply(d, false);
 			return;
 		}
@@ -425,8 +432,8 @@ namespace rdf::game
 		if (driver_) {
 			driver_->OnDodgeStarted(actor, core_->OwnsYaw());
 		}
-		DevLog("{:08X}: dodge {} angle={:.1f} clip={} keepFacing={} holdFacing={} ownsYaw={} freeRotation={} ({})", formID_,
-			chain ? "chain" : "start", angle, clip, core_->KeepsFacing(), core_->HoldsFacing(), core_->OwnsYaw(), in.freeRotation, in.modeName);
+		DevLog("{:08X}: dodge {} #{} angle={:.1f} clip={} keepFacing={} holdFacing={} ownsYaw={} freeRotation={} ({})", formID_,
+			chain ? "chain" : "start", chainIndex, angle, clip, core_->KeepsFacing(), core_->HoldsFacing(), core_->OwnsYaw(), in.freeRotation, in.modeName);
 	}
 
 	// Attack and block live in a nested behavior under the default state, so leaving the dodge and
@@ -507,6 +514,7 @@ namespace rdf::game
 			carry_ = 0.0f;
 		}
 		tailFrames_ = 30;  // follow the hand-over into locomotion in the dev trace
+		graph::SetChainIndex(actor, 0);  // the chain is over, whatever ended it
 		effects::SetInvulnerable(actor, false);
 		awaitingEnter_ = false;
 		charged_ = 0.0f;
