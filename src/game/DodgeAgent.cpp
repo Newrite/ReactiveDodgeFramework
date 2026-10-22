@@ -155,6 +155,7 @@ namespace rdf::game
 		// Attack attempts are held back while the dodge can still be cancelled into one; once it is cancelled or hands
 		// over they pass (a combo continuing from the attack the dodge became).
 		capture::SetCapturing(formID_, awaitingEnter_ || (core_->DodgeRunning() && !core_->Exiting() && !core_->CancelledIntoAction()));
+		capture::HoldSprint(formID_, pendingAttack_.has_value());
 		Trace(actor);
 		prevRequestedDistance_ = requestedDistance_;
 		prevRequestedHeading_ = requestedHeading_;

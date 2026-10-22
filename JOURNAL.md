@@ -374,3 +374,9 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   sprint before it sends its start event, holds sprint starts back while it captures, follows start / stop through the
   whole dodge, and at its end resumes the sprint only if no stop came (button still held, the Elden Ring feel), else
   stops a sprint state the graph kept. A cancel into an attack ends the sprint first.
+* Sprint held until the attack shows (2026-10-22, log with Sprint Tweaks: hold-to-sprint, iSprintDelay 50 ms): a normal
+  press of the dodge button outlasts the delay, so Sprint Tweaks re-sends ActionSprintStart every frame while the
+  button is down. During the dodge they were held back, but the capture ended at the cancel, before the replayed BFCO
+  idle (queued) reached the graph; a sprint start slipped in between and BFCO took its sprint power attack. Sprint
+  starts now stay held back while the attack the dodge became has not shown (IsAttacking). In-place power attacks out
+  of a dodge (attackPowerStartInPlace, idle 0x8C5) were captured and replayed fine in the same log.

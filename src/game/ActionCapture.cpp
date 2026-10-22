@@ -59,6 +59,7 @@ namespace rdf::game::capture
 
 		std::mutex                                   g_lock;
 		std::unordered_set<std::uint32_t>            g_capturing;
+		std::unordered_set<std::uint32_t>            g_holdingSprint;  // sprint starts held back (capturing, or an attack still to show)
 		std::unordered_map<std::uint32_t, ActorState> g_actors;
 
 		RE::BGSAction* DefaultAction(RE::DEFAULT_OBJECT object)
@@ -131,10 +132,12 @@ namespace rdf::game::capture
 			}
 			const auto id = actor->GetFormID();
 			bool       capturing = false;
+			bool       holdingSprint = false;
 			bool       tracked = false;
 			{
 				std::scoped_lock lock(g_lock);
 				capturing = g_capturing.contains(id);
+				holdingSprint = capturing || g_holdingSprint.contains(id);
 				tracked = g_actors.contains(id);
 			}
 			if (!capturing && !tracked) {
@@ -147,7 +150,11 @@ namespace rdf::game::capture
 			if (kind == Kind::SprintStart || kind == Kind::SprintStop) {
 				std::scoped_lock lock(g_lock);
 				g_actors[id].sprintWanted = kind == Kind::SprintStart;
-				return kind == Kind::SprintStart && capturing;
+				if (kind == Kind::SprintStart && holdingSprint) {
+					DevLog("{:08X}: sprint start held back by the dodge", id);
+					return true;
+				}
+				return false;
 			}
 			if (kind == Kind::None || !capturing) {
 				if (capturing) {
@@ -176,6 +183,9 @@ namespace rdf::game::capture
 		{
 			if (HoldBack(data)) {
 				const auto* ref = data->source.get();
+				if (data->action && data->action == DefaultAction(RE::DEFAULT_OBJECT::kActionSprintStart)) {
+					return false;
+				}
 				DevLog("{:08X}: attack attempt held back by the dodge (action {:08X}, event '{}', idle {:08X})", ref ? ref->GetFormID() : 0u,
 					data->action ? data->action->GetFormID() : 0u, data->animEvent.c_str(), data->animObjIdle ? data->animObjIdle->GetFormID() : 0u);
 				return false;
@@ -224,6 +234,16 @@ namespace rdf::game::capture
 			g_capturing.insert(formID);
 		} else {
 			g_capturing.erase(formID);
+		}
+	}
+
+	void HoldSprint(std::uint32_t formID, bool on)
+	{
+		std::scoped_lock lock(g_lock);
+		if (on) {
+			g_holdingSprint.insert(formID);
+		} else {
+			g_holdingSprint.erase(formID);
 		}
 	}
 
@@ -334,6 +354,7 @@ namespace rdf::game::capture
 	{
 		std::scoped_lock lock(g_lock);
 		g_capturing.erase(formID);
+		g_holdingSprint.erase(formID);
 		g_actors.erase(formID);
 	}
 
@@ -341,6 +362,7 @@ namespace rdf::game::capture
 	{
 		std::scoped_lock lock(g_lock);
 		g_capturing.clear();
+		g_holdingSprint.clear();
 		g_actors.clear();
 	}
 }

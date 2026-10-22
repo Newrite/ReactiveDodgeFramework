@@ -26,6 +26,9 @@ namespace rdf::game::capture
 	// and at its end resumes the sprint if no stop came meanwhile (the button is still held) and `resume`, otherwise
 	// ends a sprint state the graph kept because it refused the stop during the dodge.
 	bool StopSprint(RE::Actor* actor, bool remember);
+	// Sprint starts stay held back after the capture ends, while the attack the dodge became has not shown yet (a
+	// replayed idle is queued: a sprint starting first would make the graph pick a sprint attack).
+	void HoldSprint(std::uint32_t formID, bool on);
 	void FinishSprint(RE::Actor* actor, bool resume);
 	void Forget(std::uint32_t formID);
 	void Clear();  // load / new game
