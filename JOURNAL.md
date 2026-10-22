@@ -407,3 +407,9 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   the running speed (fRunSpeed): the core blends to it (MotionDriver::BeginStop toRun) and the agent keeps the speed
   floor at it like a hand-over into running, so BFCO sees an attack out of running (PowerAttackA etc.); without move
   input the dodge still ends at rest.
+* Presses held through the dodge (2026-10-22, user: power attacks out of a dodge fixed, BFCO diagonals right, perfect
+  dodges and arrow / spell i-frames confirmed in game; but sometimes a power press "did nothing"). Log: each such press
+  came early in the dodge (t 0.1-0.2 s), was rejected too-early, and expired after fBufferWindow (0.2 s) before the
+  attack window opened (~0.37 s); the dodge then ran into locomotion. New [Input] bHoldPressesDuringDodge (default on):
+  while a dodge runs and is not exiting, every buffered press stays fresh (InputBuffer::KeepAlive each frame), so a
+  press waits for its window; from the exit on it ages normally.

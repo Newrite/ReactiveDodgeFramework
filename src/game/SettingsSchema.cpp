@@ -86,6 +86,7 @@ namespace rdf::game::schema
 				Custom(Int(Page::Input, "Input", "iDodgeGamepad", RDF_I(dodgeGamepad), -1, 0xFFFF)),
 				Float(Page::Input, "Input", "fBufferWindow", RDF_F(core.input.bufferWindow), 0.0f, 1.0f, "%.2f s"),
 				Float(Page::Input, "Input", "fDebounce", RDF_F(core.input.debounce), 0.0f, 0.3f, "%.2f s"),
+				Bool(Page::Input, "Input", "bHoldPressesDuringDodge", RDF_B(core.input.holdDuringDodge)),
 				Float(Page::Input, "Input", "fPowerAttackHold", RDF_F(powerAttackHold), 0.05f, 1.0f, "%.2f s"),
 				// --- timing and windows
 				Float(Page::Timing, "Timing", "fStartup", RDF_F(core.timing.startup), 0.0f, 0.5f, "%.3f s"),

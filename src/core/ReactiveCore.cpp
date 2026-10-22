@@ -28,6 +28,11 @@ namespace rdf
 		frame_ = frame;
 		clock_.Advance(frame.dt);
 		buffer_.Expire(clock_.Now());
+		if (cfg_.input.holdDuringDodge && action_.Running() && !action_.Exiting()) {
+			for (std::size_t k = 0; k < kCommandKindCount; ++k) {
+				buffer_.KeepAlive(static_cast<CommandKind>(k), clock_.Now());
+			}
+		}
 	}
 
 	std::uint64_t ReactiveCore::Press(CommandKind kind, Vec2 dir)

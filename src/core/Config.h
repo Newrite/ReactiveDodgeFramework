@@ -113,6 +113,9 @@ namespace rdf
 	{
 		float bufferWindow{ 0.20f };
 		float debounce{ 0.06f };
+		// A press made while a dodge runs waits for its window instead of expiring after bufferWindow; from the dodge's
+		// exit on it ages normally.
+		bool  holdDuringDodge{ true };
 	};
 
 	struct Config

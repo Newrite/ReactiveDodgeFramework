@@ -66,9 +66,12 @@ TEST(press_at_window_start_executes_same_tick)
 
 TEST(press_at_expiry_edge_executes_one_frame_later_is_expired)
 {
+	// The raw buffer window (holding presses through a dodge is off here).
 	// window = 12 frames: pressed at n=12 is still alive (exactly 0.1875 s old) when the window opens at n=24.
 	{
-		Sim s(ExactConfig());
+		auto cfg = ExactConfig();
+		cfg.input.holdDuringDodge = false;
+		Sim s(cfg);
 		s.Frame(kDt64, Dir(90), { CommandKind::Dodge });
 		for (int n = 1; n < 30; ++n) {
 			n == 12 ? s.Frame(kDt64, Dir(90), { CommandKind::Dodge }) : s.Frame(kDt64, Dir(90));
@@ -77,7 +80,9 @@ TEST(press_at_expiry_edge_executes_one_frame_later_is_expired)
 	}
 	// pressed at n=11 it is 13 frames old at n=24 and has expired.
 	{
-		Sim s(ExactConfig());
+		auto cfg = ExactConfig();
+		cfg.input.holdDuringDodge = false;
+		Sim s(cfg);
 		s.Frame(kDt64, Dir(90), { CommandKind::Dodge });
 		for (int n = 1; n < 30; ++n) {
 			n == 11 ? s.Frame(kDt64, Dir(90), { CommandKind::Dodge }) : s.Frame(kDt64, Dir(90));
@@ -223,6 +228,24 @@ TEST(attack_cancel_hands_motion_to_the_attack_at_once_by_default)
 	const auto next = s.Frame(kDt64, Dir(0));
 	CHECK(!next.cmd.active);
 	CHECK(!s.core.DodgeRunning());
+}
+
+TEST(press_early_in_a_dodge_waits_for_its_window)
+{
+	// One power-attack press early in the dodge, long before the attack window and longer ago than the buffer window
+	// when it opens: it still cancels the dodge there (and with the option off it expires).
+	for (const bool hold : { true, false }) {
+		auto cfg = ExactConfig();
+		cfg.input.holdDuringDodge = hold;
+		Sim  s(cfg);
+		s.Frame(kDt64, Dir(0), { CommandKind::Dodge });
+		bool attacked = false;
+		for (int n = 1; n < 40; ++n) {
+			const auto f = n == 3 ? s.Frame(kDt64, Dir(0), { CommandKind::PowerAttack }) : s.Frame(kDt64, Dir(0));
+			attacked = attacked || f.decision.kind == DecisionKind::PowerAttack;
+		}
+		CHECK(attacked == hold);
+	}
 }
 
 TEST(attack_cancel_with_move_held_hands_over_at_running_speed)

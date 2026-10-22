@@ -1,6 +1,8 @@
 # Status (2026-10-22)
 
 ## Working in game (verified with dev-log traces and the user's play-tests)
+* 2026-10-22 (VanillaLike, BFCO): power attacks out of a dodge with and without move input (BFCO diagonals), perfect
+  dodges, i-frames against arrows and spells (projectiles pass, not removed).
 * Dodge from idle and from running, all 8 directions, keyboard (key V) with TDM in both 360 and Vanilla Style.
 * Plugin-owned displacement: requested and measured displacement match frame by frame; heading error 0.3-7 deg.
 * Continuous steering mid-dodge; diagonals from the plugin's own key/stick tracking (TDM rewrites the game's input).
