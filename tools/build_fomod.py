@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 r"""Packs Reactive Dodge Framework as a FOMOD archive (MO2 / Vortex installer with choices).
 
-    python tools/build_fomod.py [--no-copy]
+    python tools/build_fomod.py [--no-copy] [--no-greatsword]
 
 Inputs (build and generate them first: xmake build, tools/gen_rdf_patch.py, tools/gen_rdf_nemesis.py):
   build/windows/x64/releasedbg/ReactiveDodgeFramework.dll/.pdb, dist/ReactiveDodgeFramework.ini (defaults),
-  dist/Interface/Translations, behavior/Pandora_Engine/mod/rdf, behavior/Nemesis_Engine/mod/rdfm,
+  dist/Interface/Translations, dist/Scripts (ReactiveDodge.pex + source), behavior/Pandora_Engine/mod/rdf,
+  behavior/Nemesis_Engine/mod/rdfm,
   the dodge clips and the greatsword set from the MO2 mods (local fixtures, not in git).
 Output: _work/fomod/ReactiveDodgeFramework-<version>.zip, also copied into MO2's downloads folder.
 
@@ -113,7 +114,14 @@ CONFIG = """<?xml version="1.0" encoding="UTF-8"?>
 \t\t\t\t\t\t</plugin>
 \t\t\t\t\t</plugins>
 \t\t\t\t</group>
-\t\t\t\t<group name="Animation sets" type="SelectAny">
+{sets}\t\t\t</optionalFileGroups>
+\t\t</installStep>
+\t</installSteps>
+</config>
+"""
+
+
+SETS_GROUP = """\t\t\t\t<group name="Animation sets" type="SelectAny">
 \t\t\t\t\t<plugins order="Explicit">
 \t\t\t\t\t\t<plugin name="Greatsword dodge set (OAR)">
 \t\t\t\t\t\t\t<description>Eight directional greatsword dodges for two-handed swords (not spears), through Open Animation Replacer.</description>
@@ -122,16 +130,13 @@ CONFIG = """<?xml version="1.0" encoding="UTF-8"?>
 \t\t\t\t\t\t</plugin>
 \t\t\t\t\t</plugins>
 \t\t\t\t</group>
-\t\t\t</optionalFileGroups>
-\t\t</installStep>
-\t</installSteps>
-</config>
 """
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--no-copy", action="store_true", help="do not copy the archive into MO2's downloads folder")
+    ap.add_argument("--no-greatsword", action="store_true", help="leave the greatsword dodge set (and its installer option) out")
     args = ap.parse_args()
     ver = version()
     if os.path.isdir(STAGE):
@@ -145,12 +150,14 @@ def main():
     base_ini = os.path.join(ROOT, "dist", "ReactiveDodgeFramework.ini")
     copy(base_ini, os.path.join(core, "SKSE", "Plugins", "ReactiveDodgeFramework.ini"))
     copy(os.path.join(ROOT, "dist", "Interface"), os.path.join(core, "Interface"))
+    copy(os.path.join(ROOT, "dist", "Scripts"), os.path.join(core, "Scripts"))
     clips = os.path.join("meshes", "actors", "character", "animations", "RDF")
     copy(os.path.join(MODS, "AI - Reactive Dodge Framework", clips), os.path.join(core, clips))
 
     copy(os.path.join(ROOT, "behavior", "Pandora_Engine", "mod", "rdf"), os.path.join(STAGE, "10 Pandora", "Pandora_Engine", "mod", "rdf"))
     copy(os.path.join(ROOT, "behavior", "Nemesis_Engine", "mod", "rdfm"), os.path.join(STAGE, "11 Nemesis", "Nemesis_Engine", "mod", "rdfm"))
-    copy(os.path.join(MODS, "AI - RDF Dodge Set - Greatsword", "meshes"), os.path.join(STAGE, "20 Greatsword Set", "meshes"))
+    if not args.no_greatsword:
+        copy(os.path.join(MODS, "AI - RDF Dodge Set - Greatsword", "meshes"), os.path.join(STAGE, "20 Greatsword Set", "meshes"))
 
     preset_dir = os.path.join(STAGE, "30 Preset Committed", "SKSE", "Plugins")
     os.makedirs(preset_dir)
@@ -163,7 +170,7 @@ def main():
     with open(os.path.join(fomod, "info.xml"), "w", encoding="utf-8", newline="\r\n") as f:
         f.write(INFO.format(name=NAME, version=ver))
     with open(os.path.join(fomod, "ModuleConfig.xml"), "w", encoding="utf-8", newline="\r\n") as f:
-        f.write(CONFIG.format(name=NAME))
+        f.write(CONFIG.format(name=NAME, sets="" if args.no_greatsword else SETS_GROUP))
 
     archive = os.path.join(ROOT, "_work", "fomod", "ReactiveDodgeFramework-%s.zip" % ver)
     if os.path.exists(archive):
