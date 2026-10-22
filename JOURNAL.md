@@ -471,3 +471,11 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   on STB and VanillaLike; validate_rdf.py normalises interval event ids now (235/235). The plugin side is not written.
   STB's bash key (STB.dll TKDodge::BashKey): attackStop if attacking, wantBlocking + blockStart, then DoAction RightAttack +
   RightRelease once IsBlocking (retries blockStart up to 0.3 s); no power bash.
+* The 1hm dodge, plugin side (2026-10-23): TryStart sends RDF_DodgeStart1H / B1H first (third person), the root events
+  when the graph does not take them; oneHand_ keeps the layer for chains. CancelInto in a 1hm dodge performs the attack
+  (replay, else our action) or the block at once, no exit (CancelInPlace), and falls back to the root way when refused.
+  GraphGate hooks NotifyAnimationGraph (VTABLE_Character[3] / VTABLE_PlayerCharacter[3] slot 1 -> 0x14060F240, checked in
+  IDA) and holds [Graph] sHoldEvents (blockStart|blockStop) while the dodge may not be left; DodgeAgent::GateGraphEvents
+  sends them at a 1hm dodge's block window / after a root dodge, and the driver's own blockStart / blockStop bypass it.
+  The 1hm patch part is now shipped (gen_rdf_patch.py; --no-onehand to leave it out); validate_rdf 236/236, Nemesis
+  54/54, validate_onehand 63/63 on STB and VanillaLike against a --no-onehand run. Not yet run in game.

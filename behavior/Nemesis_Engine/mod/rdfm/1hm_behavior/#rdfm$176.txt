@@ -1,0 +1,26 @@
+		<hkobject name="#rdfm$176" class="hkbStateMachine" signature="0x816c1dcb">
+			<hkparam name="variableBindingSet">#rdfm$177</hkparam>
+			<hkparam name="userData">0</hkparam>
+			<hkparam name="name">RDF_1H_Dodge_B_Main_ClipSM</hkparam>
+			<hkparam name="eventToSendWhenStateOrTransitionChanges">
+				<hkobject>
+					<hkparam name="id">-1</hkparam>
+					<hkparam name="payload">null</hkparam>
+				</hkobject>
+			</hkparam>
+			<hkparam name="startStateChooser">null</hkparam>
+			<hkparam name="startStateId">0</hkparam>
+			<hkparam name="returnToPreviousStateEventId">-1</hkparam>
+			<hkparam name="randomTransitionEventId">-1</hkparam>
+			<hkparam name="transitionToNextHigherStateEventId">-1</hkparam>
+			<hkparam name="transitionToNextLowerStateEventId">-1</hkparam>
+			<hkparam name="syncVariableIndex">-1</hkparam>
+			<hkparam name="wrapAroundStateId">false</hkparam>
+			<hkparam name="maxSimultaneousTransitions">32</hkparam>
+			<hkparam name="startStateMode">START_STATE_MODE_DEFAULT</hkparam>
+			<hkparam name="selfTransitionMode">SELF_TRANSITION_MODE_NO_TRANSITION</hkparam>
+			<hkparam name="states" numelements="18">
+				#rdfm$180 #rdfm$183 #rdfm$186 #rdfm$189 #rdfm$192 #rdfm$195 #rdfm$198 #rdfm$201 #rdfm$204 #rdfm$207 #rdfm$210 #rdfm$213 #rdfm$216 #rdfm$219 #rdfm$222 #rdfm$225 #rdfm$228 #rdfm$231
+			</hkparam>
+			<hkparam name="wildcardTransitions">null</hkparam>
+		</hkobject>

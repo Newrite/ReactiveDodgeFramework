@@ -205,9 +205,20 @@ def main():
         back, vback = roundtrip(stem, txt), roundtrip(stem + "_vanilla", van)
         if back and vback:
             g, gb = H.Graph(back), H.Graph(vback)
-            check("%s: events +%d (%s), eventInfos match" % (folder, len(G.CANCEL_EVENTS), ", ".join(G.CANCEL_EVENTS)),
-                  len(g.event_names) == len(gb.event_names) + len(G.CANCEL_EVENTS) and all(e in g.ev_index for e in G.CANCEL_EVENTS)
+            events = G.CANCEL_EVENTS if stem.startswith("fp_") else G.EVENTS + G.ONEHAND_START_EVENTS + G.CANCEL_EVENTS
+            check("%s: events +%d, eventInfos match" % (folder, len(events)),
+                  len(g.event_names) == len(gb.event_names) + len(events) and all(len(g.ev_index.get(e, [])) == 1 for e in events)
                   and g.n_event_infos == len(g.event_names))
+            if not stem.startswith("fp_"):   # 3P: the 1hm dodge states (BEHAVIOR_INTEGRATION.md 7)
+                sm = [s for s in H.state_machines(g) if s.text("name") == "1HM_Behavior"][0]
+                states = {g.objs[s].intval("stateId"): g.objs[s] for s in H.sm_states(g, sm)}
+                ok = all(sid in states and states[sid].text("name") == nm
+                         and states[sid].text("transitions") == states[G.ONEHAND_READY_ID].text("transitions")
+                         for nm, sid in G.ONEHAND_STATES)
+                check("%s: RDF_1H_Dodge_A/B leave by 1HM_Ready_State's transition array" % folder, ok)
+                wl = {g.event_name(int(d["eventId"])) for d in H.trans_array(g, sm.text("wildcardTransitions"))}
+                check("%s: 1HM_Behavior wildcards for %s and RDF_DodgeExit" % (folder, "/".join(G.ONEHAND_START_EVENTS)),
+                      set(G.ONEHAND_START_EVENTS) | {"RDF_DodgeExit"} <= wl)
             rep, repb = H.Report(), H.Report()
             H.check(g, rep)
             H.check(gb, repb)

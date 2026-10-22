@@ -48,6 +48,9 @@
   not yet tried with either.
 * Attack attempts of any source (input, BFCO power idles, Input Support actions, AI) held back during the dodge and
   replayed as they were when it cancels into an attack (ActorMediator::PerformAction callers); not yet tried in game.
+* Dodge inside 1hm_behavior (weapon drawn, third person; BEHAVIOR_INTEGRATION.md 7): attacks / block / bash leave it at
+  once through 1HM_Ready_State's transitions, other mods' direct blockStart is held until the block window. Staged
+  Pandora validated on STB and VanillaLike; needs a Pandora re-run; not yet run in game.
 
 ## Known limitations
 * A one-frame upper-body pop at dodge start, visible only in slow motion (parked; findings in JOURNAL.md).

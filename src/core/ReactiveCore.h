@@ -71,6 +71,7 @@ namespace rdf
 		bool       CancelledIntoAction() const { return intoAction_; }
 		// The current dodge may be left for locomotion (and so for a jump): its exit window is open.
 		bool       ExitWindowOpen() const;
+		bool       BlockWindowOpen() const;  // the running dodge may be cancelled into a block now
 		float      Heading() const { return driver_.Heading(); }
 		float      Facing() const { return driver_.Facing(); }
 		float      Speed() const { return driver_.Speed(); }

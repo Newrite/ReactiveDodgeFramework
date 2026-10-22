@@ -75,6 +75,8 @@ namespace rdf::game
 		graph::DodgeEntry EntryFor(RE::Actor* actor, bool chain) const;
 		void              TryStart(RE::Actor* actor, const Decision& d, const AgentInput& in);
 		void              CancelInto(RE::Actor* actor, const Decision& d);
+		bool              CancelInPlace(RE::Actor* actor, const Decision& d);
+		void              GateGraphEvents(RE::Actor* actor);
 		void              RetryDeferred(RE::Actor* actor);
 		void              VerifyAttack(RE::Actor* actor, float dt, std::uint8_t attackState);
 		void              TrackAttackFromDodge(RE::Actor* actor);
@@ -135,6 +137,7 @@ namespace rdf::game
 		std::string     lastAttackLog_;           // dev log: the attack-cancel inputs last printed
 		int             tailFrames_{ 0 };         // dev trace keeps running this many ticks after a dodge
 		bool            inStateB_{ true };        // dodge state used last; the first dodge goes to A
+		bool            oneHand_{ false };        // the current / last dodge plays in 1hm_behavior, not in the root
 		bool            moveHeld_{ false };
 		bool            intoAttack_{ false };     // the current dodge was cancelled into an attack (runs on when moving)
 		float           carry_{ 0.0f };           // post-dodge speed floor for the controls-driven engine, u/s

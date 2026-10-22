@@ -6,6 +6,7 @@
 #include "Effects.h"
 #include "EngineState.h"
 #include "GraphCoordinator.h"
+#include "GraphGate.h"
 #include "InputCollector.h"
 #include "JumpGate.h"
 #include "LockOn.h"
@@ -50,7 +51,7 @@ namespace rdf::game::update
 		bool StartBlock(RE::Actor* actor)
 		{
 			actor->AsActorState()->actorState2.wantBlocking = 1;
-			if (actor->NotifyAnimationGraph("blockStart"sv)) {
+			if (gate::Send(actor, "blockStart"sv)) {
 				return true;
 			}
 			actor->AsActorState()->actorState2.wantBlocking = 0;
@@ -252,7 +253,7 @@ namespace rdf::game::update
 				return;
 			}
 			state.wantBlocking = 0;
-			player->NotifyAnimationGraph("blockStop"sv);
+			gate::Send(player, "blockStop"sv);
 			blockHolding_ = false;
 			DevLog("{}", "block released");
 		}

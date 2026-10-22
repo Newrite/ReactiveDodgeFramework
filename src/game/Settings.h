@@ -15,6 +15,13 @@ namespace rdf::game
 		std::string startB{ "RDF_DodgeStartB" };  // root wildcard into dodge state B
 		std::string chain{ "RDF_DodgeChain" };
 		std::string exit{ "RDF_DodgeExit" };
+		// the dodge inside 1hm_behavior (BEHAVIOR_INTEGRATION.md 7): tried first while 1hm runs (third person); a dodge
+		// there leaves straight into the attack / block / bash the graph is sent, like 1HM_Ready_State
+		bool        oneHand{ true };
+		std::string start1H{ "RDF_DodgeStart1H" };
+		std::string startB1H{ "RDF_DodgeStartB1H" };
+		// graph events other mods send directly, held back while the dodge may not be left: "event" or "event|cancelEvent"
+		std::vector<std::string> holdEvents{ "blockStart|blockStop" };
 		// events reported by the graph
 		std::string entered{ "RDF_DodgeEntered" };
 		std::string left{ "RDF_DodgeLeft" };

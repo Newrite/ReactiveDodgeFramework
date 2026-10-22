@@ -4,6 +4,7 @@
 #include "AttackCancel.h"
 #include "Diagnostics.h"
 #include "Effects.h"
+#include "GraphGate.h"
 #include "EngineState.h"
 #include "MotionHook.h"
 #include "Settings.h"
@@ -102,6 +103,7 @@ namespace rdf::game
 			effects::TakeDodgedHit(actor);
 		}
 		capture::Forget(formID_);
+		gate::Forget(formID_);
 		motion::Release(formID_);
 		Reset();
 	}
@@ -126,6 +128,7 @@ namespace rdf::game
 			DevLog("{:08X}: held-back {} buffered", formID_, kind == CommandKind::PowerAttack ? "power attack" : "attack");
 		}
 		HandleGraphEvents(actor);
+		GateGraphEvents(actor);
 		ReleaseOrphanedState(actor, dt);
 		HandleDodgedHits(actor);
 		RetryDeferred(actor);
@@ -473,13 +476,29 @@ namespace rdf::game
 		const float clipLength = in.firstPerson ? settings.clipLengthFirstPerson : settings.clipLength;
 		// RDF_ChainIndex: 0 for a fresh dodge, the running dodge's index + 1 for a chain (ChainCount is 1-based).
 		const int   chainIndex = chain ? core_->ChainCount() : 0;
-		if (!graph::SendStart(actor, entry, clip, settings.core.timing.PlaybackSpeed(clipLength, settings.animSpeed), armStance, chainIndex)) {
+		const float playback = settings.core.timing.PlaybackSpeed(clipLength, settings.animSpeed);
+		// The 1hm dodge first (third person, a weapon out: 1hm_behavior runs), else the root one. A chain stays in the layer
+		// of the dodge it continues; in 1hm it is the start of the other state.
+		auto       sent = entry;
+		bool       oneHand = false;
+		bool       accepted = false;
+		const bool chaining = entry == graph::DodgeEntry::Chain;
+		if (settings.graph.oneHand && !in.firstPerson && (!chaining || oneHand_)) {
+			sent = chaining ? (inStateB_ ? graph::DodgeEntry::StartA : graph::DodgeEntry::StartB) : entry;
+			accepted = oneHand = graph::SendStart(actor, sent, clip, playback, armStance, chainIndex, true);
+		}
+		if (!accepted && !(chaining && oneHand_)) {
+			sent = entry;
+			accepted = graph::SendStart(actor, entry, clip, playback, armStance, chainIndex, false);
+		}
+		if (!accepted) {
 			DevLog("{:08X}: graph refused {} (clip {}); press stays buffered", formID_, chain ? "chain" : "start", clip);
 			graph::SetChainIndex(actor, core_->DodgeRunning() ? core_->ChainCount() - 1 : 0);  // the dodge that keeps playing
 			core_->Apply(d, false);
 			return;
 		}
-		inStateB_ = entry == graph::DodgeEntry::Chain ? !inStateB_ : entry == graph::DodgeEntry::StartB;
+		oneHand_ = oneHand;
+		inStateB_ = sent == graph::DodgeEntry::Chain ? !inStateB_ : sent == graph::DodgeEntry::StartB;
 		perfectFired_ = false;
 		lastClip_ = clip;
 		ClearAttackFromDodge(actor);
@@ -501,8 +520,8 @@ namespace rdf::game
 		if (driver_) {
 			driver_->OnDodgeStarted(actor, core_->OwnsYaw());
 		}
-		DevLog("{:08X}: dodge {} #{} angle={:.1f} clip={} keepFacing={} holdFacing={} ownsYaw={} freeRotation={} ({})", formID_,
-			chain ? "chain" : "start", chainIndex, angle, clip, core_->KeepsFacing(), core_->HoldsFacing(), core_->OwnsYaw(), in.freeRotation, in.modeName);
+		DevLog("{:08X}: dodge {} #{} ({}) angle={:.1f} clip={} keepFacing={} holdFacing={} ownsYaw={} freeRotation={} ({})", formID_,
+			chain ? "chain" : "start", chainIndex, oneHand_ ? "1hm" : "root", angle, clip, core_->KeepsFacing(), core_->HoldsFacing(), core_->OwnsYaw(), in.freeRotation, in.modeName);
 	}
 
 	// Attack and block live in a nested behavior under the default state, so leaving the dodge and
@@ -510,6 +529,10 @@ namespace rdf::game
 	// dodge is already exiting into locomotion, where Retry picks the press up until it expires.
 	void DodgeAgent::CancelInto(RE::Actor* actor, const Decision& d)
 	{
+		// A 1hm dodge is left by the action itself (1HM_Ready_State's transitions): no exit first, nothing to wait for.
+		if (oneHand_ && !exitSent_ && graph::Depth(actor) > 0 && CancelInPlace(actor, d)) {
+			return;
+		}
 		if (!exitSent_) {
 			graph::SendExit(actor);
 			exitSent_ = true;
@@ -543,6 +566,57 @@ namespace rdf::game
 		DevLog("{:08X}: action for {} failed, will retry until the press expires", formID_, ToString(d.kind));
 		core_->Apply(Decision{ DecisionKind::Interrupt }, true);
 		retry_ = { d, true };
+	}
+
+	bool DodgeAgent::CancelInPlace(RE::Actor* actor, const Decision& d)
+	{
+		if (d.kind == DecisionKind::Block) {
+			if (!driver_ || !driver_->PerformAction(actor, d)) {
+				DevLog("{:08X}: block out of the 1hm dodge refused; leaving the dodge first", formID_);
+				return false;
+			}
+			exitSent_ = true;   // the block left the dodge
+			core_->Apply(d, true);
+			DevLog("{:08X}: block straight out of the 1hm dodge", formID_);
+			return true;
+		}
+		const bool replayed = capture::Replay(actor, d.kind == DecisionKind::PowerAttack);
+		capture::SetCapturing(formID_, false);
+		const bool performed = replayed || (driver_ && driver_->PerformAction(actor, d));
+		DevLog("{:08X}: {} straight out of the 1hm dodge: {} {}", formID_, ToString(d.kind), replayed ? "replayed" : "own action",
+			performed ? "accepted" : "refused");
+		if (!performed) {
+			return false;   // the root path: exit, then attempts once the graph has left
+		}
+		exitSent_ = true;   // the attack left the dodge
+		core_->Apply(d, true);
+		intoAttack_ = true;
+		graph::SetAttackFromDodge(actor, d.kind == DecisionKind::PowerAttack ? 2 : 1, lastClip_);
+		fromDodge_ = FromDodge{ true, false, graph::ReadAttack(actor).starts };
+		if (moveHeld_) {
+			carry_ = Settings::Get().core.motion.runSpeed;
+		}
+		PendingAttack p{ d };
+		p.attempts = 1;   // already made: VerifyAttack only waits for it to show (and retries our own action if not)
+		pendingAttack_ = p;
+		return true;
+	}
+
+	// Graph events other mods sent straight to the graph while the dodge could not be left (gate.h) go out once it can:
+	// a 1hm dodge in its block window (they leave it like Ready), a root dodge once the graph has left it.
+	void DodgeAgent::GateGraphEvents(RE::Actor* actor)
+	{
+		const bool dodging = core_->DodgeRunning() || awaitingEnter_;
+		const bool mayLeave = oneHand_ ? (!dodging || core_->BlockWindowOpen()) : (!dodging && graph::Depth(actor) == 0);
+		if (!mayLeave) {
+			gate::SetLocked(formID_, true);
+			return;
+		}
+		for (const auto& event : gate::TakeHeld(formID_)) {
+			const bool taken = gate::Send(actor, event);
+			DevLog("{:08X}: held graph event '{}' sent: {}", formID_, event.c_str(), taken ? "taken" : "refused");
+		}
+		gate::SetLocked(formID_, false);
 	}
 
 	void DodgeAgent::VerifyAttack(RE::Actor* actor, float dt, std::uint8_t attackState)

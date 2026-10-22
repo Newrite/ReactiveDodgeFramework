@@ -256,7 +256,7 @@ byte-identical to the baseline run.
 Not tested in game: how the 1P arms look when entering/leaving the dodge pose, and whether the game reads the hand-type variables in
 the 1P graph as it does in 3P (they are vanilla variables used by the 1P graph itself).
 
-## 7. Prototype: the dodge inside 1hm_behavior (`--onehand`, not shipped)
+## 7. The dodge inside 1hm_behavior (shipped since 2026-10-23; `--no-onehand` leaves it out)
 
 Why: the engine accepts an action only when its event triggers a transition among the graph's active nodes
 (`BShkbAnimationGraph` 0x140AEFEB0 calls the graph's `handleEvent` synchronously and reports the `hkbContext` flag "an event
@@ -265,7 +265,7 @@ transition and is refused; that is why the plugin waits for the graph to leave t
 its dodge state inside `1HM_Behavior`, next to `AttackState`, with transitions on the attack events (straight into the nested
 attack state), so its attacks start at the press.
 
-What `python tools/gen_rdf_patch.py <out> --onehand` writes into `1hm_behavior` (3P; 313 nodes; the 0_master part is the
+What `python tools/gen_rdf_patch.py` writes into `1hm_behavior` (3P; 313 nodes; the 0_master part is the
 regular one):
 - our events (all of `EVENTS`, `RDF_DodgeStart1H`, `RDF_DodgeStartB1H`, the cancel events) and variables (`VARIABLES`): the
   clips play inside 1hm now, so their annotations must be 1hm events, and the bindings 1hm variables (shared by name);
@@ -287,12 +287,18 @@ Validation: `tools/stage_pandora.py [--instance stb|vanillalike] --label <ref> -
 with `--label <proto> --rdf _work/proto_1hm/rdf`, then `tools/validate_onehand.py --ref <ref> --label <proto>`: 63/63 on STB
 (Ready has 40 transitions there) and on VanillaLike (60, BFCO / MCO / SCAR / Precision installed).
 
-What the plugin still has to do before this can run in game (none of it written yet):
-- send `RDF_DodgeStart1H` / `RDF_DodgeStartB1H` first and the root `RDF_DodgeStart` / `B` only when the 1H event is not
-  accepted (1hm not active: sheathed, magic, first person);
-- gate what reaches the graph during the dodge's locked part: actions are already held back (capture), but some mods send
-  graph events directly (InputSupport's and STB's `blockStart`), and `1HM_Behavior`'s wildcards (recoil, Precision's
-  `Collision_Recoil`, combat idles, BFCO / MCO sprint-attack wildcards) now apply to the dodge as well;
-- a held-back attack replayed at its window is accepted at once (no waiting for the graph to leave the dodge), and an attack
-  pressed inside the window simply passes;
-- first person and the Nemesis variant are not covered.
+What the plugin does with it ([Graph] bOneHandDodge, sEventStart1H / sEventStartB1H, sHoldEvents):
+- a dodge in third person sends `RDF_DodgeStart1H` / `RDF_DodgeStartB1H` first; the root `RDF_DodgeStart` / `B` only when
+  the graph does not take it (1hm not running: sheathed, magic, first person, the patch without its 1hm part). A chain stays
+  in the layer of the dodge it continues (in 1hm: the start of the other state); the exit is `RDF_DodgeExit` in both;
+- an attack or a block the arbiter lets out of a 1hm dodge is performed at once, without an exit: the held-back attempt is
+  replayed (else our own action) and leaves the dodge through Ready's transitions. Refused, it falls back to the root way
+  (exit, then attempts once the graph has left);
+- graph events other mods send straight to the graph (`sHoldEvents`, default `blockStart|blockStop`: Input Support's and
+  STB's block) are held back by a hook on `NotifyAnimationGraph` (slot 1 of the IAnimationGraphManagerHolder vtable of
+  Character / PlayerCharacter, `src/game/GraphGate`) and sent when the dodge may be left: from the block window of a 1hm
+  dodge, after the graph has left a root one. Their cancel event (`blockStop`) drops them; our own sends bypass the hook.
+
+Still open: first person and the Nemesis variant have only the root dodge in 1P; `1HM_Behavior`'s wildcards (recoil,
+Precision's `Collision_Recoil`, combat idles, BFCO / MCO sprint-attack wildcards) apply to a 1hm dodge too; nothing of
+this has run in game yet.

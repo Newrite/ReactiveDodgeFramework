@@ -82,6 +82,9 @@ Variables (appended to 0_master):
 | `bAnimationDriven` | bool (vanilla, index 81) | - | bound to bIsActive0 |
 | `DF_IsDodging` | - | - | TDM's variable. It does NOT exist in this modlist's 0_master, so it is neither created nor bound. If it ever exists, generate with `--with-df` and it is bound to bIsActive2. |
 
+With a weapon drawn in third person the dodge plays inside `1hm_behavior` (`RDF_1H_Dodge_A/B`, started by
+`RDF_DodgeStart1H` / `RDF_DodgeStartB1H`, BEHAVIOR_INTEGRATION.md 7); the clips, variables and annotations are the same.
+
 Order for a dodge from C++: set `RDF_DodgeClip`, set `RDF_DodgeSpeed`, set `RDF_ArmBlend` (0 or 1), set `RDF_ChainIndex`, set `RDF_IsDodging` true, send `RDF_DodgeStart`.
 Chained dodge: set clip/speed, send `RDF_DodgeChain`. End: wait for `RDF_DodgeLeft` (or send `RDF_DodgeExit`), set
 `RDF_IsDodging` false.

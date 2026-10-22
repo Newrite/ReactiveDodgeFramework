@@ -1,5 +1,6 @@
 #include "GraphCoordinator.h"
 
+#include "GraphGate.h"
 #include "Settings.h"
 
 #include <array>
@@ -16,7 +17,7 @@ namespace rdf::game::graph
 	{
 		struct Names
 		{
-			RE::BSFixedString start, startB, chain, exit, entered, left, clip, speed, armBlend, isDodging, chainIndex, attackFromDodge, attackFromDodgeClip;
+			RE::BSFixedString start, startB, start1H, startB1H, chain, exit, entered, left, clip, speed, armBlend, isDodging, chainIndex, attackFromDodge, attackFromDodgeClip;
 			std::vector<RE::BSFixedString> windowOpen, windowClose;
 			// [AttackCancel]
 			std::vector<RE::BSFixedString> recovery, recoveryEnd, attackStart;
@@ -150,6 +151,8 @@ namespace rdf::game::graph
 		const auto& g = Settings::Get().graph;
 		g_names.start = g.start;
 		g_names.startB = g.startB;
+		g_names.start1H = g.start1H;
+		g_names.startB1H = g.startB1H;
 		g_names.chain = g.chain;
 		g_names.exit = g.exit;
 		g_names.entered = g.entered;
@@ -312,12 +315,15 @@ namespace rdf::game::graph
 		return std::clamp(stanceShare, 0.0f, 1.0f);
 	}
 
-	bool SendStart(RE::Actor* actor, DodgeEntry entry, int clip, float animSpeed, float armStance, int chainIndex)
+	bool SendStart(RE::Actor* actor, DodgeEntry entry, int clip, float animSpeed, float armStance, int chainIndex, bool oneHand)
 	{
 		actor->SetGraphVariableInt(g_names.clip, clip);
 		actor->SetGraphVariableInt(g_names.chainIndex, chainIndex);
 		actor->SetGraphVariableFloat(g_names.speed, animSpeed);
 		actor->SetGraphVariableFloat(g_names.armBlend, ArmBlendWeight(armStance));
+		if (oneHand) {   // 1hm: a chain is the start of the other state (the caller passes StartA / StartB)
+			return gate::Send(actor, entry == DodgeEntry::StartB ? g_names.startB1H : g_names.start1H);
+		}
 		switch (entry) {
 		case DodgeEntry::Chain: return actor->NotifyAnimationGraph(g_names.chain);
 		case DodgeEntry::StartB: return actor->NotifyAnimationGraph(g_names.startB);

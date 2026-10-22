@@ -780,10 +780,10 @@ def main():
     fp_master, fp_nodes, _ = gen_master(set(), fp=True)
     write(os.path.join(out, "patches", FP_PATCH_NAME), fp_master)
     print("first person: %d new nodes -> patches/%s" % (fp_nodes, FP_PATCH_NAME))
-    if "--onehand" in sys.argv:   # prototype: the dodge inside 1hm_behavior (write it to a _work folder, not the shipped patch)
+    if "--no-onehand" not in sys.argv:   # the dodge inside 1hm_behavior (BEHAVIOR_INTEGRATION.md 7); --no-onehand: events only
         onehand, n_1h = gen_onehand()
         write(os.path.join(out, "patches", "1hm_behavior.xml"), onehand)
-        print("1hm_behavior (--onehand prototype): %d new nodes" % n_1h)
+        print("1hm_behavior: %d new nodes (dodge states inside 1HM_Behavior)" % n_1h)
     else:
         write(os.path.join(out, "patches", "1hm_behavior.xml"), gen_events(V_1HM, CANCEL_EVENTS))
     write(os.path.join(out, "patches", "firstperson~1hm_behavior.xml"), gen_events(V_1HM, CANCEL_EVENTS))

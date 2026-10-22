@@ -2,6 +2,7 @@
 #include "game/Api.h"
 #include "game/Effects.h"
 #include "game/GraphCoordinator.h"
+#include "game/GraphGate.h"
 #include "game/InputCollector.h"
 #include "game/JumpGate.h"
 #include "game/LegacyDodge.h"
@@ -70,6 +71,7 @@ SKSEPluginLoad(const SKSE::LoadInterface* a_skse)
 
 	rdf::game::Settings::Load();
 	rdf::game::graph::Init();
+	rdf::game::gate::Init();
 	rdf::game::update::Configure();
 
 	if (!rdf::game::motion::Install()) {
@@ -92,6 +94,7 @@ SKSEPluginLoad(const SKSE::LoadInterface* a_skse)
 	rdf::game::update::Install();
 	rdf::game::jump::Install();
 	rdf::game::capture::Install();
+	rdf::game::gate::Install();
 	rdf::game::api::Install();
 
 	SKSE::GetMessagingInterface()->RegisterListener(OnMessage);

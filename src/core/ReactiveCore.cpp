@@ -80,6 +80,19 @@ namespace rdf
 		return arbiter_.WindowsFor(s).exit;
 	}
 
+	bool ReactiveCore::BlockWindowOpen() const
+	{
+		if (!action_.Running()) {
+			return true;
+		}
+		ArbiterState s;
+		s.dodgeActive = !intoAction_;
+		s.exiting = action_.Exiting();
+		s.actionTime = action_.Time();
+		s.annotated = windows_.Annotated();
+		return arbiter_.WindowsFor(s).block;
+	}
+
 	float ReactiveCore::StartHeading(const Decision& d, bool chain) const
 	{
 		if (Length(d.dir) > 1e-3f) {

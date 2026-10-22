@@ -726,6 +726,23 @@ TEST(exit_window_gates_the_jump_until_exit_from)
 	CHECK(s.core.ActionTime() == 0.46875f);
 }
 
+// What the graph gate waits for in a 1hm dodge: closed at the start, open from the block window on.
+TEST(block_window_opens_with_the_arbiter_block_window)
+{
+	auto cfg = ExactConfig();
+	Sim  s(cfg);
+	CHECK(s.core.BlockWindowOpen());  // no dodge
+	s.Frame(kDt64, Dir(90), { CommandKind::Dodge });
+	CHECK(!s.core.BlockWindowOpen());
+	bool opened = false;
+	for (int n = 0; n < 80 && !opened; ++n) {
+		s.Frame(kDt64, Dir(90));
+		opened = s.core.BlockWindowOpen();
+	}
+	CHECK(opened);
+	CHECK(s.core.ActionTime() >= cfg.policy.blockFrom - 1e-4f);
+}
+
 // ---- steering limits ---------------------------------------------------------------------------
 
 TEST(max_deviation_zero_locks_the_start_direction)

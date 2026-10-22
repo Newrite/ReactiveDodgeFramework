@@ -1,0 +1,10 @@
+		<hkobject name="#rdfm$291" class="hkbManualSelectorGenerator" signature="0xd932fab8">
+			<hkparam name="variableBindingSet">#rdfm$292</hkparam>
+			<hkparam name="userData">0</hkparam>
+			<hkparam name="name">RDF_1H_Dodge_B_StanceR_1H_LeftSel</hkparam>
+			<hkparam name="generators" numelements="13">
+				#rdfm$289 #rdfm$290 #rdfm$290 #rdfm$290 #rdfm$290 #rdfm$289 #rdfm$289 #rdfm$289 #rdfm$289 #rdfm$289 #rdfm$289 #rdfm$289 #rdfm$289
+			</hkparam>
+			<hkparam name="selectedGeneratorIndex">0</hkparam>
+			<hkparam name="currentGeneratorIndex">0</hkparam>
+		</hkobject>

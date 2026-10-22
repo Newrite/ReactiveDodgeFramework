@@ -252,6 +252,10 @@ namespace rdf::game
 			g.startB = ReadString("Graph", "sEventStartB", g.startB);
 			g.chain = ReadString("Graph", "sEventChain", g.chain);
 			g.exit = ReadString("Graph", "sEventExit", g.exit);
+			g.oneHand = ReadBool("Graph", "bOneHandDodge", g.oneHand);
+			g.start1H = ReadString("Graph", "sEventStart1H", g.start1H);
+			g.startB1H = ReadString("Graph", "sEventStartB1H", g.startB1H);
+			g.holdEvents = Split(ReadString("Graph", "sHoldEvents", Join(g.holdEvents)));
 			g.entered = ReadString("Graph", "sEventEntered", g.entered);
 			g.left = ReadString("Graph", "sEventLeft", g.left);
 			g.clip = ReadString("Graph", "sVarClip", g.clip);

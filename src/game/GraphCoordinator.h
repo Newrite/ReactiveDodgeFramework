@@ -54,7 +54,8 @@ namespace rdf::game::graph
 	// Sets RDF_DodgeClip / RDF_DodgeSpeed / RDF_ArmBlend / RDF_ChainIndex, then sends the entry event. False = the
 	// graph refused it. armStance: share (0..1) of the current weapon stance on the arms, over the dodge clip.
 	// chainIndex: which dodge of the chain this is (0 = the first).
-	bool SendStart(RE::Actor* actor, DodgeEntry entry, int clip, float animSpeed, float armStance, int chainIndex);
+	// oneHand: the 1hm_behavior dodge states (BEHAVIOR_INTEGRATION.md 7), refused while 1hm does not run.
+	bool SendStart(RE::Actor* actor, DodgeEntry entry, int clip, float animSpeed, float armStance, int chainIndex, bool oneHand);
 	// RDF_ChainIndex alone: restored after a refused chain, 0 once no dodge runs.
 	void SetChainIndex(RE::Actor* actor, int chainIndex);
 	// RDF_AttackFromDodge (0 none, 1 attack, 2 power attack) and RDF_AttackFromDodgeClip.
