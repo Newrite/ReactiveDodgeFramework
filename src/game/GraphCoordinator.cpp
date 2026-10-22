@@ -4,6 +4,7 @@
 
 #include <array>
 #include <atomic>
+#include <chrono>
 #include <mutex>
 #include <optional>
 #include <unordered_map>
@@ -24,6 +25,9 @@ namespace rdf::game::graph
 		Names g_names;
 
 		// Clip annotation names (ANIMATION_CONTRACT.md), indexed by WindowEvent.
+		// Attack-start events closer together than this belong to one attack.
+		constexpr auto kAttackStartBurst = std::chrono::milliseconds(150);
+
 		constexpr std::array kWindowEventNames{ "RDF_Windows"sv, "RDF_IFrameStart"sv, "RDF_IFrameEnd"sv,
 			"RDF_ChainOpen"sv, "RDF_AttackOpen"sv, "RDF_BlockOpen"sv, "RDF_ExitOpen"sv, "RDF_PerfectStart"sv, "RDF_PerfectEnd"sv };
 		std::array<RE::BSFixedString, kWindowEventNames.size()> g_windowNames;
@@ -37,7 +41,8 @@ namespace rdf::game::graph
 			// the actor's current attack (attack frameworks, attack clip annotations); start over with each attack
 			bool                attackRecovery{ false };
 			std::optional<bool> attackCancel;
-			std::uint32_t       attackStarts{ 0 };  // attack-start events seen (a new attack after a known one)
+			std::uint32_t       attackStarts{ 0 };  // attacks started (a new attack after a known one)
+			std::chrono::steady_clock::time_point lastAttackStart{};
 			// Several graphs (the player's first / third person): only this one counts; null = every graph.
 			const RE::BSTEventSource<RE::BSAnimationGraphEvent>* activeSource{ nullptr };
 		};
@@ -99,7 +104,13 @@ namespace rdf::game::graph
 				if (Contains(g_names.attackStart, event->tag)) {
 					g.attackRecovery = false;
 					g.attackCancel.reset();
-					++g.attackStarts;
+					// One attack can send its start event more than once (BFCO's Bfco_AttackStartFX twice, ~20 ms apart):
+					// a burst counts as one start.
+					const auto now = std::chrono::steady_clock::now();
+					if (now - g.lastAttackStart > kAttackStartBurst) {
+						++g.attackStarts;
+					}
+					g.lastAttackStart = now;
 				} else if (Contains(g_names.recovery, event->tag)) {
 					g.attackRecovery = true;
 				} else if (Contains(g_names.recoveryEnd, event->tag)) {

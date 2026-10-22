@@ -442,3 +442,12 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   include DMCO's PIE stamina payload, SpecialFrames_Invincible i-frames and MCO_Recovery / MCO_InputBuffer, the last of
   which is in RDF's sRecoveryEvents: build_clip_set.py gained a spec `dropAnnotations` prefix list (annotate_clips
   checks they are gone after the repack). Clips run 1.2-2.0 s; exit windows land 0.37-0.53 s.
+* Power attacks out of a dodge, log review (2026-10-23, VanillaLike, BFCO): in-place power attacks always went through;
+  directional ones (BFCO script idles 945 F / 946 B / 948 R) were refused 9 times out of ~25. Their conditions need the
+  actor moving (GetMovementDirection != 0 OR GetMovementSpeed != 0), which no longer holds when the attack is replayed
+  after the dodge, and the re-choice among variants found none: TESDataHandler's form arrays hold no IDLE records (the
+  IDLE loader 0x140357840 hands them to the idle manager), so "top-level idles of the same plugin" was always empty.
+  Variants now walk the global form map once (TopLevelIdles), so BFCO's in-place 8C5, which has no movement condition,
+  is picked. Also RDF_AttackFromDodge was cleared ~30 ms into a BFCO attack: BFCO sends Bfco_AttackStartFX twice per
+  attack (~20 ms apart), counted as a next attack. Attack-start events within 150 ms count once, and the count is taken
+  at the cancel (the attack's own start is the first after it, the next attack's the second).

@@ -527,7 +527,7 @@ namespace rdf::game
 			intoAttack_ = true;
 			// For OAR conditions on the attack's clip: set before the attack starts (next tick, PerformPendingAttack).
 			graph::SetAttackFromDodge(actor, d.kind == DecisionKind::PowerAttack ? 2 : 1, lastClip_);
-			fromDodge_ = FromDodge{ true, false, 0 };
+			fromDodge_ = FromDodge{ true, false, graph::ReadAttack(actor).starts };
 			if (moveHeld_) {
 				carry_ = Settings::Get().core.motion.runSpeed;
 			}
@@ -559,7 +559,6 @@ namespace rdf::game
 		actor->GetGraphVariableBool("IsAttacking"sv, attacking);
 		if (attacking) {  // ours, or one the framework started from a press after the dodge let go
 			fromDodge_.started = true;
-			fromDodge_.starts = graph::ReadAttack(actor).starts;
 			DevLog("{:08X}: {} from the dodge started after {:.3f}s ({} attempt(s), attack state {})", formID_, ToString(p.decision.kind),
 				p.age, p.attempts, attackState);
 			pendingAttack_.reset();
@@ -593,7 +592,8 @@ namespace rdf::game
 	}
 
 	// RDF_AttackFromDodge lasts for the attack the dodge became: it ends with that attack, or when the next one starts (a
-	// combo going on from it is made of ordinary attacks).
+	// combo going on from it is made of ordinary attacks). Counted from the cancel: that attack's own start event (if its
+	// framework sends one, whenever it arrives against IsAttacking) is the first one after it, the next attack's the second.
 	void DodgeAgent::TrackAttackFromDodge(RE::Actor* actor)
 	{
 		if (!fromDodge_.active || !fromDodge_.started) {
@@ -601,7 +601,7 @@ namespace rdf::game
 		}
 		bool attacking = false;
 		actor->GetGraphVariableBool("IsAttacking"sv, attacking);
-		if (!attacking || graph::ReadAttack(actor).starts != fromDodge_.starts) {
+		if (!attacking || graph::ReadAttack(actor).starts > fromDodge_.starts + 1) {
 			DevLog("{:08X}: the attack out of the dodge is over ({})", formID_, attacking ? "next attack" : "attack ended");
 			ClearAttackFromDodge(actor);
 		}

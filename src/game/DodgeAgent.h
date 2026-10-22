@@ -117,7 +117,7 @@ namespace rdf::game
 		{
 			bool          active{ false };   // the variable is set
 			bool          started{ false };  // the attack shows (IsAttacking)
-			std::uint32_t starts{ 0 };       // attack-start events seen when it did
+			std::uint32_t starts{ 0 };       // attack starts seen at the cancel (before that attack)
 		};
 		FromDodge fromDodge_;
 		int       lastClip_{ 0 };  // RDF_DodgeClip of the current / last dodge

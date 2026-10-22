@@ -119,6 +119,28 @@ namespace rdf::game::capture
 		// The variants an idle's mod chooses between: its siblings in the idle tree, or, for a top-level idle (BFCO's
 		// script idles have no parent), the other top-level idles of the same plugin. Attacks of the same kind only.
 		// Cached per idle (main thread).
+		// Every idle without a parent. Idles are not in TESDataHandler's form arrays (the IDLE loader hands them to the
+		// idle manager, 0x140357840), so the global form map is walked, once (main thread, after the data loaded).
+		const std::vector<RE::TESIdleForm*>& TopLevelIdles()
+		{
+			static const std::vector<RE::TESIdleForm*> idles = [] {
+				std::vector<RE::TESIdleForm*> out;
+				const auto& [map, lock] = RE::TESForm::GetAllForms();
+				const RE::BSReadLockGuard guard{ lock };
+				if (map) {
+					for (const auto& [id, form] : *map) {
+						auto* idle = form ? form->As<RE::TESIdleForm>() : nullptr;
+						if (idle && !idle->parentIdle) {
+							out.push_back(idle);
+						}
+					}
+				}
+				logger::info("{} top-level idle(s) in the load order", out.size());
+				return out;
+			}();
+			return idles;
+		}
+
 		const std::vector<RE::TESIdleForm*>& Variants(RE::Actor* actor, RE::TESIdleForm* held, Kind kind)
 		{
 			static std::unordered_map<RE::FormID, std::vector<RE::TESIdleForm*>> cache;
@@ -136,12 +158,16 @@ namespace rdf::game::capture
 				for (std::uint32_t i = 0; i < siblings->size(); ++i) {
 					consider((*siblings)[i] ? (*siblings)[i]->As<RE::TESIdleForm>() : nullptr);
 				}
-			} else if (auto* handler = RE::TESDataHandler::GetSingleton(); handler && held->GetFile(0)) {
-				for (auto* idle : handler->GetFormArray<RE::TESIdleForm>()) {
-					if (idle && !idle->parentIdle && idle->GetFile(0) == held->GetFile(0)) {
+			} else if (const auto* file = held->GetFile(0)) {
+				std::size_t sameFile = 0;
+				for (auto* idle : TopLevelIdles()) {
+					if (idle->GetFile(0) == file) {
+						++sameFile;
 						consider(idle);
 					}
 				}
+				DevLog("{:08X}: idle {:08X}: {} other top-level idle(s) in {}", actor->GetFormID(), held->GetFormID(),
+					sameFile ? sameFile - 1 : 0, file->GetFilename());
 			}
 			DevLog("{:08X}: idle {:08X} has {} variant(s) of the same kind", actor->GetFormID(), held->GetFormID(), out.size());
 			return out;
