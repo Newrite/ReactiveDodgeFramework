@@ -494,14 +494,19 @@ namespace rdf::game
 			graph::SendExit(actor);
 			exitSent_ = true;
 		}
-		const bool performed = driver_ && driver_->PerformAction(actor, d);
+		// The framework may have started the attack from the same press itself (BFCO plays its power-attack idle
+		// on its own key): then there is nothing to perform, only to verify.
+		bool alreadyAttacking = false;
+		actor->GetGraphVariableBool("IsAttacking"sv, alreadyAttacking);
+		const bool performed = d.kind != DecisionKind::Block && alreadyAttacking ? true : driver_ && driver_->PerformAction(actor, d);
 		if (d.kind != DecisionKind::Block) {
 			// An attack is only trusted once it shows: the action can be accepted while the root is still in our dodge
 			// state and then be dropped by an attack framework's behavior (MCO / BFCO). VerifyAttack repeats it once the
 			// graph has left the dodge, until the attack state shows an attack or the time runs out.
 			core_->Apply(d, true);
 			pendingAttack_ = PendingAttack{ d, 0.0f, 0.0f, -1.0f, 1 };
-			DevLog("{:08X}: {} from the dodge: action {} (verifying)", formID_, ToString(d.kind), performed ? "accepted" : "refused");
+			DevLog("{:08X}: {} from the dodge: {} (verifying)", formID_, ToString(d.kind),
+				alreadyAttacking ? "the graph already attacks" : performed ? "action accepted" : "action refused");
 			return;
 		}
 		if (performed) {
