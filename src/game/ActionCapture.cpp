@@ -8,6 +8,7 @@
 #include <mutex>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 // wingdi.h defines GetObject as a macro, which breaks BGSDefaultObjectManager::GetObject.
 #undef GetObject
@@ -76,6 +77,8 @@ namespace rdf::game::capture
 		// The vanilla attack actions by name; anything else (idles, framework actions) is an attack when the actor's race
 		// has attack data for the animation event it plays, and a power attack when that attack data says so. Killmoves
 		// (pa_*) are paired idles, never held back.
+		Kind AttackKindOf(RE::Actor* actor, const RE::BSFixedString& animEvent);
+
 		Kind Classify(RE::Actor* actor, const RE::BGSActionData* data)
 		{
 			using D = RE::DEFAULT_OBJECT;
@@ -91,7 +94,13 @@ namespace rdf::game::capture
 					return Kind::Attack;
 				}
 			}
-			const std::string_view event = data->animEvent.c_str();
+			return AttackKindOf(actor, data->animEvent);
+		}
+
+		// Of an idle that becomes an attack (the actor's race has attack data for its animation event).
+		Kind AttackKindOf(RE::Actor* actor, const RE::BSFixedString& animEvent)
+		{
+			const std::string_view event = animEvent.c_str();
 			if (event.empty() || (event.size() >= 3 && _strnicmp(event.data(), "pa_", 3) == 0)) {
 				return Kind::None;
 			}
@@ -100,11 +109,62 @@ namespace rdf::game::capture
 			if (!map) {
 				return Kind::None;
 			}
-			const auto it = map->attackDataMap.find(data->animEvent);
+			const auto it = map->attackDataMap.find(animEvent);
 			if (it == map->attackDataMap.end() || !it->second) {
 				return Kind::None;
 			}
 			return it->second->data.flags.any(RE::AttackData::AttackFlag::kPowerAttack) ? Kind::Power : Kind::Attack;
+		}
+
+		// The variants an idle's mod chooses between: its siblings in the idle tree, or, for a top-level idle (BFCO's
+		// script idles have no parent), the other top-level idles of the same plugin. Attacks of the same kind only.
+		// Cached per idle (main thread).
+		const std::vector<RE::TESIdleForm*>& Variants(RE::Actor* actor, RE::TESIdleForm* held, Kind kind)
+		{
+			static std::unordered_map<RE::FormID, std::vector<RE::TESIdleForm*>> cache;
+			const auto [it, added] = cache.try_emplace(held->GetFormID());
+			if (!added) {
+				return it->second;
+			}
+			auto& out = it->second;
+			const auto consider = [&](RE::TESIdleForm* idle) {
+				if (idle && idle != held && AttackKindOf(actor, idle->animEventName) == kind) {
+					out.push_back(idle);
+				}
+			};
+			if (const auto* siblings = held->parentIdle ? held->parentIdle->childIdles : nullptr) {
+				for (std::uint32_t i = 0; i < siblings->size(); ++i) {
+					consider((*siblings)[i] ? (*siblings)[i]->As<RE::TESIdleForm>() : nullptr);
+				}
+			} else if (auto* handler = RE::TESDataHandler::GetSingleton(); handler && held->GetFile(0)) {
+				for (auto* idle : handler->GetFormArray<RE::TESIdleForm>()) {
+					if (idle && !idle->parentIdle && idle->GetFile(0) == held->GetFile(0)) {
+						consider(idle);
+					}
+				}
+			}
+			DevLog("{:08X}: idle {:08X} has {} variant(s) of the same kind", actor->GetFormID(), held->GetFormID(), out.size());
+			return out;
+		}
+
+		// The idle to replay now. The held one was chosen by its mod from the conditions at the press (BFCO picks a
+		// directional power attack from the stick and the facing, which the dodge changes); if they no longer hold, the
+		// first variant whose conditions hold now wins, as the mod itself would have chosen at this moment.
+		RE::TESIdleForm* ChooseIdle(RE::Actor* actor, RE::TESIdleForm* held, bool power)
+		{
+			const auto holds = [&](RE::TESIdleForm* idle) { return idle && idle->conditions.IsTrue(actor, actor); };
+			if (holds(held)) {
+				return held;
+			}
+			for (auto* idle : Variants(actor, held, power ? Kind::Power : Kind::Attack)) {
+				if (holds(idle)) {
+					DevLog("{:08X}: held-back idle {:08X} no longer applies; variant {:08X} ('{}') does", actor->GetFormID(),
+						held->GetFormID(), idle->GetFormID(), idle->animEventName.c_str());
+					return idle;
+				}
+			}
+			DevLog("{:08X}: held-back idle {:08X} no longer applies, nor any variant", actor->GetFormID(), held->GetFormID());
+			return held;  // the game decides (and will likely refuse)
 		}
 
 		// Any thread (the idle callback may run off the main one). True = held back.
@@ -231,6 +291,7 @@ namespace rdf::game::capture
 		g_replaying = true;
 		if (attempt->idle) {
 			if (auto* process = actor->GetActorRuntimeData().currentProcess) {
+				attempt->idle = ChooseIdle(actor, attempt->idle, attempt->power);
 				ok = process->PlayIdle(actor, attempt->idle, target.get());
 			}
 		} else if (attempt->action) {

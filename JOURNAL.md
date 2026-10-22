@@ -413,3 +413,11 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   attack window opened (~0.37 s); the dodge then ran into locomotion. New [Input] bHoldPressesDuringDodge (default on):
   while a dodge runs and is not exiting, every buffered press stays fresh (InputBuffer::KeepAlive each frame), so a
   press waits for its window; from the exit on it ages normally.
+* Replayed idle re-chosen at replay time (2026-10-22, log 23:35:33 / 23:35:38: the held-back BFCO power idles
+  "backward" (0x946) and "right" (0x948) were refused at the replay, our vanilla power-attack action too; the forward
+  ones went through). BFCO chooses its directional power idle from the conditions at the press (direction graph
+  variable, moving), and the dodge changes facing and movement before the replay, so the held variant no longer
+  applied. The replay now checks the held idle's own conditions and, if they fail, takes the first of its variants whose
+  conditions hold now: its siblings in the idle tree, or for a top-level idle (BFCO's script idles have no parent) the
+  other top-level idles of the same plugin, attacks of the same kind only (cached per idle), as BFCO does by calling
+  conditions.IsTrue on its candidates.
