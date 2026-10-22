@@ -54,6 +54,10 @@ ONEHAND_STATES = [("RDF_1H_Dodge_A", 9701), ("RDF_1H_Dodge_B", 9702)]
 ONEHAND_START_EVENTS = ["RDF_DodgeStart1H", "RDF_DodgeStartB1H"]
 ONEHAND_READY_ID = 0
 ONEHAND_EXIT_EXPR = "RDF_IsDodging == 1"
+# first-person 1hm_behavior (Nemesis ids of the vanilla 1P file): the same layout, its own state machine / Ready ids
+V_1HM_FP = dict(STRING="#0085", VALUES="#0086", DATA="#0087", SM="#4420", WILDCARD="#0088",
+                READY_STATE="#4418", READY_TRANSITIONS="#4416")
+FP_1HM_PATCH_NAME = "firstperson~1hm_behavior.xml"
 # 1hm_behavior's own characterPropertyNames (not 0_master's): 5 LeftArm, 7 RightArm
 CHAR_PROP_1HM = {"R": ("RightArm", 7), "L": ("LeftArm", 5)}
 # (name, type, initial value)
@@ -411,7 +415,9 @@ def chooser_sm(N, out, label, var_name, gens, ids=None):
     return sm
 
 
-def stance_chooser_fp(N, out, label):
+def stance_chooser_fp(N, out, label, drawn_only=False):
+    """drawn_only: the stance machine itself (inside 1hm_behavior a weapon is always out, and 1hm has no
+    currentDefaultState to choose by)."""
     clips = {}
 
     def clip(key):
@@ -429,12 +435,15 @@ def stance_chooser_fp(N, out, label):
         else:
             entries.append(clip(key))
     stance = chooser_sm(N, out, label + "_StanceSM", HAND_VARS["R"], entries)
+    if drawn_only:
+        return stance
     mt = clip("MT")
     ids = sorted(FP_DRAWN)
     return chooser_sm(N, out, label + "_DrawnSM", FP_DRAWN_VAR, [stance if FP_DRAWN[i] == "STANCE" else mt for i in ids], ids)
 
 
-def build_state(nm, state_id, other_id, N, fx, bind_extra, masks, v=None, fp=False, char_prop=None, trans_ptr=None):
+def build_state(nm, state_id, other_id, N, fx, bind_extra, masks, v=None, fp=False, char_prop=None, trans_ptr=None,
+                drawn_only=False):
     """returns (state node name, [xml nodes]). trans_ptr: use that existing transition array instead of our own."""
     v = v or V
     char_prop = char_prop or CHAR_PROP
@@ -476,7 +485,7 @@ def build_state(nm, state_id, other_id, N, fx, bind_extra, masks, v=None, fp=Fal
         named(arm, nm + "_FPArmLayer")
         main = dodge_selector(N, out, nm + "_FP", fp_clip_path)
         arm_dodge = dodge_selector(N, out, nm + "_FPArmDodge", fp_clip_path)
-        stance = stance_chooser_fp(N, out, nm)
+        stance = stance_chooser_fp(N, out, nm, drawn_only)
         out.append(blender_child(c_main, main, masks["not_arms"], 1.0, 0.0))
         out.append(blender_child(c_arm, arm, masks["arms"], 1.0, 0.0))
         out.append(blender(gen_ptr, [c_main, c_arm], BLEND_FLAGS_PLAIN))
@@ -591,11 +600,12 @@ def expression_condition(name, expr):
     return node(name, "hkbExpressionCondition", "0x1c3c1045", p("expression", expr))
 
 
-def gen_onehand():
-    """1hm_behavior patch of the --onehand prototype: our events / variables, two dodge states in 1HM_Behavior that leave
-    by 1HM_Ready_State's transitions, wildcards to start them and to leave back to Ready."""
+def gen_onehand(fp=False):
+    """1hm_behavior patch: our events / variables, two dodge states in 1HM_Behavior that leave by 1HM_Ready_State's
+    transitions, wildcards to start them and to leave back to Ready. fp: the first-person file, with the 1P dodge state
+    of firstperson~0_master (Bethesda's 1P dodge clips on the body, the 1P weapon stance on the arms)."""
     N = Names()
-    v = V_1HM
+    v = V_1HM_FP if fp else V_1HM
     x = ["<patch>"]
     for e in EVENTS + ONEHAND_START_EVENTS + CANCEL_EVENTS:
         x.append('  <append path="%s/eventNames"><hkcstring>%s</hkcstring></append>' % (v["STRING"], e))
@@ -612,15 +622,16 @@ def gen_onehand():
     for key, spec in (("in", FX_IN), ("out", FX_OUT)):   # no chain blend: a chain is a start of the other state
         fx[key] = N.new()
         new_nodes.append(effect_node(fx[key], spec))
-    arms = set(RIGHT_ARM_BONES) | set(LEFT_ARM_BONES)
+    arms = set(FP_ARM_BONES) if fp else set(RIGHT_ARM_BONES) | set(LEFT_ARM_BONES)
+    n_bones = N_BONES_FP if fp else N_BONES
     masks = {"arms": N.new(), "not_arms": N.new()}
-    new_nodes.append(bone_weight_array(masks["arms"], [1.0 if b in arms else 0.0 for b in range(N_BONES)]))
-    new_nodes.append(bone_weight_array(masks["not_arms"], [0.0 if b in arms else 1.0 for b in range(N_BONES)]))
+    new_nodes.append(bone_weight_array(masks["arms"], [1.0 if b in arms else 0.0 for b in range(n_bones)]))
+    new_nodes.append(bone_weight_array(masks["not_arms"], [0.0 if b in arms else 1.0 for b in range(n_bones)]))
     states = []
     (nm_a, id_a), (nm_b, id_b) = ONEHAND_STATES
     for nm, sid, other in ((nm_a, id_a, id_b), (nm_b, id_b, id_a)):
-        st, nodes = build_state(nm, sid, other, N, fx, [], masks, v, char_prop=CHAR_PROP_1HM,
-                                trans_ptr=v["READY_TRANSITIONS"])
+        st, nodes = build_state(nm, sid, other, N, fx, [], masks, v, fp=fp, char_prop=CHAR_PROP_1HM,
+                                trans_ptr=v["READY_TRANSITIONS"], drawn_only=True)
         states.append(st)
         new_nodes += nodes
     exit_cond = N.new()
@@ -699,17 +710,17 @@ def verify_ids(root):
     return ok
 
 
-def verify_ids_1hm(root):
+def verify_ids_1hm(root, fp=False):
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     import hkxcheck as H
-    g = H.Graph(os.path.join(root, "_work", "vanilla_nemesis_xml", "1hm_behavior_nem.xml"))
+    g = H.Graph(os.path.join(root, "_work", "fp_nem_xml" if fp else "vanilla_nemesis_xml", "1hm_behavior_nem.xml"))
     ok = True
 
     def chk(cond, msg):
         nonlocal ok
-        print(("ok   " if cond else "FAIL ") + "[1hm] " + msg)
+        print(("ok   " if cond else "FAIL ") + ("[1P 1hm] " if fp else "[1hm] ") + msg)
         ok &= bool(cond)
-    v = V_1HM
+    v = V_1HM_FP if fp else V_1HM
     chk(g.objs[v["STRING"]].cls == "hkbBehaviorGraphStringData", v["STRING"] + " StringData")
     chk(g.objs[v["VALUES"]].cls == "hkbVariableValueSet", v["VALUES"] + " VariableValueSet")
     chk(g.objs[v["DATA"]].cls == "hkbBehaviorGraphData", v["DATA"] + " GraphData")
@@ -768,7 +779,7 @@ def main():
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     if "--verify-ids" in sys.argv:
-        return 0 if (verify_ids(root) & verify_ids_fp(root) & verify_ids_1hm(root)) else 1
+        return 0 if (verify_ids(root) & verify_ids_fp(root) & verify_ids_1hm(root) & verify_ids_1hm(root, True)) else 1
     out = args[0] if args else os.path.join(root, "behavior", "Pandora_Engine", "mod", CODE)
     # DF_IsDodging is NOT in this modlist's 0_master -> do not bind. Pass --with-df to force when it exists.
     existing = set(OPTIONAL_BIND_VARS) if "--with-df" in sys.argv else set()
@@ -786,7 +797,12 @@ def main():
         print("1hm_behavior: %d new nodes (dodge states inside 1HM_Behavior)" % n_1h)
     else:
         write(os.path.join(out, "patches", "1hm_behavior.xml"), gen_events(V_1HM, CANCEL_EVENTS))
-    write(os.path.join(out, "patches", "firstperson~1hm_behavior.xml"), gen_events(V_1HM, CANCEL_EVENTS))
+    if "--no-onehand" not in sys.argv:
+        fp_1h, n_fp_1h = gen_onehand(fp=True)
+        write(os.path.join(out, "patches", FP_1HM_PATCH_NAME), fp_1h)
+        print("first person 1hm_behavior: %d new nodes" % n_fp_1h)
+    else:
+        write(os.path.join(out, "patches", FP_1HM_PATCH_NAME), gen_events(V_1HM, CANCEL_EVENTS))
     ch = gen_character()
     write(os.path.join(out, "patches", "defaultmale_character.xml"), ch)
     write(os.path.join(out, "patches", "defaultfemale_character.xml"), ch)

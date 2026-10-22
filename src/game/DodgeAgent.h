@@ -143,6 +143,7 @@ namespace rdf::game
 		int             tailFrames_{ 0 };         // dev trace keeps running this many ticks after a dodge
 		bool            inStateB_{ true };        // dodge state used last; the first dodge goes to A
 		bool            oneHand_{ false };        // the current / last dodge plays in 1hm_behavior, not in the root
+		bool            oneHandBroken_{ false };  // a 1hm start never entered: root dodges until the 3D reloads
 		bool            moveHeld_{ false };
 		bool            intoAttack_{ false };     // the current dodge was cancelled into an attack (runs on when moving)
 		float           carry_{ 0.0f };           // post-dodge speed floor for the controls-driven engine, u/s

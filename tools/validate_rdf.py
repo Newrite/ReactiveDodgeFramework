@@ -472,6 +472,20 @@ def check_fp(rdf_x, base_x):
     check(tag + "1P FirstPerson character file unchanged (animationNames %d)" % len(fpc.animation_names), fpc.animation_names == fpb.animation_names)
 
 
+def check_onehand_file(rdf_x, base_x, stem):
+    h, hb = H.Graph(os.path.join(rdf_x, stem + ".xml")), H.Graph(os.path.join(base_x, stem + ".xml"))
+    ev1 = G.EVENTS + G.ONEHAND_START_EVENTS + G.CANCEL_EVENTS
+    check("C  %s: %d events and %d variables present once, tables consistent" % (stem, len(ev1), len(G.VARIABLES)),
+          all(len(h.ev_index.get(e, [])) == 1 and e not in hb.ev_index for e in ev1)
+          and len(h.event_names) == len(hb.event_names) + len(ev1) and h.n_event_infos == len(h.event_names)
+          and all(len(h.var_index.get(v, [])) == 1 for v, _t, _i in G.VARIABLES) and h.n_var_infos == len(h.variable_names))
+    sm1 = [x for x in H.state_machines(h) if x.text("name") == "1HM_Behavior"][0]
+    st1 = {h.objs[x].intval("stateId"): h.objs[x] for x in H.sm_states(h, sm1)}
+    check("C  %s: RDF_1H_Dodge_A/B present and leave by 1HM_Ready_State's transition array" % stem,
+          all(sid in st1 and st1[sid].text("name") == nm and st1[sid].text("transitions") == st1[G.ONEHAND_READY_ID].text("transitions")
+              for nm, sid in G.ONEHAND_STATES))
+
+
 def main():
     base_x, rdf_x = to_xml("baseline"), to_xml("rdf")
     # ---- A
@@ -490,24 +504,9 @@ def main():
             diffs.append(xstem(sub, f))
     check("B  hkx changed only in 0_Master/DefaultMale/DefaultFemale/1hm_behavior and first-person 0_Master/1hm_behavior",
           sorted(diffs) == ["0_Master", "1hm_behavior", "DefaultFemale", "DefaultMale", "fp_0_Master", "fp_1hm_behavior"], str(diffs))
-    # 1hm_behavior: only the dodge-cancel events of attack clips
-    h, hb = H.Graph(os.path.join(rdf_x, "fp_1hm_behavior.xml")), H.Graph(os.path.join(base_x, "fp_1hm_behavior.xml"))
-    check("C  fp_1hm_behavior: events %s present once, eventNames/eventInfos +%d, nothing else changed" % (", ".join(G.CANCEL_EVENTS), len(G.CANCEL_EVENTS)),
-          all(e in h.ev_index and len(h.ev_index[e]) == 1 and e not in hb.ev_index for e in G.CANCEL_EVENTS)
-          and len(h.event_names) == len(hb.event_names) + len(G.CANCEL_EVENTS) and h.n_event_infos == len(h.event_names)
-          and len(h.objs) == len(hb.objs) and h.variable_names == hb.variable_names)
-    # 3P 1hm_behavior also gets the 1hm dodge states: checked in detail by tools/validate_onehand.py
-    h, hb = H.Graph(os.path.join(rdf_x, "1hm_behavior.xml")), H.Graph(os.path.join(base_x, "1hm_behavior.xml"))
-    ev1 = G.EVENTS + G.ONEHAND_START_EVENTS + G.CANCEL_EVENTS
-    check("C  1hm_behavior: %d events and %d variables present once, tables consistent" % (len(ev1), len(G.VARIABLES)),
-          all(len(h.ev_index.get(e, [])) == 1 and e not in hb.ev_index for e in ev1)
-          and len(h.event_names) == len(hb.event_names) + len(ev1) and h.n_event_infos == len(h.event_names)
-          and all(len(h.var_index.get(v, [])) == 1 for v, _t, _i in G.VARIABLES) and h.n_var_infos == len(h.variable_names))
-    sm1 = [x for x in H.state_machines(h) if x.text("name") == "1HM_Behavior"][0]
-    st1 = {h.objs[x].intval("stateId"): h.objs[x] for x in H.sm_states(h, sm1)}
-    check("C  1hm_behavior: RDF_1H_Dodge_A/B present and leave by 1HM_Ready_State's transition array",
-          all(sid in st1 and st1[sid].text("name") == nm and st1[sid].text("transitions") == st1[G.ONEHAND_READY_ID].text("transitions")
-              for nm, sid in G.ONEHAND_STATES))
+    # 1hm_behavior (3P and 1P) gets the 1hm dodge states: checked in detail by tools/validate_onehand.py
+    for stem1 in ("1hm_behavior", "fp_1hm_behavior"):
+        check_onehand_file(rdf_x, base_x, stem1)
 
     g = H.Graph(os.path.join(rdf_x, "0_Master.xml"))
     gb = H.Graph(os.path.join(base_x, "0_Master.xml"))

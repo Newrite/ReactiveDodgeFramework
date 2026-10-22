@@ -211,6 +211,7 @@ namespace rdf::game
 			return;
 		}
 		last3D_ = current;
+		oneHandBroken_ = false;
 		graph::RegisterSink(actor);
 		if (core_->DodgeRunning() || awaitingEnter_) {
 			AbandonGraph(actor, "3D reloaded");
@@ -331,6 +332,12 @@ namespace rdf::game
 		awaitingEnter_ = false;
 		exitSent_ = true;
 		core_->Apply(Decision{ DecisionKind::Interrupt }, true);
+		if (oneHand_) {
+			// A graph took the 1hm start but the active one never entered: a behavior output without the 1hm part in this
+			// view (first person after an older Pandora run). Root dodges only, until the 3D reloads.
+			oneHandBroken_ = true;
+			logger::warn("{:08X}: the 1hm dodge did not enter; using the root dodge until the 3D reloads (re-run Pandora / Nemesis?)", formID_);
+		}
 	}
 
 	void DodgeAgent::EndByGraph(const char* why)
@@ -507,13 +514,13 @@ namespace rdf::game
 		// RDF_ChainIndex: 0 for a fresh dodge, the running dodge's index + 1 for a chain (ChainCount is 1-based).
 		const int   chainIndex = chain ? core_->ChainCount() : 0;
 		const float playback = settings.core.timing.PlaybackSpeed(clipLength, settings.animSpeed);
-		// The 1hm dodge first (third person, a weapon out: 1hm_behavior runs), else the root one. A chain stays in the layer
-		// of the dodge it continues; in 1hm it is the start of the other state.
+		// The 1hm dodge first (a weapon out: 1hm_behavior runs, third or first person), else the root one. A chain stays in the
+		// layer of the dodge it continues; in 1hm it is the start of the other state.
 		auto       sent = entry;
 		bool       oneHand = false;
 		bool       accepted = false;
 		const bool chaining = entry == graph::DodgeEntry::Chain;
-		if (settings.graph.oneHand && !in.firstPerson && (!chaining || oneHand_)) {
+		if (settings.graph.oneHand && !oneHandBroken_ && (!chaining || oneHand_)) {
 			sent = chaining ? (inStateB_ ? graph::DodgeEntry::StartA : graph::DodgeEntry::StartB) : entry;
 			accepted = oneHand = graph::SendStart(actor, sent, clip, playback, armStance, chainIndex, true);
 		}

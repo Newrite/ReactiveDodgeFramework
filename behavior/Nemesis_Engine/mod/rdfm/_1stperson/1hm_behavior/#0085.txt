@@ -462,6 +462,25 @@
 				<hkcstring>StartAnimatedCamera</hkcstring>
 				<hkcstring>EndAnimatedCamera</hkcstring>
 <!-- MOD_CODE ~rdfm~ OPEN -->
+				<hkcstring>RDF_DodgeStart</hkcstring>
+				<hkcstring>RDF_DodgeStartB</hkcstring>
+				<hkcstring>RDF_DodgeChain</hkcstring>
+				<hkcstring>RDF_DodgeExit</hkcstring>
+				<hkcstring>RDF_DodgeEntered</hkcstring>
+				<hkcstring>RDF_DodgeLeft</hkcstring>
+				<hkcstring>RDF_Windows</hkcstring>
+				<hkcstring>RDF_IFrameStart</hkcstring>
+				<hkcstring>RDF_IFrameEnd</hkcstring>
+				<hkcstring>RDF_ChainOpen</hkcstring>
+				<hkcstring>RDF_AttackOpen</hkcstring>
+				<hkcstring>RDF_BlockOpen</hkcstring>
+				<hkcstring>RDF_ExitOpen</hkcstring>
+				<hkcstring>RDF_PerfectStart</hkcstring>
+				<hkcstring>RDF_PerfectEnd</hkcstring>
+				<hkcstring>RDF_PerfectDodge</hkcstring>
+				<hkcstring>RDF_PerfectDodged</hkcstring>
+				<hkcstring>RDF_DodgeStart1H</hkcstring>
+				<hkcstring>RDF_DodgeStartB1H</hkcstring>
 				<hkcstring>RDF_DodgeCancelOpen</hkcstring>
 				<hkcstring>RDF_DodgeCancelClose</hkcstring>
 <!-- CLOSE -->
@@ -569,6 +588,15 @@
 				<hkcstring>bLongKillMove</hkcstring>
 				<hkcstring>IsBleedingOutTransition</hkcstring>
 				<hkcstring>iCrossbowState</hkcstring>
+<!-- MOD_CODE ~rdfm~ OPEN -->
+				<hkcstring>RDF_DodgeClip</hkcstring>
+				<hkcstring>RDF_DodgeSpeed</hkcstring>
+				<hkcstring>RDF_IsDodging</hkcstring>
+				<hkcstring>RDF_ArmBlend</hkcstring>
+				<hkcstring>RDF_ChainIndex</hkcstring>
+				<hkcstring>RDF_AttackFromDodge</hkcstring>
+				<hkcstring>RDF_AttackFromDodgeClip</hkcstring>
+<!-- CLOSE -->
 			</hkparam>
 			<hkparam name="characterPropertyNames" numelements="9">
 				<hkcstring>IsThirdPerson</hkcstring>
