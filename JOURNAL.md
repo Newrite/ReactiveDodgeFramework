@@ -333,3 +333,12 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   plays the new clip's annotations). The two annotation events are registered in 1hm_behavior 3P / 1P (Pandora staged
   231/231, Nemesis 49/49 with BFCO's patch among the originals' witnesses); MCO's own behavior files cannot be patched
   that way, so MCO clips rely on MCO_IsInRecovery. 75/75 tests.
+* Dodge -> attack with MCO / BFCO (2026-10-22, user: the cancel into an attack did not work with them, the block did):
+  BFCO's player attacks are the vanilla attack action (its DLL only plays idles for power / combo keys, see
+  _ext/BFCO og), the same path as our PlayAction, so the likely cause is the action being accepted while the root is
+  still in our dodge state and the framework's 1hm_behavior dropping it (the block goes through wantBlocking +
+  blockStart and is not affected). The attack is no longer trusted on Process' word: the agent keeps it pending until
+  the attack state or IsAttacking shows it, and repeats the action once the graph left the dodge (RDF_DodgeLeft) and
+  0.1 s more passed without an attack (so an accepted one is never doubled into a combo), every 0.1 s, up to 0.5 s.
+  Dev log lines "from the dodge: action accepted/refused", "retry #n", "started after", "never started". Not yet seen in
+  game with either framework.

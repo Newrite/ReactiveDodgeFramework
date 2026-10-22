@@ -6,6 +6,7 @@
 #include <chrono>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 
 namespace rdf::game
@@ -75,6 +76,7 @@ namespace rdf::game
 		void              TryStart(RE::Actor* actor, const Decision& d, const AgentInput& in);
 		void              CancelInto(RE::Actor* actor, const Decision& d);
 		void              RetryDeferred(RE::Actor* actor);
+		void              VerifyAttack(RE::Actor* actor, float dt, std::uint8_t attackState);
 		void              RollbackStart(RE::Actor* actor);
 		void              EndByGraph(const char* why);
 		void              AbandonGraph(RE::Actor* actor, const char* why);
@@ -99,6 +101,16 @@ namespace rdf::game
 		bool  wasRunning_{ false };
 		int   prevDepth_{ 0 };
 		Retry retry_;
+		// an attack the dodge was cancelled into, until the actor's attack state shows it
+		struct PendingAttack
+		{
+			Decision decision;
+			float    age{ 0.0f };
+			float    lastTry{ 0.0f };
+			float    leftAt{ -1.0f };  // age at which the graph was seen out of the dodge, -1 = not yet
+			int      attempts{ 0 };
+		};
+		std::optional<PendingAttack> pendingAttack_;
 
 		// bookkeeping
 		RE::NiAVObject* last3D_{ nullptr };

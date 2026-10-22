@@ -80,6 +80,7 @@ namespace rdf::game
 		carry_ = 0.0f;
 		prevDepth_ = 0;
 		retry_ = {};
+		pendingAttack_.reset();
 		havePos_ = false;
 		measuredSpeed_ = 0.0f;
 		last3D_ = nullptr;
@@ -123,6 +124,7 @@ namespace rdf::game
 		const bool  ownDodge = core_->DodgeRunning() || awaitingEnter_;
 		const auto  state = engine::Read(actor, ownDodge);
 		const auto& settings = Settings::Get();
+		VerifyAttack(actor, dt, state.attackState);
 		EngineView  view;
 		view.engine = state.block;
 		staggerAge_ = state.block == EngineBlock::Staggered ? staggerAge_ + dt : 0.0f;
@@ -462,6 +464,7 @@ namespace rdf::game
 		}
 		inStateB_ = entry == graph::DodgeEntry::Chain ? !inStateB_ : entry == graph::DodgeEntry::StartB;
 		perfectFired_ = false;
+		pendingAttack_.reset();
 		if (escapeStagger_) {
 			// The graph leaves the stagger state through our wildcard, so its staggerStop annotation never
 			// fires; clear the flag the way the engine's handler would.
@@ -491,13 +494,63 @@ namespace rdf::game
 			graph::SendExit(actor);
 			exitSent_ = true;
 		}
-		if (driver_ && driver_->PerformAction(actor, d)) {
+		const bool performed = driver_ && driver_->PerformAction(actor, d);
+		if (d.kind != DecisionKind::Block) {
+			// An attack is only trusted once it shows: the action can be accepted while the root is still in our dodge
+			// state and then be dropped by an attack framework's behavior (MCO / BFCO). VerifyAttack repeats it once the
+			// graph has left the dodge, until the attack state shows an attack or the time runs out.
+			core_->Apply(d, true);
+			pendingAttack_ = PendingAttack{ d, 0.0f, 0.0f, -1.0f, 1 };
+			DevLog("{:08X}: {} from the dodge: action {} (verifying)", formID_, ToString(d.kind), performed ? "accepted" : "refused");
+			return;
+		}
+		if (performed) {
 			core_->Apply(d, true);
 			return;
 		}
 		DevLog("{:08X}: action for {} failed, will retry until the press expires", formID_, ToString(d.kind));
 		core_->Apply(Decision{ DecisionKind::Interrupt }, true);
 		retry_ = { d, true };
+	}
+
+	void DodgeAgent::VerifyAttack(RE::Actor* actor, float dt, std::uint8_t attackState)
+	{
+		if (!pendingAttack_) {
+			return;
+		}
+		auto& p = *pendingAttack_;
+		p.age += dt;
+		bool attacking = false;
+		actor->GetGraphVariableBool("IsAttacking"sv, attacking);
+		if (attackState != attack_state::kNone || attacking) {
+			DevLog("{:08X}: {} from the dodge started after {:.3f}s ({} attempt(s))", formID_, ToString(p.decision.kind), p.age, p.attempts);
+			pendingAttack_.reset();
+			return;
+		}
+		constexpr float kGiveUp = 0.5f;      // a press older than this would feel like a dropped input anyway
+		constexpr float kSettle = 0.1f;      // after the graph left the dodge: time for an accepted attack to show
+		constexpr float kRetryEvery = 0.1f;
+		if (p.age > kGiveUp) {
+			logger::info("{:08X}: {} from the dodge never started ({} attempt(s) in {:.2f}s); the attack framework refused it",
+				formID_, ToString(p.decision.kind), p.attempts, p.age);
+			pendingAttack_.reset();
+			return;
+		}
+		// Only once the graph left our states (RDF_DodgeLeft), where the action reaches the attack behaviors, and long
+		// enough after it that an attack the first action did start would show (no second attack into a combo).
+		if (graph::Depth(actor) != 0) {
+			p.leftAt = -1.0f;
+			return;
+		}
+		if (p.leftAt < 0.0f) {
+			p.leftAt = p.age;
+		}
+		if (p.age - p.leftAt >= kSettle && p.age - p.lastTry >= kRetryEvery && driver_) {
+			p.lastTry = p.age;
+			++p.attempts;
+			const bool performed = driver_->PerformAction(actor, p.decision);
+			DevLog("{:08X}: {} retry #{} at {:.3f}s: action {}", formID_, ToString(p.decision.kind), p.attempts, p.age, performed ? "accepted" : "refused");
+		}
 	}
 
 	void DodgeAgent::RetryDeferred(RE::Actor* actor)

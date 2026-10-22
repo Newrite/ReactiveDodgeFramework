@@ -42,6 +42,8 @@
 * Dodge cancels attacks of MCO / BFCO from their recovery (`MCO_IsInRecovery`, `MCO_Recovery` .. `MCO_InputBuffer`,
   `BFCO_DIY_recovery` .. next `Bfco_AttackStartFX`), attack clip annotations RDF_DodgeCancelOpen / Close (registered in
   1hm_behavior), and the anytime keywords ([AttackCancel]). Needs a Pandora re-run; not yet tried with MCO or BFCO.
+* Dodge -> attack verified by the attack state and repeated after the graph left the dodge (MCO / BFCO dropped it);
+  not yet tried with either.
 
 ## Known limitations
 * A one-frame upper-body pop at dodge start, visible only in slow motion (parked; findings in JOURNAL.md).
