@@ -80,6 +80,9 @@ SKSEPluginLoad(const SKSE::LoadInterface* a_skse)
 		if (!rdf::game::effects::InstallIFrames()) {
 			logger::error("i-frame hook not installed: dodges will not grant invulnerability");
 		}
+		if (rdf::game::Settings::Get().explosionIFrames) {
+			rdf::game::effects::InstallExplosionIFrames();
+		}
 		if (rdf::game::Settings::Get().projectileIFrames) {
 			rdf::game::effects::InstallProjectileIFrames();
 		}

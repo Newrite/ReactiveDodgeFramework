@@ -270,3 +270,11 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   installed Nemesis mod uses 4+ characters. check_rdf_nemesis.py: 33/33 (applied offline, serde-hkx round trip, hkxcheck 0
   new errors in 3P and 1P). Pandora never added our clips to animationdata either, so neither patch does. FOMOD validated
   against ModConfig 5.0 (GandaG/fomod-schema, one stray space in its xsd fixed locally).
+* Every projectile type and explosions (2026-10-22): IDA showed AddImpact (vfunc 189) as the per-target hit record for
+  all types (each overrides it but Barrier) and HandleHits (190) as the contact handler that also applies an arrow's
+  damage itself, so: AddImpact hooked on all seven vtables, HandleHits only for arrows / missiles / grenades. Single
+  projectiles that passed through during i-frames are remembered (pointer + FormID, 30 s) and ignored afterwards, which
+  closes the late-hit case; streams are not remembered. Explosions: the HasLineOfSight call inside
+  Explosion::ApplyToTargets (42677+0x38C) answers "blocked" for an invulnerable player. IDA db annotated (13 names).
+  Side note: the plugin's VTABLE_*[0] are the primary vtables; the last VariantID of CommonLib's arrays is the +0x38
+  subobject's vtable (a lookup mistake of mine while checking, not a plugin bug).

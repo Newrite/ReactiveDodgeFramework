@@ -96,3 +96,32 @@ a dodge owns the actor, so AMR still applies to every other animation. Precision
 | `JumpHandler` vtable | 263065 = 0x14166F388 | slot 4 `ProcessButton` = 0x1407090A0: mount/sprint/flags checks, then `Actor::Jump` (0x1405D1F80) |
 | `StaggeredStopHandler::Handle` | 0x140721280 | `actor+0xC4 &= ~0x2000` = `actorState2.staggered = 0` (CommonLib bit 13) |
 | `InterruptCastHandler::Handle` | 0x140722440 | graph event `InterruptCast` -> `Actor::InterruptCast` (37808 = 0x140631C80, all 4 casters) |
+
+## Projectiles (1.5.97, IDA 2026-10-22)
+Primary vtables are CommonLib's `VTABLE_*Projectile[0]` (each class also has a secondary vtable for the subobject at
++0x38; the last VariantID in CommonLib's array is that one). Slots used by RDF:
+
+| class | 189 AddImpact | 190 HandleHits | RDF treatment |
+|---|---|---|---|
+| Arrow 0x141676318 | own 0x140732400 | base 0x1407521F0 | single: both hooked, remembered |
+| Missile 0x14167AE78 | own 0x140747810 | base | single |
+| Grenade 0x141679B88 | own 0x14073FC10 | base | single |
+| Beam 0x141677660 | own 0x140734170 (also shortens `range` to the hit) | base | stream: AddImpact only |
+| Cone 0x141677EA8 | own 0x140735AA0 | own 0x140735B70 (AddImpact per actor) | stream |
+| Flame 0x141679388 | own 0x14073E5F0 | base | stream |
+| Barrier 0x141676BE8 | base 0x140751C30 | base | stream |
+
+- `HandleHits` (190, base): for each contact `sub_140752620` / `AddImpact`; on a hit it applies an arrow's
+  `weaponDamage` itself (HitData -> `ApplyHitData` 37633, or `ArrowProjectile::sub_1407546B0` with a shooter) and kills
+  the projectile if `GetKillOnCollision`. So for single projectiles skipping AddImpact is not enough: the step is dropped.
+- `AddImpact` (189) records an `ImpactData` (collidee handle at +0x18); spells and impact damage are applied later by
+  `ProcessImpacts` (172, base 0x14074C710). Skipping it per target keeps multi-target projectiles hitting the others.
+- `ApplyHitData` 37633 (0x140626400) is the common HitData sink: melee (37673+0x3C0), projectiles, explosions, traps.
+
+## Explosions
+- `Explosion::ApplyToTargets` 42677 (0x140739630) walks the target list at +0xC0. Per actor: imagespace, SetActorCause,
+  a script event, then `HasLineOfSight` 42680 (call at +0x38C = 0x1407399BC); only if that passes: the explosion's
+  HitData (`FUN_140742e10`) -> `ApplyHitData`, its spell / enchantment (BGSExplosion+0x70) cast on the target, knockdown
+  (`FUN_14073b510`). RDF answers "no line of sight" for an invulnerable player, which skips damage, spell and knockdown.
+- An Explosion keeps no link to the projectile that spawned it (CommonLib layout, IDA), so a dodged fireball's blast is
+  only covered by the i-frame window at the moment it goes off.

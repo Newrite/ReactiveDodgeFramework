@@ -303,6 +303,7 @@ namespace rdf::game
 		LoadInputCostGraph(s);
 		s.iFrames = ReadBool("IFrames", "bIFrames", s.iFrames);
 		s.projectileIFrames = ReadBool("IFrames", "bProjectileIFrames", s.projectileIFrames);
+		s.explosionIFrames = ReadBool("IFrames", "bExplosionIFrames", s.explosionIFrames);
 		s.iFrameStart = ReadFloat("IFrames", "fIFrameStart", s.iFrameStart, 0.0f, 5.0f);
 		s.iFrameEnd = ReadFloat("IFrames", "fIFrameEnd", s.iFrameEnd, 0.0f, 5.0f);
 		s.allowFirstPerson = ReadBool("Compat", "bAllowFirstPerson", s.allowFirstPerson);

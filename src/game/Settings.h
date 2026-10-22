@@ -78,7 +78,8 @@ namespace rdf::game
 
 		// [IFrames]
 		bool  iFrames{ true };
-		bool  projectileIFrames{ true };  // arrows and spell missiles pass through during i-frames
+		bool  projectileIFrames{ true };  // every projectile type passes through during i-frames
+		bool  explosionIFrames{ true };   // explosions skip the player during i-frames
 		float iFrameStart{ 0.05f };
 		float iFrameEnd{ 0.35f };
 

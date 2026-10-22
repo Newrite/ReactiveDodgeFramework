@@ -58,18 +58,15 @@
    Touches: RDF_DodgeClip index (new slot after the 16 directional ones) and ClipIndex in the plugin, CLIPS in
    gen_rdf_patch.py (Pandora + Nemesis patches, character animationNames), the 1P chooser (DodgeBack), the clip-set
    spec / build_clip_set.py ("n" direction, falling back to "b"), annotate_clips.py and ANIMATION_CONTRACT.md.
-5. Projectiles: every type, and the ones that outlive the i-frames (in progress 2026-10-22). Arrows and missiles
-   already pass through (their contacts with the player are dropped while invulnerable, the projectile is not destroyed,
-   as in Elden Ring; not yet checked in game). Open case: the i-frames end while the projectile still overlaps the
-   player, so the next physics step lands the hit late. Plan: remember every projectile that passed through during
-   i-frames and keep ignoring its contacts with that actor for the rest of its life. Cover every projectile type, not
-   only arrows and missiles: beams, flames / cones, barriers, grenades.
-6. Explosions. They hit through their own path: an explosion (RE::Explosion, from a BGSExplosion record) finds the actors
-   in its radius and builds its own HitData, so neither the melee hook (37673+0x3C0) nor the projectile contact hook sees
-   it; a fireball that a dodge lets pass still explodes where it lands and its blast still hits. To study in IDA: where an
-   explosion applies its hit / damage to an actor, so i-frames can drop it there; how a dodged projectile's own explosion
-   should behave (no blast, blast that ignores the dodger, or a normal blast that the i-frames cover); whether blast
-   knockdown / stagger (explosion force) is applied separately from the damage and needs its own guard.
+5. Projectiles, every type (built 2026-10-22, waiting for an in-game check): AddImpact (vfunc 189) hooked on all seven
+   projectile vtables, HandleHits (190) on the single ones; arrows, missiles and grenades that passed through during
+   i-frames are remembered and never hit the player late; beams, flames, cones and barriers skip the player only while
+   invulnerable. Test: arrows / firebolts through a dodge, a dodge late in a bolt's flight, Flames and Sparks streams,
+   a Wall of Flames, a thrown grenade if any mod has one.
+6. Explosions (built 2026-10-22, waiting for an in-game check): Explosion::ApplyToTargets' line-of-sight check says
+   "blocked" for an invulnerable player (no damage, spell or knockdown). Test: fireball blast during i-frames vs after,
+   a rune / trap. Open: a dodged fireball that explodes after the i-frames still hits (the explosion does not know its
+   projectile); decide whether that needs more (e.g. matching the blast to a remembered projectile by time and place).
 7. Data layers for designers and modpacks (design agreed in chat 2026-10-21): (a) runtime modifiers from active magic
    effects by keyword, Reflyem-style (sum of magnitudes; i-frame add/mult, cost mult, distance mult, chain add, gates
    such as RDF_Allow_DodgeFromStagger / RDF_Block_Dodge), with a log line explaining each resolved value; (b) profile
