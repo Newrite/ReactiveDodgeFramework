@@ -212,11 +212,14 @@ condition comparing the graph variable:
 ```json
 {
     "condition": "CompareValues",
+    "requiredVersion": "1.0.0.0",
     "Value A": { "graphVariable": "RDF_AttackFromDodge", "graphVariableType": "Int" },
     "Comparison": "==",
-    "Value B": { "value": 2 }
+    "Value B": { "value": 2.0 }
 }
 ```
+
+(The shape of a shipped OAR config comparing an Int graph variable, Animated Poisons Redone's `APR_PoisonAnim`.)
 
 (2 = power attack, 1 = attack.) Add `RDF_AttackFromDodgeClip` for per-direction variants (4 / 12 = backward roll /
 step, 2 / 10 = right, 16 / 17 = neutral...). Give the submod a higher priority than the ordinary replacer of the same
