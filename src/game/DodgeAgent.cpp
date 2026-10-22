@@ -155,7 +155,6 @@ namespace rdf::game
 		// Attack attempts are held back while the dodge can still be cancelled into one; once it is cancelled or hands
 		// over they pass (a combo continuing from the attack the dodge became).
 		capture::SetCapturing(formID_, awaitingEnter_ || (core_->DodgeRunning() && !core_->Exiting() && !core_->CancelledIntoAction()));
-		capture::HoldSprint(formID_, pendingAttack_.has_value());
 		Trace(actor);
 		prevRequestedDistance_ = requestedDistance_;
 		prevRequestedHeading_ = requestedHeading_;
@@ -465,9 +464,6 @@ namespace rdf::game
 		const float stance = in.firstPerson ? settings.armStanceFirstPerson : step ? settings.armStanceStep : settings.armStanceRoll;
 		const float armStance = HasStanceToKeep(actor) ? stance : 0.0f;
 		const float clipLength = in.firstPerson ? settings.clipLengthFirstPerson : settings.clipLength;
-		if (!chain) {
-			capture::StopSprint(actor, true);  // before the start event: the graph takes the stop first
-		}
 		// RDF_ChainIndex: 0 for a fresh dodge, the running dodge's index + 1 for a chain (ChainCount is 1-based).
 		const int   chainIndex = chain ? core_->ChainCount() : 0;
 		if (!graph::SendStart(actor, entry, clip, settings.core.timing.PlaybackSpeed(clipLength, settings.animSpeed), armStance, chainIndex)) {
@@ -508,35 +504,17 @@ namespace rdf::game
 			graph::SendExit(actor);
 			exitSent_ = true;
 		}
-		// The framework may have started the attack from the same press itself (BFCO plays its power-attack idle
-		// on its own key): then there is nothing to perform, only to verify.
-		bool alreadyAttacking = false;
-		actor->GetGraphVariableBool("IsAttacking"sv, alreadyAttacking);
-		bool performed = false;
-		if (d.kind == DecisionKind::Block) {
-			performed = driver_ && driver_->PerformAction(actor, d);
-		} else if (alreadyAttacking) {
-			performed = true;
-		} else {
-			// The attempt the dodge held back, exactly as it was made (a framework's idle or action); else our own action.
-			capture::SetCapturing(formID_, false);
-			capture::FinishSprint(actor, false);  // the attack the dodge became is not a sprint attack
-			// Nor a moving one: the graph still carries the dodge's speed from the last frame, and attack frameworks
-			// pick sprint / moving variants from it (the engine writes it again from the next movement update).
-			actor->SetGraphVariableFloat("Speed"sv, 0.0f);
-			actor->SetGraphVariableFloat("SpeedSampled"sv, 0.0f);
-			performed = capture::Replay(actor, d.kind == DecisionKind::PowerAttack) || (driver_ && driver_->PerformAction(actor, d));
-		}
 		if (d.kind != DecisionKind::Block) {
-			// An attack is only trusted once it shows: the action can be accepted while the root is still in our dodge
-			// state and then be dropped by an attack framework's behavior (MCO / BFCO). VerifyAttack repeats it once the
-			// graph has left the dodge, until the attack state shows an attack or the time runs out.
+			// The attack starts once the graph has left the dodge (PerformPendingAttack, next tick): started in the update
+			// that also runs the exit into Default_State, an attack framework's attack could start and then be dropped
+			// (BFCO's in-place power attack never got past its first frame).
+			capture::SetCapturing(formID_, false);
 			core_->Apply(d, true);
-			pendingAttack_ = PendingAttack{ d, 0.0f, 0.0f, -1.0f, 1 };
-			DevLog("{:08X}: {} from the dodge: {} (verifying)", formID_, ToString(d.kind),
-				alreadyAttacking ? "the graph already attacks" : performed ? "action accepted" : "action refused");
+			pendingAttack_ = PendingAttack{ d };
+			DevLog("{:08X}: {} from the dodge: waiting for the graph to leave the dodge", formID_, ToString(d.kind));
 			return;
 		}
+		const bool performed = driver_ && driver_->PerformAction(actor, d);
 		if (performed) {
 			core_->Apply(d, true);
 			return;
@@ -558,36 +536,36 @@ namespace rdf::game
 		// states of 1hm_behavior themselves (isActive bindings), so it shows the attack really plays.
 		bool attacking = false;
 		actor->GetGraphVariableBool("IsAttacking"sv, attacking);
-		if (attacking) {
+		if (attacking) {  // ours, or one the framework started from a press after the dodge let go
 			DevLog("{:08X}: {} from the dodge started after {:.3f}s ({} attempt(s), attack state {})", formID_, ToString(p.decision.kind),
 				p.age, p.attempts, attackState);
 			pendingAttack_.reset();
 			return;
 		}
 		constexpr float kGiveUp = 0.5f;      // a press older than this would feel like a dropped input anyway
-		constexpr float kSettle = 0.1f;      // after the graph left the dodge: time for an accepted attack to show
-		constexpr float kRetryEvery = 0.1f;
+		constexpr float kSettle = 0.1f;      // after an attempt: time for an accepted attack to show
 		if (p.age > kGiveUp) {
 			logger::info("{:08X}: {} from the dodge never started ({} attempt(s) in {:.2f}s, attack state {}); the graph refused it",
 				formID_, ToString(p.decision.kind), p.attempts, p.age, attackState);
 			pendingAttack_.reset();
 			return;
 		}
-		// Only once the graph left our states (RDF_DodgeLeft), where the action reaches the attack behaviors, and long
-		// enough after it that an attack the first action did start would show (no second attack into a combo).
+		// Only once the graph left our states (RDF_DodgeLeft): the attack then reaches the attack behaviors like any
+		// attack made from locomotion.
 		if (graph::Depth(actor) != 0) {
-			p.leftAt = -1.0f;
 			return;
 		}
-		if (p.leftAt < 0.0f) {
-			p.leftAt = p.age;
+		if (p.attempts > 0 && p.age - p.lastTry < kSettle) {
+			return;
 		}
-		if (p.age - p.leftAt >= kSettle && p.age - p.lastTry >= kRetryEvery && driver_) {
-			p.lastTry = p.age;
-			++p.attempts;
-			const bool performed = driver_->PerformAction(actor, p.decision);
-			DevLog("{:08X}: {} retry #{} at {:.3f}s: action {}", formID_, ToString(p.decision.kind), p.attempts, p.age, performed ? "accepted" : "refused");
-		}
+		p.lastTry = p.age;
+		++p.attempts;
+		// The first time the attempt the dodge held back, exactly as it was made (a framework's idle or action); after
+		// that, or without one, our own action.
+		const bool replayed = p.attempts == 1 && capture::Replay(actor, p.decision.kind == DecisionKind::PowerAttack);
+		const bool performed = replayed || (driver_ && driver_->PerformAction(actor, p.decision));
+		DevLog("{:08X}: {} from the dodge, attempt #{} at {:.3f}s: {} {}", formID_, ToString(p.decision.kind), p.attempts, p.age,
+			replayed ? "replayed" : "own action", performed ? "accepted" : "refused");
 	}
 
 	void DodgeAgent::RetryDeferred(RE::Actor* actor)
@@ -650,7 +628,6 @@ namespace rdf::game
 			carry_ = 0.0f;
 		}
 		tailFrames_ = 30;  // follow the hand-over into locomotion in the dev trace
-		capture::FinishSprint(actor, !core_->CancelledIntoAction());
 		graph::SetChainIndex(actor, 0);  // the chain is over, whatever ended it
 		effects::SetInvulnerable(actor, false);
 		awaitingEnter_ = false;

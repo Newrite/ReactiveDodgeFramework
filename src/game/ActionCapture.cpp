@@ -54,12 +54,10 @@ namespace rdf::game::capture
 		{
 			std::vector<CommandKind> fresh;  // not yet taken by the agent
 			std::optional<Attempt>   last[2];  // [power]
-			bool                     sprintWanted{ false };  // a sprint the dodge interrupted or held back, not stopped since
 		};
 
 		std::mutex                                   g_lock;
 		std::unordered_set<std::uint32_t>            g_capturing;
-		std::unordered_set<std::uint32_t>            g_holdingSprint;  // sprint starts held back (capturing, or an attack still to show)
 		std::unordered_map<std::uint32_t, ActorState> g_actors;
 
 		RE::BGSAction* DefaultAction(RE::DEFAULT_OBJECT object)
@@ -73,8 +71,6 @@ namespace rdf::game::capture
 			None,
 			Attack,
 			Power,
-			SprintStart,
-			SprintStop,
 		};
 
 		// The vanilla attack actions by name; anything else (idles, framework actions) is an attack when the actor's race
@@ -87,14 +83,6 @@ namespace rdf::game::capture
 				DefaultAction(D::kActionLeftPowerAttack), DefaultAction(D::kActionDualPowerAttack) };
 			static const std::array<RE::BGSAction*, 3> normal{ DefaultAction(D::kActionRightAttack), DefaultAction(D::kActionLeftAttack),
 				DefaultAction(D::kActionDualAttack) };
-			static RE::BGSAction* const sprintStart = DefaultAction(D::kActionSprintStart);
-			static RE::BGSAction* const sprintStop = DefaultAction(D::kActionSprintStop);
-			if (data->action && data->action == sprintStart) {
-				return Kind::SprintStart;
-			}
-			if (data->action && data->action == sprintStop) {
-				return Kind::SprintStop;
-			}
 			if (data->action) {
 				if (std::find(power.begin(), power.end(), data->action) != power.end()) {
 					return Kind::Power;
@@ -131,37 +119,14 @@ namespace rdf::game::capture
 				return false;
 			}
 			const auto id = actor->GetFormID();
-			bool       capturing = false;
-			bool       holdingSprint = false;
-			bool       tracked = false;
 			{
 				std::scoped_lock lock(g_lock);
-				capturing = g_capturing.contains(id);
-				holdingSprint = capturing || g_holdingSprint.contains(id);
-				tracked = g_actors.contains(id);
-			}
-			if (!capturing && !tracked) {
-				return false;
+				if (!g_capturing.contains(id)) {
+					return false;
+				}
 			}
 			const auto kind = Classify(actor, data);
-			// Sprint (the dodge button is often the sprint button): no sprint starts while the dodge captures; whether
-			// the actor still wants one at the dodge's end is followed through the whole dodge, exit included (a stop
-			// always passes and forgets it).
-			if (kind == Kind::SprintStart || kind == Kind::SprintStop) {
-				std::scoped_lock lock(g_lock);
-				g_actors[id].sprintWanted = kind == Kind::SprintStart;
-				if (kind == Kind::SprintStart && holdingSprint) {
-					DevLog("{:08X}: sprint start held back by the dodge", id);
-					return true;
-				}
-				return false;
-			}
-			if (kind == Kind::None || !capturing) {
-				if (capturing) {
-					// dev: what else is tried during a dodge (an attack framework's action or idle we do not classify)
-					DevLog("{:08X}: action passed during the dodge (action {:08X}, event '{}', idle {:08X})", id,
-						data->action ? data->action->GetFormID() : 0u, data->animEvent.c_str(), data->animObjIdle ? data->animObjIdle->GetFormID() : 0u);
-				}
+			if (kind == Kind::None) {
 				return false;
 			}
 			Attempt attempt;
@@ -183,9 +148,6 @@ namespace rdf::game::capture
 		{
 			if (HoldBack(data)) {
 				const auto* ref = data->source.get();
-				if (data->action && data->action == DefaultAction(RE::DEFAULT_OBJECT::kActionSprintStart)) {
-					return false;
-				}
 				DevLog("{:08X}: attack attempt held back by the dodge (action {:08X}, event '{}', idle {:08X})", ref ? ref->GetFormID() : 0u,
 					data->action ? data->action->GetFormID() : 0u, data->animEvent.c_str(), data->animObjIdle ? data->animObjIdle->GetFormID() : 0u);
 				return false;
@@ -237,16 +199,6 @@ namespace rdf::game::capture
 		}
 	}
 
-	void HoldSprint(std::uint32_t formID, bool on)
-	{
-		std::scoped_lock lock(g_lock);
-		if (on) {
-			g_holdingSprint.insert(formID);
-		} else {
-			g_holdingSprint.erase(formID);
-		}
-	}
-
 	std::vector<CommandKind> TakeNew(std::uint32_t formID)
 	{
 		std::scoped_lock lock(g_lock);
@@ -295,66 +247,10 @@ namespace rdf::game::capture
 		return ok;
 	}
 
-	namespace
-	{
-		bool PerformDefault(RE::Actor* actor, RE::DEFAULT_OBJECT object)
-		{
-			auto* action = DefaultAction(object);
-			if (!actor || !action) {
-				return false;
-			}
-			const std::unique_ptr<RE::TESActionData> data(RE::TESActionData::Create());
-			data->source = RE::NiPointer<RE::TESObjectREFR>(actor);
-			data->action = action;
-			g_replaying = true;
-			const bool ok = data->Process();
-			g_replaying = false;
-			return ok;
-		}
-	}
-
-	bool StopSprint(RE::Actor* actor, bool remember)
-	{
-		if (!actor || !actor->AsActorState()->IsSprinting()) {
-			return false;
-		}
-		const bool ok = PerformDefault(actor, RE::DEFAULT_OBJECT::kActionSprintStop);
-		if (remember) {
-			std::scoped_lock lock(g_lock);
-			g_actors[actor->GetFormID()].sprintWanted = true;
-		}
-		DevLog("{:08X}: sprint stopped for the dodge: {} (still sprinting: {})", actor->GetFormID(), ok ? "accepted" : "refused",
-			actor->AsActorState()->IsSprinting());
-		return ok;
-	}
-
-	void FinishSprint(RE::Actor* actor, bool resume)
-	{
-		if (!actor) {
-			return;
-		}
-		bool wanted = false;
-		{
-			std::scoped_lock lock(g_lock);
-			if (const auto it = g_actors.find(actor->GetFormID()); it != g_actors.end()) {
-				wanted = std::exchange(it->second.sprintWanted, false);
-			}
-		}
-		if (resume && wanted) {
-			const bool ok = PerformDefault(actor, RE::DEFAULT_OBJECT::kActionSprintStart);
-			DevLog("{:08X}: sprint resumed after the dodge: {}", actor->GetFormID(), ok ? "accepted" : "refused");
-		} else if (actor->AsActorState()->IsSprinting()) {
-			// a stop the graph refused while it was in the dodge
-			const bool ok = PerformDefault(actor, RE::DEFAULT_OBJECT::kActionSprintStop);
-			DevLog("{:08X}: stale sprint stopped after the dodge: {}", actor->GetFormID(), ok ? "accepted" : "refused");
-		}
-	}
-
 	void Forget(std::uint32_t formID)
 	{
 		std::scoped_lock lock(g_lock);
 		g_capturing.erase(formID);
-		g_holdingSprint.erase(formID);
 		g_actors.erase(formID);
 	}
 
@@ -362,7 +258,6 @@ namespace rdf::game::capture
 	{
 		std::scoped_lock lock(g_lock);
 		g_capturing.clear();
-		g_holdingSprint.clear();
 		g_actors.clear();
 	}
 }

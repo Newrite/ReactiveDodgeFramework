@@ -107,8 +107,7 @@ namespace rdf::game
 			Decision decision;
 			float    age{ 0.0f };
 			float    lastTry{ 0.0f };
-			float    leftAt{ -1.0f };  // age at which the graph was seen out of the dodge, -1 = not yet
-			int      attempts{ 0 };
+			int      attempts{ 0 };  // 0 = not performed yet (the graph is still in the dodge)
 		};
 		std::optional<PendingAttack> pendingAttack_;
 

@@ -388,3 +388,13 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   fAttackExitBlend (default 0): a cancel into an attack hands the motion to the attack at once; fActionExitBlend now
   only applies to blocks. Speed / SpeedSampled are also zeroed on the graph right before the attack is replayed.
   The sprint hold-back (previous entries) stays: it was a real but smaller effect.
+* Attack out of the dodge one update later; sprint handling removed (2026-10-22, user: still a sprint attack out of a
+  running forward dodge, and no power attack at all out of a dodge without move input; light attacks fine; "other dodge
+  frameworks have none of this, we built something wrong"). Logs: every BFCO in-place power attack replayed in the tick
+  that also sent the exit started (BFCO_PlayerAttackStart) in the same graph update as RDF_DodgeLeft / the return into
+  Default_State and never got past it (no preHitFrame, attackStop 0.2 s later); the same idle outside a dodge always
+  swung. The sprint attack events (attackPowerStart_2HMSprint, attackStartSprint) come with BFCO's forward power attack
+  while running without any dodge as well, so they are BFCO's own. Now the cancel only exits and releases the capture;
+  the attack (the held-back attempt, else our action) is performed on the first tick the graph reports it left the dodge,
+  like an attack made from locomotion in other dodge mods, then verified / retried as before. The sprint stop / hold /
+  resume code and the Speed reset went out: they addressed an effect that was not ours.
