@@ -1,16 +1,7 @@
-		<hkobject name="#rdfm$121" class="hkbClipGenerator" signature="0x333b85b9">
-			<hkparam name="variableBindingSet">#rdfm$122</hkparam>
-			<hkparam name="userData">0</hkparam>
-			<hkparam name="name">RDF_1H_Dodge_A_ArmDodge_rdf_step_l</hkparam>
-			<hkparam name="animationName">Animations\RDF\rdf_step_l.hkx</hkparam>
-			<hkparam name="triggers">null</hkparam>
-			<hkparam name="cropStartAmountLocalTime">0.000000</hkparam>
-			<hkparam name="cropEndAmountLocalTime">0.000000</hkparam>
-			<hkparam name="startTime">0.000000</hkparam>
-			<hkparam name="playbackSpeed">1.000000</hkparam>
-			<hkparam name="enforcedDuration">0.000000</hkparam>
-			<hkparam name="userControlledTimeFraction">0.000000</hkparam>
-			<hkparam name="animationBindingIndex">-1</hkparam>
-			<hkparam name="mode">MODE_SINGLE_PLAY</hkparam>
-			<hkparam name="flags">0</hkparam>
+		<hkobject name="#rdfm$121" class="hkbBlenderGeneratorChild" signature="0xe2b384b0">
+			<hkparam name="variableBindingSet">#rdfm$205</hkparam>
+			<hkparam name="generator">#rdfm$202</hkparam>
+			<hkparam name="boneWeights">null</hkparam>
+			<hkparam name="weight">1.000000</hkparam>
+			<hkparam name="worldFromModelWeight">0.000000</hkparam>
 		</hkobject>

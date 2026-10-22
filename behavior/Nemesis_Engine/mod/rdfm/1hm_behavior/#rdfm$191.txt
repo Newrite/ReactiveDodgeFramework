@@ -1,11 +1,10 @@
-		<hkobject name="#rdfm$191" class="hkbVariableBindingSet" signature="0x338ad4ff">
-			<hkparam name="bindings" numelements="1">
-				<hkobject>
-					<hkparam name="memberPath">playbackSpeed</hkparam>
-					<hkparam name="variableIndex">$variableID[RDF_DodgeSpeed]$</hkparam>
-					<hkparam name="bitIndex">-1</hkparam>
-					<hkparam name="bindingType">BINDING_TYPE_VARIABLE</hkparam>
-				</hkobject>
+		<hkobject name="#rdfm$191" class="hkbManualSelectorGenerator" signature="0xd932fab8">
+			<hkparam name="variableBindingSet">#rdfm$192</hkparam>
+			<hkparam name="userData">0</hkparam>
+			<hkparam name="name">RDF_1H_Dodge_B_StanceR_Sel</hkparam>
+			<hkparam name="generators" numelements="13">
+				#rdfm$180 #rdfm$183 #rdfm$183 #rdfm$183 #rdfm$183 #rdfm$185 #rdfm$186 #rdfm$187 #rdfm$188 #rdfm$189 #rdfm$181 #rdfm$181 #rdfm$190
 			</hkparam>
-			<hkparam name="indexOfBindingToEnable">-1</hkparam>
+			<hkparam name="selectedGeneratorIndex">0</hkparam>
+			<hkparam name="currentGeneratorIndex">0</hkparam>
 		</hkobject>

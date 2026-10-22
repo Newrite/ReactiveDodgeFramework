@@ -5,33 +5,34 @@ set, and what the C++ plugin must do to drive it. All names below are parameters
 
 ## 1. Files
 
-18 hkx files in `meshes\actors\character\animations\RDF\` (data-relative), registered in the animationNames of BOTH
-`DefaultMale` and `DefaultFemale` (the patch does this; the graph refers to them as `Animations\RDF\<name>.hkx`):
+9 hkx files in `meshes\actors\character\animations\RDF\` (data-relative), registered in the animationNames of BOTH
+`DefaultMale` and `DefaultFemale` (the patch does this; the graph refers to them as `Animations\RDF\<name>.hkx`). One
+dodge per direction, no roll / step kinds (until 2026-10-23 there were 18: `rdf_roll_*` 0..7, `rdf_step_*` 8..15, two
+neutral):
 
-| index (`RDF_DodgeClip`) | file | meaning | index | file |
-|---|---|---|---|---|
-| 0 | `rdf_roll_f.hkx`  | roll, forward  | 8  | `rdf_step_f.hkx`  |
-| 1 | `rdf_roll_fr.hkx` | forward-right  | 9  | `rdf_step_fr.hkx` |
-| 2 | `rdf_roll_r.hkx`  | right          | 10 | `rdf_step_r.hkx`  |
-| 3 | `rdf_roll_br.hkx` | back-right     | 11 | `rdf_step_br.hkx` |
-| 4 | `rdf_roll_b.hkx`  | back           | 12 | `rdf_step_b.hkx`  |
-| 5 | `rdf_roll_bl.hkx` | back-left      | 13 | `rdf_step_bl.hkx` |
-| 6 | `rdf_roll_l.hkx`  | left           | 14 | `rdf_step_l.hkx`  |
-| 7 | `rdf_roll_fl.hkx` | forward-left   | 15 | `rdf_step_fl.hkx` |
-| 16 | `rdf_roll_n.hkx` | neutral        | 17 | `rdf_step_n.hkx` |
+| `RDF_DodgeClip` | file | direction |
+|---|---|---|
+| 0 | `RDF_Dodge_Forward.hkx`       | forward       |
+| 1 | `RDF_Dodge_ForwardRight.hkx`  | forward-right |
+| 2 | `RDF_Dodge_Right.hkx`         | right         |
+| 3 | `RDF_Dodge_BackwardRight.hkx` | back-right    |
+| 4 | `RDF_Dodge_Backward.hkx`      | back          |
+| 5 | `RDF_Dodge_BackwardLeft.hkx`  | back-left     |
+| 6 | `RDF_Dodge_Left.hkx`          | left          |
+| 7 | `RDF_Dodge_ForwardLeft.hkx`   | forward-left  |
+| 8 | `RDF_Dodge_Neutral.hkx`       | neutral       |
 
-Neutral (`n`): a fresh dodge pressed without move input that keeps facing (the default `bBackstepWithoutInput=1` makes
-it a backstep). Its default content is a copy of the backward clip, so nothing changes until a set provides its own;
-its motion is still the plugin's, so an `n` clip should move the way `bBackstepWithoutInput` sends it (back by default).
-A chain without input keeps the running dodge's heading and uses the directional clip. First person: `DodgeBack`.
+Neutral: a fresh dodge pressed without move input that keeps facing (the default `bBackstepWithoutInput=1` makes it a
+backstep). Its default content is a copy of the backward clip, so nothing changes until a set provides its own; its motion
+is still the plugin's, so a neutral clip should move the way `bBackstepWithoutInput` sends it (back by default). A chain
+without input keeps the running dodge's heading and uses the directional clip. First person: `DodgeBack`.
 
-Index = `kind * 8 + direction`; kind 0 = roll, 1 = step (sidestep); direction order is clockwise from forward:
-F, FR, R, BR, B, BL, L, FL. Each clip is authored relative to the character's facing; the plugin picks the clip that matches
-the dodge direction relative to the actor.
+Direction order is clockwise from forward. Each clip is authored relative to the character's facing; the plugin picks the
+clip that matches the dodge direction relative to the actor (a dodge that turns the actor to its path plays Forward).
 
 Clips must be Skyrim SE 64-bit hkx on the vanilla human skeleton (`Character Assets\skeleton.hkx`), 30 fps.
 
-Development placeholders: `tools/install_fixtures.py` copies the 16 clips of the user's own "The Ultimate Dodge Mod" into
+Development placeholders: `tools/install_fixtures.py` copies 9 clips (its sidesteps) of the user's own "The Ultimate Dodge Mod" into
 the RDF mod folder under these names. They are NOT redistributable (the author's work), are gitignored, and must be
 replaced before anything is published.
 
@@ -72,13 +73,13 @@ Variables (appended to 0_master):
 
 | variable | type | default | use |
 |---|---|---|---|
-| `RDF_DodgeClip` | int | 0 | selects one of the 18 clips (16 directional + 2 neutral); read when the state is entered |
+| `RDF_DodgeClip` | int | 0 | selects one of the 9 clips (8 directions + neutral); read when the state is entered |
 | `RDF_DodgeSpeed` | float | 1.0 | clip playback speed multiplier |
 | `RDF_IsDodging` | bool | false | bound to the state's BSIsActiveModifier; the plugin sets it true before `RDF_DodgeStart` and false after `RDF_DodgeLeft` |
-| `RDF_ArmBlend` | float | 0.0 | arm stance layer weight: 0 = arms follow the dodge clip, 1 = arms hold the current weapon stance (iRightHandType / iLeftHandType), linear in between. Write it before the dodge starts. 1 for side/back steps, 0 for rolls. See BEHAVIOR_INTEGRATION.md section 5 |
+| `RDF_ArmBlend` | float | 0.0 | arm stance layer weight: 0 = arms follow the dodge clip, 1 = arms hold the current weapon stance (iRightHandType / iLeftHandType), linear in between. Write it before the dodge starts ([Graph] fArmStance, default 1). See BEHAVIOR_INTEGRATION.md section 5 |
 | `RDF_ChainIndex` | int | 0 | which dodge of a chain is playing: 0 the first, 1 the second, 2 the third, ... Written by the plugin before `RDF_DodgeStart` / `RDF_DodgeStartB` / `RDF_DodgeChain` (so a clip generator or a transition condition sees the new value when the state is entered), and set back to 0 when the dodge is over however it ended (clip end, cancel into an attack / block, stagger, graph left, rollback, camera switch, the actor's agent released, a loaded save). Read-only for the graph: use it to swap clips or branch on the second / third dodge |
 | `RDF_AttackFromDodge` | int | 0 | the attack playing came out of a dodge: 1 attack, 2 power attack, 0 otherwise. Written by the plugin before that attack starts (one update after the graph left the dodge), back to 0 when the attack ends, when the next attack starts (a combo going on from it is made of ordinary attacks) or when a dodge starts. Meant for OAR conditions on attack clips, see "Dodge attacks" below |
-| `RDF_AttackFromDodgeClip` | int | 0 | the `RDF_DodgeClip` of that dodge (0..7 rolls F FR R BR B BL L FL, 8..15 steps, 16 / 17 neutral); valid while `RDF_AttackFromDodge` > 0 |
+| `RDF_AttackFromDodgeClip` | int | 0 | the `RDF_DodgeClip` of that dodge (0..7 F FR R BR B BL L FL, 8 neutral); valid while `RDF_AttackFromDodge` > 0 |
 | `bAnimationDriven` | bool (vanilla, index 81) | - | bound to bIsActive0 |
 | `DF_IsDodging` | - | - | TDM's variable. It does NOT exist in this modlist's 0_master, so it is neither created nor bound. If it ever exists, generate with `--with-df` and it is bound to bIsActive2. |
 
@@ -128,8 +129,8 @@ up to 5e-7.
 
 ### Per weapon (or any condition) — an OAR set, no Pandora run
 
-The graph always plays `Animations\RDF\rdf_{roll,step}_<dir>.hkx`. A set is an Open Animation Replacer mod
-whose submod mirrors those 16 paths under its conditions, so it can be added, removed or reordered without
+The graph always plays `Animations\RDF\RDF_Dodge_<Direction>.hkx`. A set is an Open Animation Replacer mod
+whose submod mirrors those 9 paths under its conditions, so it can be added, removed or reordered without
 regenerating behaviours:
 
 1. Write a spec in `behavior/sets/<name>.json`: target MO2 mod name, OAR mod/submod names, priority, the OAR
@@ -155,9 +156,9 @@ DMCO's `Dodge_MCO-DXP.esl` (which defines that sound descriptor) is active.
 ### Replacing the default set
 
 
-1. Author 18 clips with the naming and index convention above (the two `n` ones may be copies of `b`).
+1. Author 9 clips with the naming and index convention above (the neutral one may be a copy of the backward one).
 2. Put them in a new folder (e.g. `Animations\RDF2\`) and change `ANIM_DIR` in `tools/gen_rdf_patch.py`, or enlarge `CLIPS`
-   to several sets: the selector simply grows (`RDF_DodgeClip = set * 16 + index`); nothing else in the graph changes.
+   to several sets: the selector simply grows (`RDF_DodgeClip = set * 9 + index`); nothing else in the graph changes.
 3. `python tools/gen_rdf_patch.py && python tools/install_fixtures.py`, re-run Pandora, then validate:
    `python tools/stage_pandora.py --label rdf --rdf behavior/Pandora_Engine/mod/rdf` and `python tools/validate_rdf.py`.
    (`validate_rdf.py` takes the clip list and expected node count from the generator, so it follows the change.)
@@ -168,7 +169,7 @@ With `RDF_ArmBlend` > 0 the arm bones (right: clavicle, upper arm, forearm, hand
 bones; left: the same plus the shield bone) are replaced by the vanilla weapon-ready idle pose of the player's current weapon
 types, looping, while the rest of the body plays the dodge clip. Consequences for authoring:
 - a dodge clip meant for `RDF_ArmBlend = 1` (side steps, back steps) may leave the arms at a neutral pose; they are overridden;
-- a clip meant for `RDF_ArmBlend = 0` (rolls) must animate the arms itself (it keeps full control of them);
+- a clip meant for `RDF_ArmBlend = 0` must animate the arms itself (it keeps full control of them);
 - root motion always comes from the dodge clip, never from the stance layer.
 The stance clips are vanilla files (`H2H_Idle`, `1HM_Idle`, `DW1HM1HMIdle`, `2HM_Idle`, `2HW_Idle`, `Bow_IdleHeld`, `StaffRight_Idle`,
 `Staff_Idle`, `MRh_Idle`, `MLh_Idle`, `Tor_1HMPose`, `DLC01\CrossBow_IdleHeld`); a clip set does not have to provide them.
@@ -233,8 +234,8 @@ condition comparing the graph variable:
 
 (The shape of a shipped OAR config comparing an Int graph variable, Animated Poisons Redone's `APR_PoisonAnim`.)
 
-(2 = power attack, 1 = attack.) Add `RDF_AttackFromDodgeClip` for per-direction variants (4 / 12 = backward roll /
-step, 2 / 10 = right, 16 / 17 = neutral...). Give the submod a higher priority than the ordinary replacer of the same
+(2 = power attack, 1 = attack.) Add `RDF_AttackFromDodgeClip` for per-direction variants (4 = backward, 2 = right,
+8 = neutral...). Give the submod a higher priority than the ordinary replacer of the same
 clip. OAR evaluates conditions when the clip starts; the plugin writes both variables before the attack starts and
 clears them when it is over, so the next attack of a combo plays its normal clip.
 

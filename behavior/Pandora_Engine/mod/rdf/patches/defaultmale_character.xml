@@ -1,20 +1,11 @@
 <patch>
-  <append path="#0029/animationNames"><hkcstring>Animations\RDF\rdf_roll_f.hkx</hkcstring></append>
-  <append path="#0029/animationNames"><hkcstring>Animations\RDF\rdf_roll_fr.hkx</hkcstring></append>
-  <append path="#0029/animationNames"><hkcstring>Animations\RDF\rdf_roll_r.hkx</hkcstring></append>
-  <append path="#0029/animationNames"><hkcstring>Animations\RDF\rdf_roll_br.hkx</hkcstring></append>
-  <append path="#0029/animationNames"><hkcstring>Animations\RDF\rdf_roll_b.hkx</hkcstring></append>
-  <append path="#0029/animationNames"><hkcstring>Animations\RDF\rdf_roll_bl.hkx</hkcstring></append>
-  <append path="#0029/animationNames"><hkcstring>Animations\RDF\rdf_roll_l.hkx</hkcstring></append>
-  <append path="#0029/animationNames"><hkcstring>Animations\RDF\rdf_roll_fl.hkx</hkcstring></append>
-  <append path="#0029/animationNames"><hkcstring>Animations\RDF\rdf_step_f.hkx</hkcstring></append>
-  <append path="#0029/animationNames"><hkcstring>Animations\RDF\rdf_step_fr.hkx</hkcstring></append>
-  <append path="#0029/animationNames"><hkcstring>Animations\RDF\rdf_step_r.hkx</hkcstring></append>
-  <append path="#0029/animationNames"><hkcstring>Animations\RDF\rdf_step_br.hkx</hkcstring></append>
-  <append path="#0029/animationNames"><hkcstring>Animations\RDF\rdf_step_b.hkx</hkcstring></append>
-  <append path="#0029/animationNames"><hkcstring>Animations\RDF\rdf_step_bl.hkx</hkcstring></append>
-  <append path="#0029/animationNames"><hkcstring>Animations\RDF\rdf_step_l.hkx</hkcstring></append>
-  <append path="#0029/animationNames"><hkcstring>Animations\RDF\rdf_step_fl.hkx</hkcstring></append>
-  <append path="#0029/animationNames"><hkcstring>Animations\RDF\rdf_roll_n.hkx</hkcstring></append>
-  <append path="#0029/animationNames"><hkcstring>Animations\RDF\rdf_step_n.hkx</hkcstring></append>
+  <append path="#0029/animationNames"><hkcstring>Animations\RDF\RDF_Dodge_Forward.hkx</hkcstring></append>
+  <append path="#0029/animationNames"><hkcstring>Animations\RDF\RDF_Dodge_ForwardRight.hkx</hkcstring></append>
+  <append path="#0029/animationNames"><hkcstring>Animations\RDF\RDF_Dodge_Right.hkx</hkcstring></append>
+  <append path="#0029/animationNames"><hkcstring>Animations\RDF\RDF_Dodge_BackwardRight.hkx</hkcstring></append>
+  <append path="#0029/animationNames"><hkcstring>Animations\RDF\RDF_Dodge_Backward.hkx</hkcstring></append>
+  <append path="#0029/animationNames"><hkcstring>Animations\RDF\RDF_Dodge_BackwardLeft.hkx</hkcstring></append>
+  <append path="#0029/animationNames"><hkcstring>Animations\RDF\RDF_Dodge_Left.hkx</hkcstring></append>
+  <append path="#0029/animationNames"><hkcstring>Animations\RDF\RDF_Dodge_ForwardLeft.hkx</hkcstring></append>
+  <append path="#0029/animationNames"><hkcstring>Animations\RDF\RDF_Dodge_Neutral.hkx</hkcstring></append>
 </patch>

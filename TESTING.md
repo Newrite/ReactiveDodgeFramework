@@ -30,7 +30,7 @@ what is still waiting.
 * Real Pandora run on a staged copy of every enabled STB mod's patch inputs (baseline reproduces the live
   output byte-for-byte for all 57 hkx), with the output redirected to `_work`: `validate_rdf.py` 80/80 —
   events/variables resolved (no −1), states 9701/9702 and every transition/effect as designed, vanilla
-  wildcards intact, 16 clips registered in both characters, 122 unrelated state machines unchanged, no new
+  wildcards intact, 9 clips registered in both characters, 122 unrelated state machines unchanged, no new
   Pandora log failures. A mistyped-name control patch fails 5 checks.
 * Build: no warnings from project code (only CommonLib's bundled minhook C4701).
 
@@ -55,6 +55,6 @@ what is still waiting.
 ### Waiting
 * Post-dodge speed floor (`carry` / `floorHits` in the trace).
 * Projectile i-frames (`i-frames: projectile ... passed through` lines).
-* Power attack from a dodge, attack -> dodge, MCO-style windows; arm stance on rolls (default off).
+* Power attack from a dodge, attack -> dodge, MCO-style windows; arm stance with fArmStance below 1.
 * Gamepad, slopes/stairs/walls, save/load and cell change mid-dodge, death, menus.
 * Visual blend quality with a proper animation set (fixtures are TUDM clips).

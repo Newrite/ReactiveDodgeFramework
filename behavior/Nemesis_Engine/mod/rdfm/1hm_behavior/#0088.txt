@@ -331,7 +331,7 @@
 						</hkobject>
 					</hkparam>
 					<hkparam name="transition">#rdfm$1</hkparam>
-					<hkparam name="condition">#rdfm$314</hkparam>
+					<hkparam name="condition">#rdfm$206</hkparam>
 					<hkparam name="eventId">$eventID[RDF_DodgeExit]$</hkparam>
 					<hkparam name="toStateId">0</hkparam>
 					<hkparam name="fromNestedStateId">0</hkparam>

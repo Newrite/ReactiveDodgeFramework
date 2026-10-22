@@ -68,8 +68,8 @@
    and attack -> dodge, block from a dodge; send the log.
 2. Remove the dev tracing of graph events once the above is confirmed (it is behind `bDevLog` already).
 3. A proper animation set annotated with `tools/annotate_clips.py`.
-4. Neutral dodge clip "N" (built 2026-10-22, waiting for an in-game check): RDF_DodgeClip 16 = rdf_roll_n, 17 =
-   rdf_step_n, picked for a fresh dodge pressed without move input that keeps facing. Default content: copies of
+4. Neutral dodge clip (built 2026-10-22, waiting for an in-game check; since 2026-10-23 one set of 9 clips, no roll /
+   step kinds): RDF_DodgeClip 8 = RDF_Dodge_Neutral, picked for a fresh dodge pressed without move input that keeps facing. Default content: copies of
    the backward clips (annotations included) in the RDF mod; 1P plays DodgeBack. Both patches, install_fixtures,
    build_clip_set (optional "n" in a spec, else "b"), validate_rdf. The greatsword OAR set in MO2 was built
    before this and has no n clips: there the base n (the TUDM backward copy) plays until the set is rebuilt.

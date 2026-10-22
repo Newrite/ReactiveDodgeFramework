@@ -62,7 +62,7 @@ python tools/test_hkxcheck.py
 ```
 
 `validate_rdf.py` checks: no new failure line in Engine.log; only 0_Master / DefaultMale / DefaultFemale changed; events and
-variables exist with the right types and initial values and no macro resolved to -1; both states, the generator chain, 16 clips,
+variables exist with the right types and initial values and no macro resolved to -1; both states, the generator chain, 9 clips,
 bindings, triggers; every transition (events, targets, effect durations and flags); the vanilla stagger / ragdoll / jump / swim /
 bleed-out wildcards still present; animation names in both characters; per state machine the number of states and transitions
 equals the baseline (root machine +2 states / +29 transitions); no object lost except the five nodes the patch edits.
@@ -94,7 +94,7 @@ the player's current weapon stance, layered over the dodge clip. The plugin cont
 ```
 ModifierGenerator { BSIsActiveModifier(bAnimationDriven, RDF_IsDodging),
   ArmStanceBlend  hkbBlenderGenerator flags 0                       (vanilla pattern: complementary masks, weights 1)
-    child0  weight 1  worldFromModel 1  mask NOT_ARMS    generator = dodge clip state machine (startStateId <- RDF_DodgeClip, 16 states = 16 clips)
+    child0  weight 1  worldFromModel 1  mask NOT_ARMS    generator = dodge clip state machine (startStateId <- RDF_DodgeClip, 9 states = 9 clips)
     child1  weight 1  worldFromModel 0  mask ARMS        generator = ArmLayer
   ArmLayer        hkbBlenderGenerator flags 16 (PARAMETRIC), blendParameter <- RDF_ArmBlend
     p0  weight 0  generator = a SECOND dodge clip state machine (own clip nodes, same variables)
@@ -125,7 +125,7 @@ checks `NOT_ARMS + RightArm + LeftArm == 1` for every bone.
      the two neighbours. Here the positions are 0 (dodge copy) and 1 (stance), so `RDF_ArmBlend` = f gives
      `arms = (1-f) * dodge + f * stance` exactly.
 - Why the dodge appears twice: a single dodge generator under a weighted-average child would give `W/(1+W)` and never reach
-  100 % stance. With the second copy the lerp reaches exactly 0 and 1. Cost: one extra selector with 16 clips per state; the two
+  100 % stance. With the second copy the lerp reaches exactly 0 and 1. Cost: one extra selector with 9 clips per state; the two
   copies start together, run at the same speed and are never shared between parents.
 - `worldFromModelWeight` 1 only on the main dodge child, 0 on the ArmLayer and its children, so root motion comes from the dodge
   clip alone (the plugin owns displacement anyway).
@@ -135,7 +135,7 @@ checks `NOT_ARMS + RightArm + LeftArm == 1` for every bone.
 ### 5.3 What the plugin writes
 | `RDF_ArmBlend` | meaning |
 |---|---|
-| `0.0` (default) | off: arms follow the dodge clip exactly (rolls; unarmed) |
+| `0.0` | off: arms follow the dodge clip exactly (unarmed) |
 | `1.0` | 100 % stance on the arms |
 | `0 < f < 1` | linear mix `(1-f) * dodge + f * stance` (written directly, no `f/(1-f)` conversion) |
 Values outside [0,1] are clamped by the parametric blend (position 0 / 1 are the end children). Set the variable before the

@@ -1,12 +1,10 @@
-		<hkobject name="#rdfm$183" class="hkbStateMachineStateInfo" signature="0xed7f9d0">
-			<hkparam name="variableBindingSet">null</hkparam>
-			<hkparam name="listeners" numelements="0"></hkparam>
-			<hkparam name="enterNotifyEvents">null</hkparam>
-			<hkparam name="exitNotifyEvents">null</hkparam>
-			<hkparam name="transitions">null</hkparam>
-			<hkparam name="generator">#rdfm$181</hkparam>
-			<hkparam name="name">RDF_1H_Dodge_B_Main_S1_rdf_roll_fr</hkparam>
-			<hkparam name="stateId">1</hkparam>
-			<hkparam name="probability">1.000000</hkparam>
-			<hkparam name="enable">true</hkparam>
+		<hkobject name="#rdfm$183" class="hkbManualSelectorGenerator" signature="0xd932fab8">
+			<hkparam name="variableBindingSet">#rdfm$184</hkparam>
+			<hkparam name="userData">0</hkparam>
+			<hkparam name="name">RDF_1H_Dodge_B_StanceR_1H_LeftSel</hkparam>
+			<hkparam name="generators" numelements="13">
+				#rdfm$181 #rdfm$182 #rdfm$182 #rdfm$182 #rdfm$182 #rdfm$181 #rdfm$181 #rdfm$181 #rdfm$181 #rdfm$181 #rdfm$181 #rdfm$181 #rdfm$181
+			</hkparam>
+			<hkparam name="selectedGeneratorIndex">0</hkparam>
+			<hkparam name="currentGeneratorIndex">0</hkparam>
 		</hkobject>

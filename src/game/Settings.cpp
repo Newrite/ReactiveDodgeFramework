@@ -269,13 +269,12 @@ namespace rdf::game
 			g.windowClose = Split(ReadString("Graph", "sDodgeWindowCloseEvents", Join(g.windowClose)));
 			s.clipLength = ReadFloat("Graph", "fClipLength", s.clipLength, 0.05f, 10.0f);
 			s.animSpeed = ReadFloat("Graph", "fAnimSpeed", s.animSpeed, 0.1f, 5.0f);
-			s.armStanceStep = ReadFloat("Graph", "fArmStanceStep", s.armStanceStep, 0.0f, 1.0f);
-			s.armStanceRoll = ReadFloat("Graph", "fArmStanceRoll", s.armStanceRoll, 0.0f, 1.0f);
+			// fArmStanceStep: its name before the roll / step clips became one set (an older ini)
+			s.armStance = ReadFloat("Graph", "fArmStance", ReadFloat("Graph", "fArmStanceStep", s.armStance, 0.0f, 1.0f), 0.0f, 1.0f);
 			s.armStanceFirstPerson = ReadFloat("Graph", "fArmStanceFirstPerson", s.armStanceFirstPerson, 0.0f, 1.0f);
 			s.firstPersonLookScale = ReadFloat("Graph", "fFirstPersonLookScale", s.firstPersonLookScale, -5.0f, 5.0f);
 			s.clipLengthFirstPerson = ReadFloat("Graph", "fClipLengthFirstPerson", s.clipLengthFirstPerson, 0.05f, 10.0f);
 			s.armStanceWhenSheathed = ReadBool("Graph", "bArmStanceWhenSheathed", s.armStanceWhenSheathed);
-			s.sidestepWhenKeepFacing = ReadBool("Graph", "bSidestepWhenKeepFacing", s.sidestepWhenKeepFacing);
 			s.enterTimeoutFrames = ReadInt("Graph", "iEnterTimeoutFrames", s.enterTimeoutFrames, 1, 120);
 		}
 	}

@@ -1,7 +1,7 @@
 		<hkobject name="#rdfm$186" class="hkbStateMachine" signature="0x816c1dcb">
 			<hkparam name="variableBindingSet">#rdfm$187</hkparam>
 			<hkparam name="userData">0</hkparam>
-			<hkparam name="name">RDF_Dodge_A_DrawnSM</hkparam>
+			<hkparam name="name">RDF_Dodge_B_FPArmDodge_ClipSM</hkparam>
 			<hkparam name="eventToSendWhenStateOrTransitionChanges">
 				<hkobject>
 					<hkparam name="id">-1</hkparam>
@@ -20,7 +20,7 @@
 			<hkparam name="startStateMode">START_STATE_MODE_DEFAULT</hkparam>
 			<hkparam name="selfTransitionMode">SELF_TRANSITION_MODE_NO_TRANSITION</hkparam>
 			<hkparam name="states" numelements="9">
-				#rdfm$188 #rdfm$189 #rdfm$190 #rdfm$191 #rdfm$192 #rdfm$193 #rdfm$194 #rdfm$195 #rdfm$196
+				#rdfm$190 #rdfm$193 #rdfm$196 #rdfm$199 #rdfm$202 #rdfm$205 #rdfm$208 #rdfm$211 #rdfm$214
 			</hkparam>
 			<hkparam name="wildcardTransitions">null</hkparam>
 		</hkobject>

@@ -62,17 +62,14 @@ namespace rdf::game
 		GraphNames graph;
 		float      animSpeed{ 1.0f };
 		float      clipLength{ 0.667f };  // seconds of the dodge clip at speed 1
-		// Share of the current weapon stance on the arms during a dodge (0..1): steps keep the guard,
-		// rolls let the clip move the arms (a body turning over with arms frozen in a stance looks wrong).
-		float      armStanceStep{ 1.0f };
-		float      armStanceRoll{ 0.0f };
+		// Share of the current weapon stance on the arms during a dodge (0..1): 1 keeps the guard, 0 lets the clip move them.
+		float      armStance{ 1.0f };
 		// First person plays Bethesda's 1P dodge clips (0.9 s) on torso, head and camera; this is the
 		// share of the weapon-ready pose on the arms (1 = the grip stays on the weapon).
 		float      armStanceFirstPerson{ 1.0f };
 		float      clipLengthFirstPerson{ 0.9f };
 		float      firstPersonLookScale{ 1.0f };  // mouse turn during a 1P dodge, x the engine's own rate
 		bool       armStanceWhenSheathed{ false };  // also keep the stance of a sheathed weapon / spell
-		bool       sidestepWhenKeepFacing{ true };  // clips 8..15 instead of 0..7 when the actor keeps its facing
 		int        enterTimeoutFrames{ 6 };
 
 		// [Motion]

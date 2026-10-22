@@ -1,9 +1,9 @@
 """Build an MO2 mod that swaps RDF's dodge clips for another set through Open Animation Replacer.
 
-RDF's graph always plays meshes\\actors\\character\\animations\\RDF\\rdf_{roll,step}_<dir>.hkx. A clip set is
-an OAR replacer mod whose submod mirrors those 16 paths and gates them with conditions (weapon type...),
-so sets are added without touching the Pandora patch. The spec (behavior/sets/*.json) names one source
-clip per direction; it is copied into both the roll and the step slot, then annotated with the RDF_*
+RDF's graph always plays meshes\\actors\\character\\animations\\RDF\\RDF_Dodge_<Direction>.hkx (9 clips: 8 directions
+and Neutral). A clip set is an OAR replacer mod whose submod mirrors those paths and gates them with conditions (weapon
+type...), so sets are added without touching the Pandora patch. The spec (behavior/sets/*.json) names one source clip
+per direction (f fr r br b bl l fl, optional n = neutral, else the backward one); it is copied in, then annotated with the RDF_*
 windows (tools/annotate_clips.py, the source clip's own annotations are kept, except those starting with one of the
 spec's "dropAnnotations" prefixes: another dodge framework's events, such as DMCO's stamina payload, its
 SpecialFrames i-frames or MCO's recovery / input-buffer events, which RDF would take for an attack's).
@@ -18,11 +18,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import annotate_clips  # noqa: E402
+import gen_rdf_patch as G  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 MODS = Path(r"F:\STB\Skyrim\[STB] Mod Organizer\mods")
-DIRS = ["f", "fr", "r", "br", "b", "bl", "l", "fl"]
-SLOTS = ["roll", "step"]
+DIRS = G.DIRS
 ANIMATIONS = Path("meshes/actors/character/animations")
 
 
@@ -39,7 +39,7 @@ def build(spec_path, src, mods):
 
     oar = mods / spec["mod"] / ANIMATIONS / "OpenAnimationReplacer" / spec["oarMod"]
     submod = oar / spec["submod"]["name"]
-    clips = submod / "RDF"  # mirrors animations\RDF\rdf_*.hkx
+    clips = submod / "RDF"  # mirrors animations\RDF\RDF_Dodge_*.hkx
     if submod.exists():
         shutil.rmtree(submod)
     clips.mkdir(parents=True)
@@ -47,18 +47,17 @@ def build(spec_path, src, mods):
     write_json(oar / "config.json", {"name": spec["oarMod"], "author": spec["author"], "description": spec["description"]})
     write_json(submod / "config.json", {
         "name": spec["submod"]["name"],
-        "description": "Replaces RDF's 18 dodge clips (roll and step slots share one clip per direction, neutral n included).",
+        "description": "Replaces RDF's 9 dodge clips (8 directions and the neutral one).",
         "priority": spec["submod"]["priority"],
         "conditions": spec["submod"]["conditions"],
     })
 
     # "n" (neutral, no move input) is optional in a spec: without it the backward clip fills the slot.
-    for d in DIRS + ["n"]:
+    for d, name in zip(G.CLIP_DIRS, G.CLIPS):
         source = src / spec["clips"].get(d, spec["clips"]["b"])
         if not source.is_file():
             sys.exit(f"missing source clip {source}")
-        for slot in SLOTS:
-            shutil.copyfile(source, clips / f"rdf_{slot}_{d}.hkx")
+        shutil.copyfile(source, clips / f"{name}.hkx")
 
     annotate_clips.WORK.mkdir(parents=True, exist_ok=True)
     report = {"rule": {"iframeOn": annotate_clips.IFRAME_ON, "actionLatest": annotate_clips.ACTION_LATEST,
@@ -83,8 +82,8 @@ def main(argv):
     submod, report, out = build(args.spec.resolve(), args.src.resolve(), args.mods)
     print(f"built {submod}")
     for name, m in report["clips"].items():
-        if name.startswith("rdf_roll_"):
-            print(f"  {name[9:]:>2}: peak {m['peakSpeed']:.0f}@{m['peakTime']:.3f}  iframes {m['RDF_IFrameStart']:.3f}-"
+        if name in G.CLIP_DIR_OF:
+            print(f"  {G.CLIP_DIR_OF[name]:>2}: peak {m['peakSpeed']:.0f}@{m['peakTime']:.3f}  iframes {m['RDF_IFrameStart']:.3f}-"
                   f"{m['RDF_IFrameEnd']:.3f}  attack/block {m['RDF_AttackOpen']:.3f}  chain {m['RDF_ChainOpen']:.3f}"
                   f"  exit {m['RDF_ExitOpen']:.3f}")
     print(f"windows written to {out}")

@@ -1659,24 +1659,15 @@
 				<hkcstring>Animations\WW_Stage8.hkx</hkcstring>
 				<hkcstring>Animations\WW_Stage9.hkx</hkcstring>
 <!-- MOD_CODE ~rdfm~ OPEN -->
-				<hkcstring>Animations\RDF\rdf_roll_f.hkx</hkcstring>
-				<hkcstring>Animations\RDF\rdf_roll_fr.hkx</hkcstring>
-				<hkcstring>Animations\RDF\rdf_roll_r.hkx</hkcstring>
-				<hkcstring>Animations\RDF\rdf_roll_br.hkx</hkcstring>
-				<hkcstring>Animations\RDF\rdf_roll_b.hkx</hkcstring>
-				<hkcstring>Animations\RDF\rdf_roll_bl.hkx</hkcstring>
-				<hkcstring>Animations\RDF\rdf_roll_l.hkx</hkcstring>
-				<hkcstring>Animations\RDF\rdf_roll_fl.hkx</hkcstring>
-				<hkcstring>Animations\RDF\rdf_step_f.hkx</hkcstring>
-				<hkcstring>Animations\RDF\rdf_step_fr.hkx</hkcstring>
-				<hkcstring>Animations\RDF\rdf_step_r.hkx</hkcstring>
-				<hkcstring>Animations\RDF\rdf_step_br.hkx</hkcstring>
-				<hkcstring>Animations\RDF\rdf_step_b.hkx</hkcstring>
-				<hkcstring>Animations\RDF\rdf_step_bl.hkx</hkcstring>
-				<hkcstring>Animations\RDF\rdf_step_l.hkx</hkcstring>
-				<hkcstring>Animations\RDF\rdf_step_fl.hkx</hkcstring>
-				<hkcstring>Animations\RDF\rdf_roll_n.hkx</hkcstring>
-				<hkcstring>Animations\RDF\rdf_step_n.hkx</hkcstring>
+				<hkcstring>Animations\RDF\RDF_Dodge_Forward.hkx</hkcstring>
+				<hkcstring>Animations\RDF\RDF_Dodge_ForwardRight.hkx</hkcstring>
+				<hkcstring>Animations\RDF\RDF_Dodge_Right.hkx</hkcstring>
+				<hkcstring>Animations\RDF\RDF_Dodge_BackwardRight.hkx</hkcstring>
+				<hkcstring>Animations\RDF\RDF_Dodge_Backward.hkx</hkcstring>
+				<hkcstring>Animations\RDF\RDF_Dodge_BackwardLeft.hkx</hkcstring>
+				<hkcstring>Animations\RDF\RDF_Dodge_Left.hkx</hkcstring>
+				<hkcstring>Animations\RDF\RDF_Dodge_ForwardLeft.hkx</hkcstring>
+				<hkcstring>Animations\RDF\RDF_Dodge_Neutral.hkx</hkcstring>
 <!-- CLOSE -->
 			</hkparam>
 			<hkparam name="animationFilenames" numelements="0"></hkparam>

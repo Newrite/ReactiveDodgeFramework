@@ -1,3 +1,0 @@
-		<hkobject name="#rdfm$314" class="hkbExpressionCondition" signature="0x1c3c1045">
-			<hkparam name="expression">RDF_IsDodging == 1</hkparam>
-		</hkobject>

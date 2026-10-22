@@ -502,3 +502,11 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   made LeftAttack of an empty left hand a block press and raised our blockStart, which the graph refuses with a bow. Now a
   bow / crossbow in the right hand makes the left button an attack (replayed: tap = bash, hold = power bash) and
   PrepareBash leaves wantBlocking alone for them.
+* One dodge clip per direction (2026-10-23, user: drop the roll / step split, the clips were the same anyway): 9 clips
+  RDF_Dodge_Forward .. ForwardLeft (RDF_DodgeClip 0..7) and RDF_Dodge_Neutral (8) replace rdf_roll_* / rdf_step_* (18).
+  The plugin no longer picks a kind (bSidestepWhenKeepFacing gone; a dodge that turns the actor to its path plays Forward)
+  and has one fArmStance (an older ini's fArmStanceStep is read as its default; fArmStanceRoll is ignored). Graph nodes:
+  root 315 -> 207, 1hm 313 -> 205, 1P 1hm 363 -> 255. Fixtures are TUDM's sidesteps (install_fixtures removes the old
+  files), build_clip_set copies one clip per slot; the Infinity Dodge and greatsword OAR sets rebuilt with the new
+  names. RDF_AttackFromDodgeClip values follow (0..8). validate_rdf 237/237, validate_onehand 123/123 (STB, VanillaLike),
+  Nemesis 59/59.

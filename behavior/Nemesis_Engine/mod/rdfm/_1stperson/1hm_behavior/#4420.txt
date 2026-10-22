@@ -34,7 +34,7 @@
 				#0182
 <!-- MOD_CODE ~rdfm~ OPEN -->
 				#rdfm$4
-				#rdfm$184
+				#rdfm$130
 <!-- CLOSE -->
 			</hkparam>
 			<hkparam name="wildcardTransitions">#0088</hkparam>

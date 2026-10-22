@@ -88,9 +88,14 @@ FX_OUT = ("RDF_DodgeOutBlend", 0.25, "FLAG_IGNORE_TO_WORLD_FROM_MODEL", "SELF_TR
 
 DIRS = ["f", "fr", "r", "br", "b", "bl", "l", "fl"]
 ANIM_DIR = "Animations\\RDF"
-# index order = RDF_DodgeClip: 0..7 rolls, 8..15 steps, then the neutral "n" slots (a dodge pressed without move input):
-# 16 roll n, 17 step n. Default content of n is a copy of the backward clip (install_fixtures, build_clip_set).
-CLIPS = ([("rdf_roll_%s" % d) for d in DIRS] + [("rdf_step_%s" % d) for d in DIRS] + ["rdf_roll_n", "rdf_step_n"])
+# One dodge clip per direction plus the neutral one (a dodge pressed without move input); index = RDF_DodgeClip:
+# 0..7 clockwise from forward (DIRS), 8 neutral. Default content of the neutral clip is a copy of the backward one
+# (install_fixtures, build_clip_set).
+CLIP_NAMES = {"f": "Forward", "fr": "ForwardRight", "r": "Right", "br": "BackwardRight", "b": "Backward",
+              "bl": "BackwardLeft", "l": "Left", "fl": "ForwardLeft", "n": "Neutral"}
+CLIP_DIRS = DIRS + ["n"]
+CLIPS = ["RDF_Dodge_%s" % CLIP_NAMES[d] for d in CLIP_DIRS]
+CLIP_DIR_OF = dict(zip(CLIPS, CLIP_DIRS))
 
 # "vanilla": mirror Stagger_State's return (4 conditional transitions that restore the Default_Behavior nested state);
 # "simple": one unconditional transition per exit event to Default_State (sync variable restores nested state anyway).
@@ -327,8 +332,8 @@ def clip_node(N, out, label, anim, mode, speed_var=None):
 
 
 def fp_clip_path(cname):
-    """1P animation for a CLIPS name: rdf_roll_fr -> Animations\\DodgeRight.hkx."""
-    return "Animations\\%s.hkx" % FP_DODGE_CLIPS[cname.rsplit("_", 1)[1]]
+    """1P animation for a CLIPS name: RDF_Dodge_ForwardRight -> Animations\\DodgeRight.hkx."""
+    return "Animations\\%s.hkx" % FP_DODGE_CLIPS[CLIP_DIR_OF[cname]]
 
 
 def dodge_selector(N, out, label, path=None):
