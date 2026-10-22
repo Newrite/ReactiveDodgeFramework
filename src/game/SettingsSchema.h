@@ -26,13 +26,14 @@ namespace rdf::game::schema
 		Int,
 		Bool,
 		Choice,  // an int index into `choices`, written to the ini as the choice's name
+		Form,    // a game form named by text (forms.h): an edit box with its resolution and a picker of `formType`
 	};
 
 	struct Field
 	{
 		Page        page;
 		const char* section;
-		const char* key;  // also the translation stem: "$RDF_<key>" and "$RDF_<key>_Desc"
+		const char* key;  // also the translation stem: "$RDF_<key>" and "$RDF_<key>_Desc" (unless `textKey`)
 		Kind        kind;
 		float       min{ 0.0f };
 		float       max{ 1.0f };
@@ -43,7 +44,10 @@ namespace rdf::game::schema
 		int (*getChoice)(const Settings&){ nullptr };
 		void (*setChoice)(Settings&, int){ nullptr };
 		std::span<const char* const> choices{};  // ini names; labels are "$RDF_<key>_<name>"
+		std::string* (*str)(Settings&){ nullptr };
+		RE::FormType formType{ RE::FormType::None };
 		bool        custom{ false };              // saved like the others, drawn by its page's own widget
+		const char* textKey{ nullptr };           // translation stem when `key` repeats in another section
 	};
 
 	std::span<const Field> Fields();

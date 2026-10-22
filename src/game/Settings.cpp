@@ -17,6 +17,7 @@ namespace rdf::game
 		Settings                   g_settings;
 		std::mutex                 g_snapshotLock;  // Commit (main thread) vs Snapshot (render thread)
 		std::atomic<std::uint32_t> g_generation{ 1 };
+		std::vector<std::function<void()>> g_observers;  // main thread only
 
 		std::string ReadString(const char* section, const char* key, const std::string& def)
 		{
@@ -291,6 +292,14 @@ namespace rdf::game
 			g_settings = s;
 		}
 		g_generation.fetch_add(1, std::memory_order_acq_rel);
+		for (const auto& observer : g_observers) {
+			observer();
+		}
+	}
+
+	void Settings::Observe(std::function<void()> observer)
+	{
+		g_observers.push_back(std::move(observer));
 	}
 
 	std::uint32_t Settings::Generation()

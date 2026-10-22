@@ -18,6 +18,7 @@ namespace rdf::game::schema
 #define RDF_F(member) +[](Settings& s) -> float* { return &s.member; }
 #define RDF_I(member) +[](Settings& s) -> int* { return &s.member; }
 #define RDF_B(member) +[](Settings& s) -> bool* { return &s.member; }
+#define RDF_S(member) +[](Settings& s) -> std::string* { return &s.member; }
 
 		Field Float(Page page, const char* section, const char* key, float* (*f)(Settings&), float min, float max, const char* format)
 		{
@@ -38,6 +39,20 @@ namespace rdf::game::schema
 			Field x{ page, section, key, Kind::Bool };
 			x.b = b;
 			return x;
+		}
+
+		Field Form(Page page, const char* section, const char* key, std::string* (*str)(Settings&), RE::FormType type)
+		{
+			Field x{ page, section, key, Kind::Form };
+			x.str = str;
+			x.formType = type;
+			return x;
+		}
+
+		Field Named(Field f, const char* textKey)
+		{
+			f.textKey = textKey;
+			return f;
 		}
 
 		Field Custom(Field f)
@@ -145,11 +160,18 @@ namespace rdf::game::schema
 				Float(Page::Rules, "Perfect", "fPerfectSlowMotionEaseIn", RDF_F(perfect.slowMotionEaseIn), 0.0f, 1.0f, "%.2f s"),
 				Float(Page::Rules, "Perfect", "fPerfectSlowMotionEaseOut", RDF_F(perfect.slowMotionEaseOut), 0.0f, 1.0f, "%.2f s"),
 				Float(Page::Rules, "Perfect", "fPerfectSlowMotionCooldown", RDF_F(perfect.slowMotionCooldown), 0.0f, 10.0f, "%.1f s"),
+				Form(Page::Rules, "Rules", "sNoDodgeKeyword", RDF_S(attackCancel.noDodgeKeyword), RE::FormType::Keyword),
 				Bool(Page::Rules, "AttackCancel", "bDodgeInRecovery", RDF_B(core.policy.cancelInRecovery)),
+				Form(Page::Rules, "AttackCancel", "sAnyTimeKeyword", RDF_S(attackCancel.anyTimeKeyword), RE::FormType::Keyword),
+				Form(Page::Rules, "AttackCancel", "sAnyTimePowerKeyword", RDF_S(attackCancel.anyTimePowerKeyword), RE::FormType::Keyword),
 				Bool(Page::Rules, "Jump", "bBlockDuringDodge", RDF_B(blockJumpDuringDodge)),
 				Bool(Page::Rules, "Stagger", "bDodgeFromStagger", RDF_B(dodgeFromStagger)),
 				Float(Page::Rules, "Stagger", "fDodgeDelay", RDF_F(staggerDodgeDelay), -1.0f, 3.0f, "%.2f s"),
 				Float(Page::Rules, "Stagger", "fEscapeCost", RDF_F(stagger.escapeCost), 0.0f, 100.0f, "%.0f"),
+				Form(Page::Rules, "Stagger", "sNoEscapeKeyword", RDF_S(stagger.noEscapeKeyword), RE::FormType::Keyword),
+				Named(Form(Page::Rules, "Stagger", "sAnyTimeKeyword", RDF_S(stagger.anyTimeKeyword), RE::FormType::Keyword), "Stagger_sAnyTimeKeyword"),
+				Form(Page::Rules, "Stagger", "sDelayKeyword", RDF_S(stagger.delayKeyword), RE::FormType::Keyword),
+				Form(Page::Rules, "Stagger", "sEscapeCostKeyword", RDF_S(stagger.escapeCostKeyword), RE::FormType::Keyword),
 				// --- debug
 				Bool(Page::Debug, "Dev", "bDevLog", RDF_B(devLog)),
 			};
@@ -159,6 +181,7 @@ namespace rdf::game::schema
 #undef RDF_F
 #undef RDF_I
 #undef RDF_B
+#undef RDF_S
 
 		std::string ValueText(const Field& f, const Settings& s)
 		{
@@ -176,6 +199,7 @@ namespace rdf::game::schema
 					const int v = f.getChoice(s);
 					return v >= 0 && v < static_cast<int>(f.choices.size()) ? f.choices[v] : f.choices[0];
 				}
+			case Kind::Form: return *f.str(m);
 			}
 			return {};
 		}
@@ -198,6 +222,7 @@ namespace rdf::game::schema
 			case Kind::Int: *f.i(to) = *f.i(src); break;
 			case Kind::Bool: *f.b(to) = *f.b(src); break;
 			case Kind::Choice: f.setChoice(to, f.getChoice(from)); break;
+			case Kind::Form: *f.str(to) = *f.str(src); break;
 			}
 		}
 	}

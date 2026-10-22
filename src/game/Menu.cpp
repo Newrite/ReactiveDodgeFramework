@@ -1,5 +1,6 @@
 #include "Menu.h"
 
+#include "Forms.h"
 #include "Settings.h"
 #include "SettingsSchema.h"
 
@@ -13,7 +14,9 @@
 #include "FUCK_API.h"
 #include "IconsFontAwesome6.h"
 
+#include <algorithm>
 #include <array>
+#include <cctype>
 #include <atomic>
 #include <string>
 #include <vector>
@@ -41,7 +44,8 @@ namespace rdf::game::menu
 			static const std::vector<FieldText> texts = [] {
 				std::vector<FieldText> out;
 				for (const auto& f : schema::Fields()) {
-					FieldText t{ std::string("$RDF_") + f.key, std::string("$RDF_") + f.key + "_Desc", {} };
+					const std::string stem = f.textKey ? f.textKey : f.key;
+					FieldText t{ "$RDF_" + stem, "$RDF_" + stem + "_Desc", {} };
 					for (const auto* c : f.choices) {
 						t.choices.push_back(std::string("$RDF_") + f.key + "_" + c);
 					}
@@ -117,6 +121,77 @@ namespace rdf::game::menu
 			std::atomic<bool> resync_{ false };
 		};
 
+		// A form named by text: the edit box (committed when the edit ends, so half-typed text is never resolved), what the
+		// committed text resolves to (forms.h: Peek, resolved on the main thread), a picker over every form of the type and a
+		// clear button. The game keeps running with whatever the text resolves to, null included.
+		bool DrawForm(const Field& f, const char* label)
+		{
+			auto&        s = State::Get().Draft();
+			std::string& text = *f.str(s);
+			bool         changed = false;
+			FUCK::PushItemWidth(FUCK::GetContentRegionAvail().x * 0.55f);
+			FUCK::InputText(label, &text);
+			FUCK::PopItemWidth();
+			const bool editing = FUCK::IsItemActive();
+			changed |= FUCK::IsItemDeactivatedAfterEdit();
+			if (FUCK::IsItemHovered()) {
+				FUCK::SetTooltip("$RDF_Form_Hint"_T);  // no % in the text: the host formats it printf-style
+			}
+			FUCK::SameLine();
+			if (FUCK::Button(ICON_FA_MAGNIFYING_GLASS "##pick")) {
+				FUCK::OpenPopup("pick");
+			}
+			FUCK::SameLine();
+			if (FUCK::Button(ICON_FA_XMARK "##clear") && !text.empty()) {
+				text.clear();
+				changed = true;
+			}
+			if (FUCK::BeginPopup("pick")) {
+				static std::string filter;
+				FUCK::InputText("$RDF_Form_Filter"_T, &filter);
+				std::string needle = filter;
+				std::transform(needle.begin(), needle.end(), needle.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+				FUCK::BeginChild("list", ImVec2(560.0f, 320.0f), true);
+				if (const auto catalog = forms::CatalogOf(f.formType); !catalog) {
+					FUCK::TextDisabled("%s", "$RDF_Form_Loading"_T);
+				} else {
+					int shown = 0;
+					for (const auto& e : *catalog) {
+						if (!needle.empty() && e.search.find(needle) == std::string::npos) {
+							continue;
+						}
+						if (++shown > 400) {
+							FUCK::TextDisabled("%s", "$RDF_Form_More"_T);
+							break;
+						}
+						if (FUCK::Selectable(e.label.c_str(), e.text == text)) {
+							text = e.text;
+							changed = true;
+							FUCK::CloseCurrentPopup();
+						}
+					}
+					if (shown == 0) {
+						FUCK::TextDisabled("%s", "$RDF_Form_NoMatch"_T);
+					}
+				}
+				FUCK::EndChild();
+				FUCK::EndPopup();
+			}
+			// what the text resolves to
+			if (editing) {
+				FUCK::TextDisabled("%s", "$RDF_Form_Editing"_T);
+			} else {
+				const auto r = forms::Peek(text, f.formType);
+				switch (r.status) {
+				case forms::Status::Empty: FUCK::TextDisabled("%s", "$RDF_Form_None"_T); break;
+				case forms::Status::Pending: FUCK::TextDisabled("%s", "$RDF_Form_Pending"_T); break;
+				case forms::Status::Found: FUCK::TextColored(ImVec4(0.5f, 0.9f, 0.5f, 1.0f), "%s %s", ICON_FA_CHECK, r.detail.c_str()); break;
+				default: FUCK::TextColored(ImVec4(1.0f, 0.55f, 0.35f, 1.0f), "%s %s", ICON_FA_TRIANGLE_EXCLAMATION, r.detail.c_str()); break;
+				}
+			}
+			return changed;
+		}
+
 		void DrawField(const Field& f, const FieldText& t)
 		{
 			auto&       s = State::Get().Draft();
@@ -131,6 +206,9 @@ namespace rdf::game::menu
 				break;
 			case Kind::Bool:
 				changed = FUCK::Checkbox(label, f.b(s));
+				break;
+			case Kind::Form:
+				changed = DrawForm(f, label);
 				break;
 			case Kind::Choice:
 				{
@@ -342,8 +420,10 @@ namespace rdf::game::menu
 						const std::string key = std::string("$RDF_Section_") + section;
 						FUCK::SeparatorText(FUCK::Translate(key.c_str()));
 					}
+					FUCK::PushID(fields[n].section);
 					FUCK::PushID(fields[n].key);
 					DrawField(fields[n], texts[n]);
+					FUCK::PopID();
 					FUCK::PopID();
 				}
 				DrawFooter(page_);

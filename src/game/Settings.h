@@ -1,5 +1,7 @@
 #pragma once
 
+#include <functional>
+
 #include "core/Config.h"
 
 #include <optional>
@@ -170,6 +172,9 @@ namespace rdf::game
 		// Replace the live tuning (main thread); bumps Generation() so cached copies (the core) refresh.
 		static void            Commit(const Settings& s);
 		static std::uint32_t   Generation();
+		// Called on the main thread after every Commit (a Load ends with one), in registration order: caches that depend
+		// on settings (resolved forms, event names) refresh here.
+		static void            Observe(std::function<void()> observer);
 		// A copy for another thread (the menu renders on the render thread).
 		static Settings        Snapshot();
 	};

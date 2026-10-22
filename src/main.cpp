@@ -1,6 +1,7 @@
 #include "game/ActionCapture.h"
 #include "game/Api.h"
 #include "game/Effects.h"
+#include "game/Forms.h"
 #include "game/GraphCoordinator.h"
 #include "game/GraphGate.h"
 #include "game/InputCollector.h"
@@ -47,6 +48,7 @@ namespace
 			}
 			break;
 		case SKSE::MessagingInterface::kDataLoaded:
+			rdf::game::forms::OnDataLoaded();
 			rdf::game::input::Install();
 			rdf::game::menu::Install();
 			break;
@@ -69,6 +71,7 @@ SKSEPluginLoad(const SKSE::LoadInterface* a_skse)
 
 	SKSE::Init(a_skse, { .log = false, .trampoline = true, .trampolineSize = 512 });
 
+	rdf::game::Settings::Observe([] { rdf::game::forms::Invalidate(); });  // forms named by settings resolve again
 	rdf::game::Settings::Load();
 	rdf::game::graph::Init();
 	rdf::game::gate::Init();

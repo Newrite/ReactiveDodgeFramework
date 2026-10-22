@@ -510,3 +510,14 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   files), build_clip_set copies one clip per slot; the Infinity Dodge and greatsword OAR sets rebuilt with the new
   names. RDF_AttackFromDodgeClip values follow (0..8). validate_rdf 237/237, validate_onehand 123/123 (STB, VanillaLike),
   Nemesis 59/59.
+* Game forms in the menu (2026-10-23, user: keywords editable and resolved in the UI, null-safe, with observers; later
+  CastOnDodge / CastOnPerfectDodge rules with chosen spells): src/game/Forms is the one place a form named by text
+  resolves ("Plugin.esp|0xLocalID", an EditorID, or a runtime 0xFormID), with a status (empty / pending / found / not
+  found / wrong type / bad text) and a readable detail, cached per (text, type) and resolved only on the main thread
+  once the data is loaded; Peek gives any thread (the menu) the cached result and queues a miss. Settings::Observe calls
+  back after every Commit / Load; forms::Invalidate is the first observer, so a keyword edited in the menu resolves again.
+  AttackCancel's own keyword lookup is gone (forms::Get<BGSKeyword>). Schema Kind::Form: an edit box committed when the
+  edit ends (half-typed text is never resolved), the resolution under it, a picker over every form of the type
+  (forms::CatalogOf, built on the main thread, filterable) and a clear button; the 7 keyword settings of [Rules],
+  [AttackCancel] and [Stagger] are form fields on the Rules page. Spells for CastOnDodge go through the same path (name
+  them by plugin and id: spells keep no EditorID without an EditorID plugin).
