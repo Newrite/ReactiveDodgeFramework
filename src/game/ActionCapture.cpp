@@ -1,6 +1,7 @@
 #include "ActionCapture.h"
 
 #include "Diagnostics.h"
+#include "Settings.h"
 
 #include <algorithm>
 #include <array>
@@ -116,80 +117,85 @@ namespace rdf::game::capture
 			return it->second->data.flags.any(RE::AttackData::AttackFlag::kPowerAttack) ? Kind::Power : Kind::Attack;
 		}
 
-		// The variants an idle's mod chooses between: its siblings in the idle tree, or, for a top-level idle (BFCO's
-		// script idles have no parent), the other top-level idles of the same plugin. Attacks of the same kind only.
-		// Cached per idle (main thread).
-		// Every idle without a parent. Idles are not in TESDataHandler's form arrays (the IDLE loader hands them to the
-		// idle manager, 0x140357840), so the global form map is walked, once (main thread, after the data loaded).
-		const std::vector<RE::TESIdleForm*>& TopLevelIdles()
+		// An idle mod's own selection order ([Input] sIdleReplayChains): the idles one key press chooses between, in the
+		// order the mod tries them (BFCO, src/Events.cpp AttackStateManager: jump, sprint, bash, then A B L R by
+		// DirecionalCycleMoveset, then in place). Resolved once (main thread, after the data loaded).
+		const std::vector<std::vector<RE::TESIdleForm*>>& Chains()
 		{
-			static const std::vector<RE::TESIdleForm*> idles = [] {
-				std::vector<RE::TESIdleForm*> out;
-				const auto& [map, lock] = RE::TESForm::GetAllForms();
-				const RE::BSReadLockGuard guard{ lock };
-				if (map) {
-					for (const auto& [id, form] : *map) {
-						auto* idle = form ? form->As<RE::TESIdleForm>() : nullptr;
-						if (idle && !idle->parentIdle) {
-							out.push_back(idle);
+			static const std::vector<std::vector<RE::TESIdleForm*>> chains = [] {
+				std::vector<std::vector<RE::TESIdleForm*>> out;
+				auto* handler = RE::TESDataHandler::GetSingleton();
+				for (const auto& spec : Settings::Get().idleReplayChains) {
+					std::vector<std::string> parts;
+					for (std::size_t from = 0;;) {
+						const auto bar = spec.find('|', from);
+						parts.push_back(spec.substr(from, bar == std::string::npos ? std::string::npos : bar - from));
+						if (bar == std::string::npos) {
+							break;
+						}
+						from = bar + 1;
+					}
+					std::vector<RE::TESIdleForm*> chain;
+					for (std::size_t i = 1; handler && i < parts.size(); ++i) {
+						const auto id = static_cast<RE::FormID>(std::strtoul(parts[i].c_str(), nullptr, 16));
+						if (auto* idle = handler->LookupForm<RE::TESIdleForm>(id, parts[0])) {
+							chain.push_back(idle);
 						}
 					}
-				}
-				logger::info("{} top-level idle(s) in the load order", out.size());
-				return out;
-			}();
-			return idles;
-		}
-
-		const std::vector<RE::TESIdleForm*>& Variants(RE::Actor* actor, RE::TESIdleForm* held, Kind kind)
-		{
-			static std::unordered_map<RE::FormID, std::vector<RE::TESIdleForm*>> cache;
-			const auto [it, added] = cache.try_emplace(held->GetFormID());
-			if (!added) {
-				return it->second;
-			}
-			auto& out = it->second;
-			const auto consider = [&](RE::TESIdleForm* idle) {
-				if (idle && idle != held && AttackKindOf(actor, idle->animEventName) == kind) {
-					out.push_back(idle);
-				}
-			};
-			if (const auto* siblings = held->parentIdle ? held->parentIdle->childIdles : nullptr) {
-				for (std::uint32_t i = 0; i < siblings->size(); ++i) {
-					consider((*siblings)[i] ? (*siblings)[i]->As<RE::TESIdleForm>() : nullptr);
-				}
-			} else if (const auto* file = held->GetFile(0)) {
-				std::size_t sameFile = 0;
-				for (auto* idle : TopLevelIdles()) {
-					if (idle->GetFile(0) == file) {
-						++sameFile;
-						consider(idle);
+					logger::info("idle replay chain {}: {} of {} idle(s) found", parts[0], chain.size(), parts.size() - 1);
+					if (!chain.empty()) {
+						out.push_back(std::move(chain));
 					}
 				}
-				DevLog("{:08X}: idle {:08X}: {} other top-level idle(s) in {}", actor->GetFormID(), held->GetFormID(),
-					sameFile ? sameFile - 1 : 0, file->GetFilename());
+				return out;
+			}();
+			return chains;
+		}
+
+		// The idles the held one's mod would choose between now, in the mod's order: its selection chain, or its
+		// siblings in the idle tree (attacks of the same kind; the tree's own order). A top-level idle in no chain has
+		// none: which other idles its mod would try, and in what order, cannot be told from the records.
+		std::vector<RE::TESIdleForm*> Candidates(RE::Actor* actor, RE::TESIdleForm* held, Kind kind)
+		{
+			for (const auto& chain : Chains()) {
+				if (std::find(chain.begin(), chain.end(), held) != chain.end()) {
+					return chain;
+				}
 			}
-			DevLog("{:08X}: idle {:08X} has {} variant(s) of the same kind", actor->GetFormID(), held->GetFormID(), out.size());
+			std::vector<RE::TESIdleForm*> out;
+			if (const auto* siblings = held->parentIdle ? held->parentIdle->childIdles : nullptr) {
+				for (std::uint32_t i = 0; i < siblings->size(); ++i) {
+					auto* idle = (*siblings)[i] ? (*siblings)[i]->As<RE::TESIdleForm>() : nullptr;
+					if (idle && (idle == held || AttackKindOf(actor, idle->animEventName) == kind)) {
+						out.push_back(idle);
+					}
+				}
+			}
 			return out;
 		}
 
 		// The idle to replay now. The held one was chosen by its mod from the conditions at the press (BFCO picks a
-		// directional power attack from the stick and the facing, which the dodge changes); if they no longer hold, the
-		// first variant whose conditions hold now wins, as the mod itself would have chosen at this moment.
+		// directional power attack from the movement keys, which may be released by the time the dodge lets the attack
+		// go); the mod's choice is made again, now: the first candidate whose conditions hold (the same check the mod
+		// makes, conditions.IsTrue(actor, actor)).
 		RE::TESIdleForm* ChooseIdle(RE::Actor* actor, RE::TESIdleForm* held, bool power)
 		{
 			const auto holds = [&](RE::TESIdleForm* idle) { return idle && idle->conditions.IsTrue(actor, actor); };
-			if (holds(held)) {
-				return held;
-			}
-			for (auto* idle : Variants(actor, held, power ? Kind::Power : Kind::Attack)) {
+			const auto candidates = Candidates(actor, held, power ? Kind::Power : Kind::Attack);
+			for (auto* idle : candidates) {
 				if (holds(idle)) {
-					DevLog("{:08X}: held-back idle {:08X} no longer applies; variant {:08X} ('{}') does", actor->GetFormID(),
-						held->GetFormID(), idle->GetFormID(), idle->animEventName.c_str());
+					if (idle != held) {
+						DevLog("{:08X}: held-back idle {:08X} chosen again as {:08X} ('{}')", actor->GetFormID(), held->GetFormID(),
+							idle->GetFormID(), idle->animEventName.c_str());
+					}
 					return idle;
 				}
 			}
-			DevLog("{:08X}: held-back idle {:08X} no longer applies, nor any variant", actor->GetFormID(), held->GetFormID());
+			if (candidates.empty() && holds(held)) {
+				return held;
+			}
+			DevLog("{:08X}: held-back idle {:08X} no longer applies, nor any of {} candidate(s)", actor->GetFormID(),
+				held->GetFormID(), candidates.size());
 			return held;  // the game decides (and will likely refuse)
 		}
 

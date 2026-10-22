@@ -241,6 +241,7 @@ namespace rdf::game
 			s.core.input.debounce = ReadFloat("Input", "fDebounce", s.core.input.debounce, 0.0f, 1.0f);
 			s.core.input.holdDuringDodge = ReadBool("Input", "bHoldPressesDuringDodge", s.core.input.holdDuringDodge);
 			s.powerAttackHold = ReadFloat("Input", "fPowerAttackHold", s.powerAttackHold, 0.05f, 2.0f);
+			s.idleReplayChains = Split(ReadString("Input", "sIdleReplayChains", Join(s.idleReplayChains)));
 
 			s.costResource = ParseResource(ReadString("Cost", "sResource", "Stamina"));
 			s.cost = ReadFloat("Cost", "fCost", s.cost, 0.0f, 1000.0f);

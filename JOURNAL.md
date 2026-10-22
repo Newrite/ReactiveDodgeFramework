@@ -451,3 +451,13 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   is picked. Also RDF_AttackFromDodge was cleared ~30 ms into a BFCO attack: BFCO sends Bfco_AttackStartFX twice per
   attack (~20 ms apart), counted as a next attack. Attack-start events within 150 ms count once, and the count is taken
   at the cancel (the attack's own start is the first after it, the next attack's the second).
+* Re-choosing a held-back idle the way its mod does (2026-10-23, user: read BFCO's sources instead of guessing): the
+  replay variants of 9671a8b walked every top-level idle of the plugin in hash-map order, which for BFCO includes the
+  combo key's 8BF (power-attack event, passes whenever a combo key is bound). BFCO's own choice
+  (_ext/BFCO/src/Events.cpp, AttackStateManager::ProcessEvent on the power key) is an ordered chain checked with
+  conditions.IsTrue(player, player): JumpPower 944, SprintPower 8BE, PowerBash 8C0, [CancelDodge 949 + 50 ms when in
+  a TDM dodge / MCO recovery], A 945, B 946, L 947, R 948, PowerNormal 8C5. The direction is the graph variable
+  DirecionalCycleMoveset (DMK's DirectionalMovement.dll, from the held movement keys: 1 A, 2-4 R, 5 B, 6-8 L) plus
+  "moving"; 8C5 needs no movement (IsSprinting == 0, not blocking). So [Input] sIdleReplayChains lists such chains
+  (BFCO's by default); a held idle in a chain is chosen again from the start of its chain at the replay, an idle with a
+  parent from its siblings in tree order, any other idle only replays itself. TopLevelIdles is gone.

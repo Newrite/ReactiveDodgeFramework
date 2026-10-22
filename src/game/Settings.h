@@ -96,6 +96,10 @@ namespace rdf::game
 		// so turning the camera mid-dodge does not steer it (a locked target still does).
 		bool inputFromStartCamera{ false };
 
+		// [Input] sIdleReplayChains: idle mods' selection chains for an attack held back by a dodge, re-chosen when it is
+		// replayed. Each: "Plugin.esp|0xID|0xID|...", the idles in the order the mod tries them.
+		std::vector<std::string> idleReplayChains{ "SCSI-ACTbfco-Main.esp|0x944|0x8BE|0x8C0|0x945|0x946|0x947|0x948|0x8C5" };
+
 		// [AttackCancel]: when a dodge may cancel the actor's own attack (beyond sAttackStates, see ActionArbiter.h).
 		struct AttackCancelSettings
 		{
