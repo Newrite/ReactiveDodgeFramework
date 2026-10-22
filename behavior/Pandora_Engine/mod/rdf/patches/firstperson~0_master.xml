@@ -25,6 +25,10 @@
   <append path="#0097/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
   <append path="#0095/eventNames"><hkcstring>RDF_ExitOpen</hkcstring></append>
   <append path="#0097/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
+  <append path="#0095/eventNames"><hkcstring>RDF_PerfectStart</hkcstring></append>
+  <append path="#0097/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
+  <append path="#0095/eventNames"><hkcstring>RDF_PerfectEnd</hkcstring></append>
+  <append path="#0097/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
   <append path="#0095/eventNames"><hkcstring>RDF_PerfectDodge</hkcstring></append>
   <append path="#0097/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
   <append path="#0095/eventNames"><hkcstring>RDF_PerfectDodged</hkcstring></append>

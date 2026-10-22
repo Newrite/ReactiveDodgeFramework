@@ -10,6 +10,7 @@
 #include "LockOn.h"
 #include "MotionHook.h"
 #include "Settings.h"
+#include "SlowMotion.h"
 
 #include <chrono>
 #include <memory>
@@ -93,8 +94,6 @@ namespace rdf::game::update
 			AgentInput BuildInput(RE::PlayerCharacter* player);
 			void       DrainInput(ReactiveCore& core, Vec2 move);
 			void       MaintainBlock(RE::PlayerCharacter* player);
-			void       StartSlowMotion();
-			void       UpdateSlowMotion(bool force = false);
 			void       TracePose(RE::PlayerCharacter* player) const;
 
 			std::unique_ptr<DodgeAgent> agent_;
@@ -103,9 +102,6 @@ namespace rdf::game::update
 			const char* modeName_{ "" };
 			bool        blockHolding_{ false };   // a block we started out of a dodge, kept while held
 			int         blockAge_{ 0 };           // ticks since that block started
-			bool        slowMotion_{ false };     // perfect-dodge slow motion running
-			float       slowMotionRestore_{ 1.0f };
-			std::chrono::steady_clock::time_point slowMotionUntil_{};
 		};
 
 		// Actors other than the player dodge only when asked to (RequestDodge). Their agent lives while the dodge
@@ -139,7 +135,7 @@ namespace rdf::game::update
 				agent_->Reset();
 			}
 			lockon::ReleaseYaw();
-			UpdateSlowMotion(true);
+			slowmo::Stop();
 			blockHolding_ = false;
 		}
 
@@ -189,7 +185,7 @@ namespace rdf::game::update
 			const auto& core = agent_->Core();
 			jump::SetLocked(Settings::Get().blockJumpDuringDodge &&
 			                (agent_->AwaitingEnter() || (core.DodgeRunning() && !core.ExitWindowOpen())));
-			UpdateSlowMotion();
+			slowmo::Update();
 			if (Settings::Get().devLog && agent_->Busy()) {
 				TracePose(player);
 			}
@@ -260,40 +256,7 @@ namespace rdf::game::update
 
 		void Player::OnPerfectDodge(RE::Actor*, float)
 		{
-			const auto& p = Settings::Get().perfect;
-			if (p.slowMotion < 1.0f && p.slowMotionDuration > 0.0f) {
-				StartSlowMotion();
-			}
-		}
-
-		// BSTimer::SetGlobalTimeMultiplier (66988, verified in IDA: sets the target multiplier and, unless the ini asks
-		// for a slow change, the current one). The duration is wall-clock time, so the slow motion does not stretch itself.
-		void Player::StartSlowMotion()
-		{
-			const auto& p = Settings::Get().perfect;
-			auto*       timer = RE::BSTimer::GetSingleton();
-			if (!timer) {
-				return;
-			}
-			if (!slowMotion_) {
-				slowMotionRestore_ = RE::BSTimer::QGlobalTimeMultiplier();
-			}
-			timer->SetGlobalTimeMultiplier(p.slowMotion * slowMotionRestore_, true);
-			slowMotion_ = true;
-			slowMotionUntil_ = std::chrono::steady_clock::now() +
-			                   std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<float>(p.slowMotionDuration));
-			DevLog("perfect dodge slow motion x{:.2f} for {:.2f}s", p.slowMotion, p.slowMotionDuration);
-		}
-
-		void Player::UpdateSlowMotion(bool force)
-		{
-			if (!slowMotion_ || (!force && std::chrono::steady_clock::now() < slowMotionUntil_)) {
-				return;
-			}
-			if (auto* timer = RE::BSTimer::GetSingleton()) {
-				timer->SetGlobalTimeMultiplier(slowMotionRestore_, true);
-			}
-			slowMotion_ = false;
+			slowmo::Start();
 		}
 
 		// Dev: bone positions in the actor's own frame (last rendered pose), to see a one-frame pose pop.
@@ -417,7 +380,9 @@ namespace rdf::game::update
 						g_npcs.Request(actor, r.angleDeg);
 					}
 				}
-				g_player.Tick(player, dt, forPlayer);
+				// Under a magic slowdown (ours or the Slow Time shout) the engine runs the player's own updates, movement
+				// included, faster than the world by this factor; the player's dodge clock follows them.
+				g_player.Tick(player, dt * slowmo::PlayerDtScale(), forPlayer);
 				g_npcs.Tick(dt);
 			}
 

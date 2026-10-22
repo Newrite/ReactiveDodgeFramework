@@ -25,7 +25,7 @@ EVENTS = ["RDF_DodgeStart", "RDF_DodgeStartB", "RDF_DodgeChain", "RDF_DodgeExit"
 # Clip annotations (ANIMATION_CONTRACT.md). An annotation only reaches the plugin as an animation
 # event when its text is a registered event name of the graph that plays the clip.
 ANNOTATION_EVENTS = ["RDF_Windows", "RDF_IFrameStart", "RDF_IFrameEnd", "RDF_ChainOpen",
-                     "RDF_AttackOpen", "RDF_BlockOpen", "RDF_ExitOpen"]
+                     "RDF_AttackOpen", "RDF_BlockOpen", "RDF_ExitOpen", "RDF_PerfectStart", "RDF_PerfectEnd"]
 EVENTS += ANNOTATION_EVENTS
 # Sent by the plugin on a perfect dodge (to the player and to the attacker); registered so behaviors, OAR and other
 # plugins' graph-event sinks receive them (NotifyAnimationGraph drops a name the graph does not know).

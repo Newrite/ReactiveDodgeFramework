@@ -297,8 +297,9 @@ namespace rdf::game
 			return;
 		}
 		const float t = core_->ActionTime();
-		if (t < p.windowStart || t > p.windowEnd) {
-			DevLog("{:08X}: dodged a hit at t={:.3f}, outside the perfect window [{:.2f}, {:.2f}]", formID_, t, p.windowStart, p.windowEnd);
+		if (!core_->PerfectWindow(p.windowStart, p.windowEnd)) {
+			DevLog("{:08X}: dodged a hit at t={:.3f}, outside the perfect window (RDF_PerfectStart/End of the clip, else [{:.2f}, {:.2f}])",
+				formID_, t, p.windowStart, p.windowEnd);
 			return;
 		}
 		perfectFired_ = true;

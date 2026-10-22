@@ -319,7 +319,11 @@ namespace rdf::game
 		pf.windowStart = ReadFloat("Perfect", "fPerfectWindowStart", pf.windowStart, 0.0f, 3.0f);
 		pf.windowEnd = ReadFloat("Perfect", "fPerfectWindowEnd", pf.windowEnd, 0.0f, 3.0f);
 		pf.slowMotion = ReadFloat("Perfect", "fPerfectSlowMotion", pf.slowMotion, 0.05f, 1.0f);
+		pf.slowMotionPlayer = ReadFloat("Perfect", "fPerfectSlowMotionPlayer", pf.slowMotionPlayer, 0.05f, 1.0f);
 		pf.slowMotionDuration = ReadFloat("Perfect", "fPerfectSlowMotionDuration", pf.slowMotionDuration, 0.0f, 5.0f);
+		pf.slowMotionEaseIn = ReadFloat("Perfect", "fPerfectSlowMotionEaseIn", pf.slowMotionEaseIn, 0.0f, 2.0f);
+		pf.slowMotionEaseOut = ReadFloat("Perfect", "fPerfectSlowMotionEaseOut", pf.slowMotionEaseOut, 0.0f, 2.0f);
+		pf.slowMotionCooldown = ReadFloat("Perfect", "fPerfectSlowMotionCooldown", pf.slowMotionCooldown, 0.0f, 30.0f);
 		pf.playerEvent = ReadString("Perfect", "sPlayerEvent", pf.playerEvent);
 		pf.attackerEvent = ReadString("Perfect", "sAttackerEvent", pf.attackerEvent);
 		pf.modEvent = ReadString("Perfect", "sModEvent", pf.modEvent);

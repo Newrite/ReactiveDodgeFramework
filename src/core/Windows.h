@@ -15,6 +15,8 @@ namespace rdf
 		AttackOpen,
 		BlockOpen,
 		ExitOpen,
+		PerfectStart,  // the clip's own perfect-dodge window (optional: without it the ini window counts)
+		PerfectEnd,
 	};
 
 	struct OpenWindows
@@ -43,14 +45,19 @@ namespace rdf
 			case WindowEvent::AttackOpen: w.attack = true; break;
 			case WindowEvent::BlockOpen: w.block = true; break;
 			case WindowEvent::ExitOpen: w.exit = true; break;
+			case WindowEvent::PerfectStart: perfect_ = true; break;
+			case WindowEvent::PerfectEnd: perfect_ = false; break;
 			}
 		}
 
 		const std::optional<OpenWindows>& Annotated() const { return marks_; }
 		bool                              Invulnerable() const { return invulnerable_; }
+		// Set once the clip announced a perfect window: whether it is open now.
+		const std::optional<bool>&        Perfect() const { return perfect_; }
 
 	private:
 		std::optional<OpenWindows> marks_;
 		bool                       invulnerable_{ false };
+		std::optional<bool>        perfect_;
 	};
 }

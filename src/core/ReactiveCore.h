@@ -83,6 +83,8 @@ namespace rdf
 		float      StartAngleDeg() const { return startAngleDeg_; }
 		// An annotated clip's own i-frame window, else [from, to) of the ini timers.
 		bool       Invulnerable(float from, float to) const;
+		// The clip's own perfect window (RDF_PerfectStart / End) if it has one, else [from, to] of the ini.
+		bool       PerfectWindow(float from, float to) const;
 		// RDF_* annotation events of the clip playing the current dodge.
 		void       OnWindowEvent(WindowEvent e);
 		bool       ClipAnnotated() const { return windows_.Annotated().has_value(); }

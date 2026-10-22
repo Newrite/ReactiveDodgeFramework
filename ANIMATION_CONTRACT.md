@@ -94,6 +94,7 @@ When a dodge's clip sends `RDF_Windows`, that dodge ignores the ini timers (`fCh
 |---|---|
 | `RDF_Windows` | at 0: this clip carries windows |
 | `RDF_IFrameStart` / `RDF_IFrameEnd` | invulnerability window (when `bIFrames=1`) |
+| `RDF_PerfectStart` / `RDF_PerfectEnd` | optional perfect-dodge window; a clip without them keeps `fPerfectWindowStart/End` even when its other windows are annotated |
 | `RDF_ChainOpen` | a buffered dodge may chain from here |
 | `RDF_AttackOpen` | a buffered attack may cancel the dodge from here |
 | `RDF_BlockOpen` | a buffered block may cancel the dodge from here |

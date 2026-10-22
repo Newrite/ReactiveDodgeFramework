@@ -597,6 +597,28 @@ TEST(annotation_events_drive_windows_and_iframes_per_dodge)
 	CHECK(!s.core.ClipAnnotated());
 }
 
+TEST(perfect_window_from_the_clip_or_the_ini)
+{
+	Sim s;
+	CHECK(!s.core.PerfectWindow(0.0f, 10.0f));  // no dodge
+	s.Frame(kDt64, Dir(0), { CommandKind::Dodge });
+	CHECK(s.core.PerfectWindow(0.0f, 0.15f));  // ini window, dodge just started
+	for (int i = 0; i < 20; ++i) {
+		s.Frame(kDt64, Dir(0));
+	}
+	CHECK(!s.core.PerfectWindow(0.0f, 0.15f));  // past it
+
+	// An annotated clip without perfect marks keeps the ini window ...
+	s.core.OnWindowEvent(WindowEvent::Marker);
+	CHECK(!s.core.PerfectWindow(0.0f, 0.15f));
+	CHECK(s.core.PerfectWindow(0.0f, 10.0f));
+	// ... one with them uses its own.
+	s.core.OnWindowEvent(WindowEvent::PerfectStart);
+	CHECK(s.core.PerfectWindow(0.0f, 0.15f));
+	s.core.OnWindowEvent(WindowEvent::PerfectEnd);
+	CHECK(!s.core.PerfectWindow(0.0f, 10.0f));
+}
+
 // ---- jump gate -------------------------------------------------------------------------------
 
 TEST(exit_window_gates_the_jump_until_exit_from)

@@ -80,8 +80,12 @@
    projectile, explosion) inside [fPerfectWindowStart, fPerfectWindowEnd] counts once per dodge: graph events
    RDF_PerfectDodge (player) / RDF_PerfectDodged (attacker, both registered in the patch), the SKSE mod event
    RDF_PerfectDodge (sender = attacker, numArg = dodge time), optional slow motion ([Perfect], FLICK Rules page).
-   Next: a window measured from the attacker's swing start (reaction-based), clip annotations RDF_PerfectStart/End,
-   perk / keyword gating through item 7.
+   Since 2026-10-22: clip annotations RDF_PerfectStart / RDF_PerfectEnd override the ini window (registered in both
+   patches); slow motion through VATS::SetMagicTimeSlowdown (43103, the Slow Time shout's call, checked in IDA):
+   world and player speeds apart (fPerfectSlowMotionPlayer 1 = the player keeps full speed), ease in / hold / ease out,
+   re-hold on another perfect dodge, cooldown, skipped while the shout or a kill cam owns the slowdown, left alone if
+   one takes it over; the player's dodge clock runs at the engine's player/world ratio meanwhile.
+   Next: a window measured from the attacker's swing start (reaction-based), perk / keyword gating through item 7.
 10. Lock-on style option: Souls-like FaceMotion rolls under lock-on (turn to the path, roll forward, turn back to the
     target in the recovery) next to today's directional clips.
 11. NPC dodges. Mechanics done (2026-10-22, waiting for an in-game check): the dodge is a per-actor `DodgeAgent`

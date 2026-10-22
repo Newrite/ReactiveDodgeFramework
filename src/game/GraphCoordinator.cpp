@@ -21,7 +21,7 @@ namespace rdf::game::graph
 
 		// Clip annotation names (ANIMATION_CONTRACT.md), indexed by WindowEvent.
 		constexpr std::array kWindowEventNames{ "RDF_Windows"sv, "RDF_IFrameStart"sv, "RDF_IFrameEnd"sv,
-			"RDF_ChainOpen"sv, "RDF_AttackOpen"sv, "RDF_BlockOpen"sv, "RDF_ExitOpen"sv };
+			"RDF_ChainOpen"sv, "RDF_AttackOpen"sv, "RDF_BlockOpen"sv, "RDF_ExitOpen"sv, "RDF_PerfectStart"sv, "RDF_PerfectEnd"sv };
 		std::array<RE::BSFixedString, kWindowEventNames.size()> g_windowNames;
 
 		struct ActorGraph

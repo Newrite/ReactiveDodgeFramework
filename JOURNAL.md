@@ -305,3 +305,14 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   running dodge's index when the graph refuses a chain, and writes 0 in OnStopped (every end goes through it: clip end,
   cancel, stagger, graph left, rollback, abandon), in the orphaned-state watchdog, on Release, and on a 3D (re)load
   with no dodge running (the player's graph variables come back from the save).
+* Perfect-dodge slow motion (2026-10-22, user: settings for the slow time): BSTimer's global multiplier slowed the player
+  with the world. The Slow Time shout (SlowTimeEffect vtable 0x14163C870, Start = vfunc 20) instead calls
+  VATS::SetMagicTimeSlowdown(world, player) (43103 = 0x140759360: SetGlobalTimeMultiplier(world) and VATS +0x80 / +0x84;
+  world <= 0 restores 1.0, the effect's destructor writes (0, 1)). 0x140759420 returns (player / world) x (target / current
+  global multiplier) and is what PlayerCharacter::Update (vfunc 0xAD itself, which gets the world dt), the movement job
+  queue and the camera multiply the player's dt by, so the player keeps its speed. Our player tick now scales its dt by
+  player / world too, or the dodge clock would lag the faster animation and motion (not seen in game yet). New module
+  SlowMotion.cpp: smoothstep ease in / hold / ease out in real seconds, a perfect dodge during one re-holds it, a cooldown,
+  no start while VATS already has a slowdown or a kill cam, and no restore once someone else's write replaced ours.
+  Clip annotations RDF_PerfectStart / RDF_PerfectEnd (WindowEvent, optional: an annotated clip without them keeps the
+  ini window). Pandora staged 229/229, Nemesis 33/33, 73/73 tests.

@@ -99,8 +99,13 @@ namespace rdf::game
 			bool        enabled{ true };
 			float       windowStart{ 0.0f };
 			float       windowEnd{ 0.15f };
-			float       slowMotion{ 1.0f };          // time multiplier on a perfect dodge; 1 = none
-			float       slowMotionDuration{ 0.4f };  // wall-clock seconds
+			// slow motion (player only), real seconds
+			float       slowMotion{ 1.0f };          // world speed during it; 1 = no slow motion
+			float       slowMotionPlayer{ 1.0f };    // the player's speed during it; 1 = unaffected, = slowMotion: slowed alike
+			float       slowMotionDuration{ 0.4f };  // full slow motion, between the ramps
+			float       slowMotionEaseIn{ 0.05f };
+			float       slowMotionEaseOut{ 0.2f };
+			float       slowMotionCooldown{ 0.0f };  // after one ends, before the next may start
 			std::string playerEvent{ "RDF_PerfectDodge" };     // graph event on the player
 			std::string attackerEvent{ "RDF_PerfectDodged" };  // graph event on the attacker
 			std::string modEvent{ "RDF_PerfectDodge" };        // SKSE mod event (Papyrus RegisterForModEvent)

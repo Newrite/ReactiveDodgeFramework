@@ -146,6 +146,17 @@ namespace rdf
 		return action_.Time() >= from && action_.Time() < to;
 	}
 
+	bool ReactiveCore::PerfectWindow(float from, float to) const
+	{
+		if (!action_.Running()) {
+			return false;
+		}
+		if (const auto& clip = windows_.Perfect()) {
+			return *clip;
+		}
+		return action_.Time() >= from && action_.Time() <= to;
+	}
+
 	void ReactiveCore::OnWindowEvent(WindowEvent e)
 	{
 		if (action_.Running()) {

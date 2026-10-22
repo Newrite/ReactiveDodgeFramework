@@ -1231,6 +1231,8 @@
 				<hkcstring>RDF_AttackOpen</hkcstring>
 				<hkcstring>RDF_BlockOpen</hkcstring>
 				<hkcstring>RDF_ExitOpen</hkcstring>
+				<hkcstring>RDF_PerfectStart</hkcstring>
+				<hkcstring>RDF_PerfectEnd</hkcstring>
 				<hkcstring>RDF_PerfectDodge</hkcstring>
 				<hkcstring>RDF_PerfectDodged</hkcstring>
 <!-- CLOSE -->
