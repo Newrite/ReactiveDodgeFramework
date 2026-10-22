@@ -316,3 +316,9 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   no start while VATS already has a slowdown or a kill cam, and no restore once someone else's write replaced ours.
   Clip annotations RDF_PerfectStart / RDF_PerfectEnd (WindowEvent, optional: an annotated clip without them keeps the
   ini window). Pandora staged 229/229, Nemesis 33/33, 73/73 tests.
+* Neutral dodge N (2026-10-22, user: annotations overriding the defaults is the right approach; add N with the backward
+  clip for now): two slots after the 16 directional ones, 16 roll n / 17 step n (step when bSidestepWhenKeepFacing, like the
+  directional pair; the arm stance follows the same roll / step split). ReactiveCore::PreviewNeutral: a StartDodge with no
+  press direction; a chain without input keeps the running heading and stays directional. FaceMotion (turn to the path)
+  still plays the forward roll. Pandora staged 229/229, Nemesis 33/33, 74/74 tests. The MO2 RDF folder got rdf_*_n as
+  copies of the annotated rdf_*_b.

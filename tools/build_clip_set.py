@@ -45,13 +45,14 @@ def build(spec_path, src, mods):
     write_json(oar / "config.json", {"name": spec["oarMod"], "author": spec["author"], "description": spec["description"]})
     write_json(submod / "config.json", {
         "name": spec["submod"]["name"],
-        "description": "Replaces RDF's 16 dodge clips (roll and step slots share one clip per direction).",
+        "description": "Replaces RDF's 18 dodge clips (roll and step slots share one clip per direction, neutral n included).",
         "priority": spec["submod"]["priority"],
         "conditions": spec["submod"]["conditions"],
     })
 
-    for d in DIRS:
-        source = src / spec["clips"][d]
+    # "n" (neutral, no move input) is optional in a spec: without it the backward clip fills the slot.
+    for d in DIRS + ["n"]:
+        source = src / spec["clips"].get(d, spec["clips"]["b"])
         if not source.is_file():
             sys.exit(f"missing source clip {source}")
         for slot in SLOTS:

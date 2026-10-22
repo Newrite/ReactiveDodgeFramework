@@ -1,8 +1,11 @@
-		<hkobject name="#rdfm$187" class="hkbStateMachineEventPropertyArray" signature="0xb07b4388">
-			<hkparam name="events" numelements="1">
+		<hkobject name="#rdfm$187" class="hkbVariableBindingSet" signature="0x338ad4ff">
+			<hkparam name="bindings" numelements="1">
 				<hkobject>
-					<hkparam name="id">$eventID[RDF_DodgeLeft]$</hkparam>
-					<hkparam name="payload">null</hkparam>
+					<hkparam name="memberPath">startStateId</hkparam>
+					<hkparam name="variableIndex">$variableID[currentDefaultState]$</hkparam>
+					<hkparam name="bitIndex">-1</hkparam>
+					<hkparam name="bindingType">BINDING_TYPE_VARIABLE</hkparam>
 				</hkobject>
 			</hkparam>
+			<hkparam name="indexOfBindingToEnable">-1</hkparam>
 		</hkobject>

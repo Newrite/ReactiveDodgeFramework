@@ -5,7 +5,7 @@ set, and what the C++ plugin must do to drive it. All names below are parameters
 
 ## 1. Files
 
-16 hkx files in `meshes\actors\character\animations\RDF\` (data-relative), registered in the animationNames of BOTH
+18 hkx files in `meshes\actors\character\animations\RDF\` (data-relative), registered in the animationNames of BOTH
 `DefaultMale` and `DefaultFemale` (the patch does this; the graph refers to them as `Animations\RDF\<name>.hkx`):
 
 | index (`RDF_DodgeClip`) | file | meaning | index | file |
@@ -18,6 +18,12 @@ set, and what the C++ plugin must do to drive it. All names below are parameters
 | 5 | `rdf_roll_bl.hkx` | back-left      | 13 | `rdf_step_bl.hkx` |
 | 6 | `rdf_roll_l.hkx`  | left           | 14 | `rdf_step_l.hkx`  |
 | 7 | `rdf_roll_fl.hkx` | forward-left   | 15 | `rdf_step_fl.hkx` |
+| 16 | `rdf_roll_n.hkx` | neutral        | 17 | `rdf_step_n.hkx` |
+
+Neutral (`n`): a fresh dodge pressed without move input that keeps facing (the default `bBackstepWithoutInput=1` makes
+it a backstep). Its default content is a copy of the backward clip, so nothing changes until a set provides its own;
+its motion is still the plugin's, so an `n` clip should move the way `bBackstepWithoutInput` sends it (back by default).
+A chain without input keeps the running dodge's heading and uses the directional clip. First person: `DodgeBack`.
 
 Index = `kind * 8 + direction`; kind 0 = roll, 1 = step (sidestep); direction order is clockwise from forward:
 F, FR, R, BR, B, BL, L, FL. Each clip is authored relative to the character's facing; the plugin picks the clip that matches
@@ -66,7 +72,7 @@ Variables (appended to 0_master):
 
 | variable | type | default | use |
 |---|---|---|---|
-| `RDF_DodgeClip` | int | 0 | selects one of the 16 clips; read when the state is entered |
+| `RDF_DodgeClip` | int | 0 | selects one of the 18 clips (16 directional + 2 neutral); read when the state is entered |
 | `RDF_DodgeSpeed` | float | 1.0 | clip playback speed multiplier |
 | `RDF_IsDodging` | bool | false | bound to the state's BSIsActiveModifier; the plugin sets it true before `RDF_DodgeStart` and false after `RDF_DodgeLeft` |
 | `RDF_ArmBlend` | float | 0.0 | arm stance layer weight: 0 = arms follow the dodge clip, 1 = arms hold the current weapon stance (iRightHandType / iLeftHandType), linear in between. Write it before the dodge starts. 1 for side/back steps, 0 for rolls. See BEHAVIOR_INTEGRATION.md section 5 |
@@ -135,7 +141,7 @@ hand, not a spear).
 ### Replacing the default set
 
 
-1. Author 16 clips with the naming and index convention above.
+1. Author 18 clips with the naming and index convention above (the two `n` ones may be copies of `b`).
 2. Put them in a new folder (e.g. `Animations\RDF2\`) and change `ANIM_DIR` in `tools/gen_rdf_patch.py`, or enlarge `CLIPS`
    to several sets: the selector simply grows (`RDF_DodgeClip = set * 16 + index`); nothing else in the graph changes.
 3. `python tools/gen_rdf_patch.py && python tools/install_fixtures.py`, re-run Pandora, then validate:

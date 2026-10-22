@@ -1,8 +1,8 @@
 		<hkobject name="#rdfm$119" class="hkbClipGenerator" signature="0x333b85b9">
 			<hkparam name="variableBindingSet">#rdfm$120</hkparam>
 			<hkparam name="userData">0</hkparam>
-			<hkparam name="name">RDF_Dodge_A_ArmDodge_rdf_step_fl</hkparam>
-			<hkparam name="animationName">Animations\RDF\rdf_step_fl.hkx</hkparam>
+			<hkparam name="name">RDF_Dodge_A_ArmDodge_rdf_step_bl</hkparam>
+			<hkparam name="animationName">Animations\RDF\rdf_step_bl.hkx</hkparam>
 			<hkparam name="triggers">null</hkparam>
 			<hkparam name="cropStartAmountLocalTime">0.000000</hkparam>
 			<hkparam name="cropEndAmountLocalTime">0.000000</hkparam>

@@ -15,4 +15,6 @@
   <append path="#0029/animationNames"><hkcstring>Animations\RDF\rdf_step_bl.hkx</hkcstring></append>
   <append path="#0029/animationNames"><hkcstring>Animations\RDF\rdf_step_l.hkx</hkcstring></append>
   <append path="#0029/animationNames"><hkcstring>Animations\RDF\rdf_step_fl.hkx</hkcstring></append>
+  <append path="#0029/animationNames"><hkcstring>Animations\RDF\rdf_roll_n.hkx</hkcstring></append>
+  <append path="#0029/animationNames"><hkcstring>Animations\RDF\rdf_step_n.hkx</hkcstring></append>
 </patch>

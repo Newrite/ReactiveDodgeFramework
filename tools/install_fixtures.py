@@ -5,7 +5,7 @@ r"""Install the RDF behavior patch + LOCAL DEV animation fixtures into the MO2 m
 
 Writes ONLY inside the RDF mod folder (default: mods\AI - Reactive Dodge Framework):
   Pandora_Engine\mod\rdf\...                         <- behavior/Pandora_Engine/mod/rdf (run tools/gen_rdf_patch.py first)
-  meshes\actors\character\animations\RDF\rdf_*.hkx   <- 16 clips COPIED from the user's own "The Ultimate Dodge Mod"
+  meshes\actors\character\animations\RDF\rdf_*.hkx   <- 18 clips COPIED from the user's own "The Ultimate Dodge Mod"
 
 The clips belong to TUDM's author. They are development placeholders: never commit them (they are gitignored),
 never ship them. The shipped framework needs its own animation set (see ANIMATION_CONTRACT.md).
@@ -22,7 +22,8 @@ SRC_ANIMS = os.path.join(MODS, "The Ultimate Dodge Mod", "meshes", "actors", "ch
 DEFAULT_DEST = os.path.join(MODS, "AI - Reactive Dodge Framework")
 # index order must match tools/gen_rdf_patch.py DIRS: f fr r br b bl l fl
 SRC_SUFFIX = {"f": "forward", "fr": "forwardright", "r": "right", "br": "backwardright", "b": "backward",
-              "bl": "backwardleft", "l": "left", "fl": "forwardleft"}
+              "bl": "backwardleft", "l": "left", "fl": "forwardleft",
+              "n": "backward"}  # neutral (no move input): the backward clip until a set provides its own
 KINDS = {"roll": "roll", "step": "sidestep"}
 
 

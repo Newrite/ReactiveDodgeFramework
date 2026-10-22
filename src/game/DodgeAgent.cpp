@@ -13,7 +13,8 @@ namespace rdf::game
 {
 	namespace
 	{
-		constexpr int kFirstStepClip = 8;  // RDF_DodgeClip 0..7 rolls, 8..15 steps (ANIMATION_CONTRACT.md)
+		constexpr int kFirstStepClip = 8;    // RDF_DodgeClip 0..7 rolls, 8..15 steps (ANIMATION_CONTRACT.md)
+		constexpr int kNeutralRollClip = 16;  // 16 roll n, 17 step n: a dodge pressed without move input
 
 		Vec2 PlanarPosition(const RE::Actor* a)
 		{
@@ -324,10 +325,13 @@ namespace rdf::game
 		}
 	}
 
-	int DodgeAgent::ClipIndex(float angleDeg, bool keepFacing)
+	int DodgeAgent::ClipIndex(float angleDeg, bool keepFacing, bool neutral)
 	{
 		if (!keepFacing) {
 			return 0;  // the character turns to face the trajectory: always the forward roll
+		}
+		if (neutral) {
+			return kNeutralRollClip + (Settings::Get().sidestepWhenKeepFacing ? 1 : 0);
 		}
 		const int octant = static_cast<int>(std::lround(angleDeg / 45.0f));
 		const int index = ((octant % 8) + 8) % 8;  // F, FR, R, BR, B, BL, L, FL
@@ -402,9 +406,10 @@ namespace rdf::game
 		const auto& settings = Settings::Get();
 		const bool  chain = d.kind == DecisionKind::ChainDodge;
 		const float angle = core_->PreviewStartAngleDeg(d);
-		const int   clip = ClipIndex(angle, core_->PreviewKeepsFacing(d));
+		const int   clip = ClipIndex(angle, core_->PreviewKeepsFacing(d), core_->PreviewNeutral(d));
 		const auto  entry = EntryFor(actor, chain);
-		const float stance = in.firstPerson ? settings.armStanceFirstPerson : clip >= kFirstStepClip ? settings.armStanceStep : settings.armStanceRoll;
+		const bool  step = clip >= kNeutralRollClip ? clip > kNeutralRollClip : clip >= kFirstStepClip;
+		const float stance = in.firstPerson ? settings.armStanceFirstPerson : step ? settings.armStanceStep : settings.armStanceRoll;
 		const float armStance = HasStanceToKeep(actor) ? stance : 0.0f;
 		const float clipLength = in.firstPerson ? settings.clipLengthFirstPerson : settings.clipLength;
 		// RDF_ChainIndex: 0 for a fresh dodge, the running dodge's index + 1 for a chain (ChainCount is 1-based).

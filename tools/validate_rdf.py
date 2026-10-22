@@ -9,9 +9,9 @@ Checks (each printed as PASS/FAIL):
   A  Engine.log of the rdf run has no problem line for the rdf mod, and none beyond the baseline's
   B  every hkx except 0_Master/DefaultMale/DefaultFemale is byte-identical to the baseline run
   C  required events/variables exist; no macro resolved to -1 (RDF nodes use real indices)
-  D  states 9701/9702: names, enter/exit events, generator chain, 16 clips (paths, speed binding, end trigger)
+  D  states 9701/9702: names, enter/exit events, generator chain, 18 clips (paths, speed binding, end trigger)
   E  transitions of both states and the root wildcard exactly as designed (events, targets, effects, flags)
-  F  all 16 clip names are in DefaultMale AND DefaultFemale animationNames; hkxcheck over every graph is clean
+  F  all 18 clip names are in DefaultMale AND DefaultFemale animationNames; hkxcheck over every graph is clean
   G  nothing lost: per state machine, #states and #transitions equal baseline except RootBehaviorGraph (+2 / +1);
      objects present in the baseline but missing in the rdf run are only the 5 expected modified nodes
 """
@@ -157,7 +157,7 @@ def char_masks(ch):
 
 
 def dodge_selector_problems(g, sm, path=None):
-    """The dodge clip chooser must be a state machine (not a ManualSelector): startStateId <- RDF_DodgeClip, 16 states."""
+    """The dodge clip chooser must be a state machine (not a ManualSelector): startStateId <- RDF_DodgeClip, one state per clip."""
     problems = []
     if sm.cls != "hkbStateMachine":
         return ["not a state machine (%s)" % sm.cls]
@@ -238,7 +238,7 @@ def check_arm_layer(g, male, female, masks_real, sid, outer):
           (float(c0.text("weight")), float(c0.text("worldFromModelWeight")), float(c1.text("weight")), float(c1.text("worldFromModelWeight"))) == (1.0, 1.0, 1.0, 0.0))
     sel_main = g.objs[c0.text("generator")]
     pr = dodge_selector_problems(g, sel_main)
-    check(tag + " child0 generator = dodge state machine (startStateId <- RDF_DodgeClip, 16 states in order, speed binding, no triggers)", not pr, "; ".join(pr[:3]))
+    check(tag + " child0 generator = dodge state machine (startStateId <- RDF_DodgeClip, %d states in order," % len(G.CLIPS) + " speed binding, no triggers)", not pr, "; ".join(pr[:3]))
     arm = g.objs[c1.text("generator")]
     check(tag + " ArmLayer = parametric blender (flags 16), blendParameter <- RDF_ArmBlend",
           arm.cls == "hkbBlenderGenerator" and arm.text("flags") == "16" and bind_list(g, arm) == [("blendParameter", "RDF_ArmBlend", "BINDING_TYPE_VARIABLE")], str(bind_list(g, arm)))
@@ -339,7 +339,7 @@ def check_fp(rdf_x, base_x):
               and c_main.text("worldFromModelWeight") == c_arm.text("worldFromModelWeight") == "0.000000", "len %d/%d" % (len(m_main), len(m_arm)))
         fp_sm = g.objs[c_main.text("generator")]
         pr = dodge_selector_problems(g, fp_sm, G.fp_clip_path)
-        check(tag + "1P %d body: dodge chooser, startStateId <- RDF_DodgeClip, 16 states -> vanilla 1P dodge clips, speed binding" % sid, not pr, "; ".join(pr[:3]))
+        check(tag + "1P %d body: dodge chooser, startStateId <- RDF_DodgeClip, %d states -> vanilla 1P dodge clips, speed binding" % (sid, len(G.CLIPS)), not pr, "; ".join(pr[:3]))
         arm = g.objs[c_arm.text("generator")]
         check(tag + "1P %d arms: parametric blender (flags 16), blendParameter <- RDF_ArmBlend" % sid,
               arm.cls == "hkbBlenderGenerator" and arm.text("flags") == "16" and bind_list(g, arm) == [("blendParameter", "RDF_ArmBlend", "BINDING_TYPE_VARIABLE")])
@@ -587,9 +587,9 @@ def main():
     for cname, ch in (("DefaultMale", male), ("DefaultFemale", female)):
         have = {x.lower() for x in ch.animation_names}
         miss = [c for c in G.CLIPS if ("%s\\%s.hkx" % (G.ANIM_DIR, c)).lower() not in have]
-        check("F  %s has all 16 RDF animationNames" % cname, not miss, str(miss))
+        check("F  %s has all %d RDF animationNames" % (cname, len(G.CLIPS)), not miss, str(miss))
     base_m = H.Graph(os.path.join(base_x, "DefaultMale.xml"))
-    check("F  DefaultMale grew by exactly 16", len(male.animation_names) == len(base_m.animation_names) + 16, "%d -> %d" % (len(base_m.animation_names), len(male.animation_names)))
+    check("F  DefaultMale grew by exactly %d" % len(G.CLIPS), len(male.animation_names) == len(base_m.animation_names) + len(G.CLIPS), "%d -> %d" % (len(base_m.animation_names), len(male.animation_names)))
     for sub, f in FILES:
         stem = xstem(sub, f)
         if stem.startswith("Default") or stem.endswith("FirstPerson"):

@@ -1,7 +1,10 @@
-		<hkobject name="#rdfm$156" class="hkbBlenderGeneratorChild" signature="0xe2b384b0">
-			<hkparam name="variableBindingSet">null</hkparam>
-			<hkparam name="generator">#rdfm$165</hkparam>
-			<hkparam name="boneWeights">#rdfm$4</hkparam>
-			<hkparam name="weight">1.000000</hkparam>
-			<hkparam name="worldFromModelWeight">1.000000</hkparam>
+		<hkobject name="#rdfm$156" class="hkbManualSelectorGenerator" signature="0xd932fab8">
+			<hkparam name="variableBindingSet">#rdfm$157</hkparam>
+			<hkparam name="userData">0</hkparam>
+			<hkparam name="name">RDF_Dodge_A_StanceL_Sel</hkparam>
+			<hkparam name="generators" numelements="13">
+				#rdfm$147 #rdfm$148 #rdfm$148 #rdfm$148 #rdfm$148 #rdfm$149 #rdfm$150 #rdfm$151 #rdfm$152 #rdfm$153 #rdfm$147 #rdfm$154 #rdfm$155
+			</hkparam>
+			<hkparam name="selectedGeneratorIndex">0</hkparam>
+			<hkparam name="currentGeneratorIndex">0</hkparam>
 		</hkobject>

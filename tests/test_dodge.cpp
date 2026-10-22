@@ -597,6 +597,27 @@ TEST(annotation_events_drive_windows_and_iframes_per_dodge)
 	CHECK(!s.core.ClipAnnotated());
 }
 
+TEST(neutral_dodge_is_a_fresh_press_without_input)
+{
+	Sim s;
+	const auto f = s.Frame(kDt64, {}, { CommandKind::Dodge });
+	CHECK(f.decision.kind == DecisionKind::StartDodge);
+	CHECK(s.core.PreviewNeutral(f.decision));
+	CHECK(std::fabs(std::fabs(s.core.StartAngleDeg()) - 180.0f) < 1.0f);  // bBackstepWithoutInput: backwards
+
+	// A chain without input keeps its heading: not neutral.
+	for (int i = 0; i < 40; ++i) {
+		s.Frame(kDt64);
+	}
+	const auto c = s.Frame(kDt64, {}, { CommandKind::Dodge });
+	CHECK(c.decision.kind == DecisionKind::ChainDodge);
+	CHECK(!s.core.PreviewNeutral(c.decision));
+
+	Sim d;
+	const auto g = d.Frame(kDt64, Dir(90), { CommandKind::Dodge });
+	CHECK(!d.core.PreviewNeutral(g.decision));
+}
+
 TEST(perfect_window_from_the_clip_or_the_ini)
 {
 	Sim s;

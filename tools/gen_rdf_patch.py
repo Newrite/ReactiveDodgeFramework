@@ -5,7 +5,7 @@
 
 Writes   info.xml
          patches/0_master.xml               events, variables, 2 root states, root wildcard
-         patches/defaultmale_character.xml  16 animation names
+         patches/defaultmale_character.xml  18 animation names
          patches/defaultfemale_character.xml
 
 All node ids are NEMESIS ids of the VANILLA graph (see docs/research/behavior-pipeline.md section 1.3 / 2.7).
@@ -56,7 +56,9 @@ FX_OUT = ("RDF_DodgeOutBlend", 0.25, "FLAG_IGNORE_TO_WORLD_FROM_MODEL", "SELF_TR
 
 DIRS = ["f", "fr", "r", "br", "b", "bl", "l", "fl"]
 ANIM_DIR = "Animations\\RDF"
-CLIPS = ([("rdf_roll_%s" % d) for d in DIRS] + [("rdf_step_%s" % d) for d in DIRS])   # index order = RDF_DodgeClip
+# index order = RDF_DodgeClip: 0..7 rolls, 8..15 steps, then the neutral "n" slots (a dodge pressed without move input):
+# 16 roll n, 17 step n. Default content of n is a copy of the backward clip (install_fixtures, build_clip_set).
+CLIPS = ([("rdf_roll_%s" % d) for d in DIRS] + [("rdf_step_%s" % d) for d in DIRS] + ["rdf_roll_n", "rdf_step_n"])
 
 # "vanilla": mirror Stagger_State's return (4 conditional transitions that restore the Default_Behavior nested state);
 # "simple": one unconditional transition per exit event to Default_State (sync variable restores nested state anyway).
@@ -140,7 +142,7 @@ FP_ARM_BONES = [27, 28, 29, 30, 31, 32, 38, 39, 40, 41, 42, 43, 44, 45, 47, 48] 
 # Forward has no 1P dodge clip. The vanilla 1P sneak roll dropped the camera far below the arms (which hold the stance),
 # so the arms left the view; forward keeps the neutral 1P idle on the body and the plugin alone moves the player.
 FP_DODGE_CLIPS = {"f": "MT_Idle", "fr": "DodgeRight", "r": "DodgeRight", "br": "DodgeRight",
-                  "b": "DodgeBack", "bl": "DodgeLeft", "l": "DodgeLeft", "fl": "DodgeLeft"}
+                  "b": "DodgeBack", "bl": "DodgeLeft", "l": "DodgeLeft", "fl": "DodgeLeft", "n": "DodgeBack"}
 # Outer 1P chooser: hkbStateMachine startStateId <- currentDefaultState (the vanilla sync variable that holds the stateId of
 # Default_Behavior: 0 MT/sheathed, 1 weapon readied, 2 magic readied, 10/11 equip, 12/13 unequip, 14 kill move, 20 paired).
 # Weapon pose only while a weapon/spell is out; sheathed (or being sheathed) -> neutral 1P idle `MT_Idle`.

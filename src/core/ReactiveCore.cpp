@@ -92,6 +92,11 @@ namespace rdf
 		return rdf::KeepsFacing(cfg_.steering, frame_.lockOn, frame_.freeRotation, PreviewStartAngleDeg(d));
 	}
 
+	bool ReactiveCore::PreviewNeutral(const Decision& d) const
+	{
+		return d.kind == DecisionKind::StartDodge && Length(d.dir) <= 1e-3f;  // a chain without input keeps its heading
+	}
+
 	void ReactiveCore::Consume(const Decision& d)
 	{
 		const double now = clock_.Now();

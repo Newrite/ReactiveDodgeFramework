@@ -4,9 +4,9 @@
 			<hkparam name="enterNotifyEvents">null</hkparam>
 			<hkparam name="exitNotifyEvents">null</hkparam>
 			<hkparam name="transitions">null</hkparam>
-			<hkparam name="generator">#rdfm$157</hkparam>
-			<hkparam name="name">RDF_Dodge_A_StanceSM_S12</hkparam>
-			<hkparam name="stateId">12</hkparam>
+			<hkparam name="generator">#rdfm$133</hkparam>
+			<hkparam name="name">RDF_Dodge_A_StanceSM_S0</hkparam>
+			<hkparam name="stateId">0</hkparam>
 			<hkparam name="probability">1.000000</hkparam>
 			<hkparam name="enable">true</hkparam>
 		</hkobject>

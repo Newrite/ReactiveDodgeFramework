@@ -1675,6 +1675,8 @@
 				<hkcstring>Animations\RDF\rdf_step_bl.hkx</hkcstring>
 				<hkcstring>Animations\RDF\rdf_step_l.hkx</hkcstring>
 				<hkcstring>Animations\RDF\rdf_step_fl.hkx</hkcstring>
+				<hkcstring>Animations\RDF\rdf_roll_n.hkx</hkcstring>
+				<hkcstring>Animations\RDF\rdf_step_n.hkx</hkcstring>
 <!-- CLOSE -->
 			</hkparam>
 			<hkparam name="animationFilenames" numelements="0"></hkparam>

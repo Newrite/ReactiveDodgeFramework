@@ -73,6 +73,8 @@ namespace rdf
 		// What StartDodge would do, without doing it: lets the caller ask the graph first.
 		float PreviewStartAngleDeg(const Decision& d) const;
 		bool  PreviewKeepsFacing(const Decision& d) const;  // what a dodge started by `d` would do
+		// `d` starts a fresh dodge pressed without move input (its heading comes from bBackstepWithoutInput).
+		bool  PreviewNeutral(const Decision& d) const;
 		bool  KeepsFacing() const { return driver_.KeepsFacing(); }  // the current dodge
 		bool  HoldsFacing() const { return driver_.HoldsFacing(); }  // ... and holds its start yaw
 		bool  OwnsYaw() const { return driver_.OwnsYaw(); }          // the dodge turns the actor itself

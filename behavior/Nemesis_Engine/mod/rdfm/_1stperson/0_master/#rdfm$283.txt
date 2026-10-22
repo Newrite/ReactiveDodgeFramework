@@ -5,8 +5,8 @@
 			<hkparam name="exitNotifyEvents">null</hkparam>
 			<hkparam name="transitions">null</hkparam>
 			<hkparam name="generator">#rdfm$281</hkparam>
-			<hkparam name="name">RDF_Dodge_B_FPArmDodge_S10_rdf_step_r</hkparam>
-			<hkparam name="stateId">10</hkparam>
+			<hkparam name="name">RDF_Dodge_B_FPArmDodge_S4_rdf_roll_b</hkparam>
+			<hkparam name="stateId">4</hkparam>
 			<hkparam name="probability">1.000000</hkparam>
 			<hkparam name="enable">true</hkparam>
 		</hkobject>

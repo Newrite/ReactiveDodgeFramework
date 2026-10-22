@@ -83,7 +83,7 @@ namespace rdf::game
 		void              Trace(RE::Actor* actor);
 		void              LogRejection(const Decision& d);
 		void              LogCost(RE::Actor* actor, float current) const;
-		static int        ClipIndex(float angleDeg, bool keepFacing);
+		static int        ClipIndex(float angleDeg, bool keepFacing, bool neutral);
 
 		std::unique_ptr<ReactiveCore> core_;
 		AgentDriver*                  driver_;

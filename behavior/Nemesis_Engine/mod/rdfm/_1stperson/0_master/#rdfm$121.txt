@@ -1,26 +1,12 @@
-		<hkobject name="#rdfm$121" class="hkbStateMachine" signature="0x816c1dcb">
-			<hkparam name="variableBindingSet">#rdfm$122</hkparam>
-			<hkparam name="userData">0</hkparam>
-			<hkparam name="name">RDF_Dodge_A_Left_L0</hkparam>
-			<hkparam name="eventToSendWhenStateOrTransitionChanges">
-				<hkobject>
-					<hkparam name="id">-1</hkparam>
-					<hkparam name="payload">null</hkparam>
-				</hkobject>
-			</hkparam>
-			<hkparam name="startStateChooser">null</hkparam>
-			<hkparam name="startStateId">0</hkparam>
-			<hkparam name="returnToPreviousStateEventId">-1</hkparam>
-			<hkparam name="randomTransitionEventId">-1</hkparam>
-			<hkparam name="transitionToNextHigherStateEventId">-1</hkparam>
-			<hkparam name="transitionToNextLowerStateEventId">-1</hkparam>
-			<hkparam name="syncVariableIndex">-1</hkparam>
-			<hkparam name="wrapAroundStateId">false</hkparam>
-			<hkparam name="maxSimultaneousTransitions">32</hkparam>
-			<hkparam name="startStateMode">START_STATE_MODE_DEFAULT</hkparam>
-			<hkparam name="selfTransitionMode">SELF_TRANSITION_MODE_NO_TRANSITION</hkparam>
-			<hkparam name="states" numelements="13">
-				#rdfm$123 #rdfm$124 #rdfm$125 #rdfm$126 #rdfm$127 #rdfm$128 #rdfm$129 #rdfm$130 #rdfm$131 #rdfm$132 #rdfm$133 #rdfm$134 #rdfm$135
-			</hkparam>
-			<hkparam name="wildcardTransitions">null</hkparam>
+		<hkobject name="#rdfm$121" class="hkbStateMachineStateInfo" signature="0xed7f9d0">
+			<hkparam name="variableBindingSet">null</hkparam>
+			<hkparam name="listeners" numelements="0"></hkparam>
+			<hkparam name="enterNotifyEvents">null</hkparam>
+			<hkparam name="exitNotifyEvents">null</hkparam>
+			<hkparam name="transitions">null</hkparam>
+			<hkparam name="generator">#rdfm$119</hkparam>
+			<hkparam name="name">RDF_Dodge_A_FPArmDodge_S14_rdf_step_l</hkparam>
+			<hkparam name="stateId">14</hkparam>
+			<hkparam name="probability">1.000000</hkparam>
+			<hkparam name="enable">true</hkparam>
 		</hkobject>
