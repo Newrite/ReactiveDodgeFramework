@@ -16,6 +16,8 @@
   clip's own arms (user: both look right).
 * First external clip set as an OAR mod (`AI - RDF Dodge Set - Greatsword`, `tools/build_clip_set.py`): 134/134
   dodges played it with its own windows (user: looks and feels good).
+* First person: vanilla 1P dodge clips on torso/camera with the arms masked to the stance (fArmStanceFirstPerson 1)
+  (user-verified 2026-10-22).
 * The "press -> twitch, no dodge" bug: both causes fixed (start into the state being left; zero-length streaming clip
   firing a clip-end exit). 0/72 failures after the fix.
 
@@ -25,8 +27,7 @@
 * Gamepad and analog magnitudes; dodge button on RS click collides with TDM's target lock (rebind in the menu).
 * Lifecycle: cell change, death, menus mid-dodge.
 * Camera switch mid-dodge sends the exit; the orphaned-state watchdog.
-* First person: vanilla 1P dodge clips on torso/camera with the arms masked to the stance (fArmStanceFirstPerson 1),
-  forward without the sneak roll, mouse turn during the dodge (fFirstPersonLookScale).
+* First person: forward without the sneak roll, mouse turn during the dodge (fFirstPersonLookScale).
 * Dodge out of a charging spell interrupts the cast (InterruptCast on enter).
 * Jump blocked until the exit window (`[Jump]`); dodge out of stagger (`[Stagger]`).
 * Steering limits (fMaxDeviation, fInputCone, bInputFromStartCamera, bHoldFacing), direction commit window,
@@ -57,12 +58,12 @@
    Touches: RDF_DodgeClip index (new slot after the 16 directional ones) and ClipIndex in the plugin, CLIPS in
    gen_rdf_patch.py (Pandora + Nemesis patches, character animationNames), the 1P chooser (DodgeBack), the clip-set
    spec / build_clip_set.py ("n" direction, falling back to "b"), annotate_clips.py and ANIMATION_CONTRACT.md.
-5. Projectiles that outlive the i-frames. Arrows and missiles already pass through (their contacts with the player are
-   dropped while invulnerable, the projectile is not destroyed, as in Elden Ring; not yet checked in game). Open case: the
-   i-frames end while the projectile still overlaps the player, so the next physics step lands the hit late. Plan: remember
-   every projectile that passed through during i-frames (handle + expiry) and keep ignoring its contacts with that actor
-   for the rest of its life, or until it has fully left the actor's collision; decide which. Also look at what is not
-   covered at all: beams, flames (cone), barrier and grenade projectiles.
+5. Projectiles: every type, and the ones that outlive the i-frames (in progress 2026-10-22). Arrows and missiles
+   already pass through (their contacts with the player are dropped while invulnerable, the projectile is not destroyed,
+   as in Elden Ring; not yet checked in game). Open case: the i-frames end while the projectile still overlaps the
+   player, so the next physics step lands the hit late. Plan: remember every projectile that passed through during
+   i-frames and keep ignoring its contacts with that actor for the rest of its life. Cover every projectile type, not
+   only arrows and missiles: beams, flames / cones, barriers, grenades.
 6. Explosions. They hit through their own path: an explosion (RE::Explosion, from a BGSExplosion record) finds the actors
    in its radius and builds its own HitData, so neither the melee hook (37673+0x3C0) nor the projectile contact hook sees
    it; a fireball that a dodge lets pass still explodes where it lands and its blast still hits. To study in IDA: where an
