@@ -1,4 +1,4 @@
-# Status (2026-10-19, evening)
+# Status (2026-10-22)
 
 ## Working in game (verified with dev-log traces and the user's play-tests)
 * Dodge from idle and from running, all 8 directions, keyboard (key V) with TDM in both 360 and Vanilla Style.
@@ -21,18 +21,31 @@
 
 ## Built and deployed, waiting for an in-game check
 * Projectile i-frames (`bProjectileIFrames`): arrows and spell missiles fly through during the window.
-* Gamepad (right-stick click) and analog magnitudes.
+* Precision hits ignored during i-frames (pre-hit callback, `[Compat] bUsePrecision`).
+* Gamepad and analog magnitudes; dodge button on RS click collides with TDM's target lock (rebind in the menu).
 * Lifecycle: cell change, death, menus mid-dodge.
+* Camera switch mid-dodge sends the exit; the orphaned-state watchdog.
+* First person: vanilla 1P dodge clips on torso/camera with the arms masked to the stance (fArmStanceFirstPerson 1),
+  forward without the sneak roll, mouse turn during the dodge (fFirstPersonLookScale).
+* Dodge out of a charging spell interrupts the cast (InterruptCast on enter).
+* Jump blocked until the exit window (`[Jump]`); dodge out of stagger (`[Stagger]`).
+* Steering limits (fMaxDeviation, fInputCone, bInputFromStartCamera, bHoldFacing), direction commit window,
+  orientation warp, facing handed back to the camera at the end (no TDM snap on the next attack), TDM mode latched
+  for a chain (diagonal chains keep the arm blend).
+* FLICK menu (F7): seven pages, live edits, save to ini, dodge button rebinding.
+* Nemesis patch (`Nemesis_Engine/mod/rdfm`): offline check 33/33, never run through Nemesis itself.
+* Motion hook chains behind another plugin's hook on the same call (user fix); not yet seen with one installed.
 
 ## Known limitations
 * A one-frame upper-body pop at dodge start, visible only in slow motion (parked; findings in JOURNAL.md).
 * Fixture animations are TUDM's clips (local only, not redistributable); visual quality is bounded by them, e.g. they
   settle into a full stance at the end. A proper clip set is needed for final visuals.
-* First person: no roll clip; the 1P graph plays the weapon stance (or MT_Idle when sheathed) while the plugin moves the player.
+* First person: no 1P forward dodge clip exists; forward keeps the neutral idle on the body.
 * Beams and flame streams are not covered by projectile i-frames; left-hand and dual attacks from a dodge are not
   implemented.
 * In this modlist V also triggers a bash when a weapon is drawn (another mod's binding); choose a free key if that
-  matters.
+  matters (FLICK menu, Controls page).
+* fRunSpeed (exit speed) is a constant; it matches STB's running speed (~300) by chance, not by reading it.
 
 ## Next actions
 1. In game: run into running after dodges (speed floor), shoot arrows/spells at the player (i-frames), dodge -> attack
@@ -56,3 +69,14 @@
    explosion applies its hit / damage to an actor, so i-frames can drop it there; how a dodged projectile's own explosion
    should behave (no blast, blast that ignores the dodger, or a normal blast that the i-frames cover); whether blast
    knockdown / stagger (explosion force) is applied separately from the damage and needs its own guard.
+7. Data layers for designers and modpacks (design agreed in chat 2026-10-21): (a) runtime modifiers from active magic
+   effects by keyword, Reflyem-style (sum of magnitudes; i-frame add/mult, cost mult, distance mult, chain add, gates
+   such as RDF_Allow_DodgeFromStagger / RDF_Block_Dodge), with a log line explaining each resolved value; (b) profile
+   files with OAR-like conditions and priorities (cost, cooldown, chain, gates, window scale, distance); (c) a clip
+   descriptor annotation at 0.0 (versioned, e.g. RDF_Clip.v1|dur=..|dist=..|motion=root) and a root-motion mode that
+   follows the clip's own animmotion. Per actor / NPCs later.
+8. Exit speed from the real locomotion speed (movement type run/walk speed x SpeedMult, sprint) instead of fRunSpeed.
+9. Perfect dodge: a hit inside the first part of the i-frames (or measured from the attacker's swing start) sends
+   graph events to both actors and a hook for slow motion; perk / keyword gated through item 7.
+10. Lock-on style option: Souls-like FaceMotion rolls under lock-on (turn to the path, roll forward, turn back to the
+    target in the recovery) next to today's directional clips.
