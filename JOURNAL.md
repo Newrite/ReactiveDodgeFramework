@@ -344,3 +344,10 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   0.1 s more passed without an attack (so an accepted one is never doubled into a combo), every 0.1 s, up to 0.5 s.
   Dev log lines "from the dodge: action accepted/refused", "retry #n", "started after", "never started". Not yet seen in
   game with either framework.
+* FLICK dodge-key binding (2026-10-22, user: a friend pressed a key while binding and nothing changed; gamepad wants its
+  own bind): Draw() refreshed the managed hotkey from the settings at its top whenever no bind was running, so the key
+  FLICK had just written on the input thread was overwritten before the change check below could see it. FLICK's
+  DrawManagedHotkey also shows only the active device's half (Buttons.cpp: gKey while a gamepad is the input device).
+  Now two rows (keyboard / mouse, gamepad) drawn with FUCK::Hotkey, each with its own StartBinding; OnAsyncInput takes
+  the UpdateBinding result for the row being bound (a button of the other device restarts the wait) and hands it to
+  Draw through atomics, which writes it into the draft and commits.

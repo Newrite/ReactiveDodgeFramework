@@ -212,6 +212,9 @@ namespace rdf::game::menu
 			                     -1;
 		}
 
+		// Two rows, keyboard/mouse and gamepad, each showing its own key whatever device is in use (FLICK's managed hotkey
+		// shows only the active device's half). FLICK reads the press on the input thread (OnAsyncInput); the result is
+		// handed to the drawing thread through atomics and applied to the draft there.
 		class DodgeKey
 		{
 		public:
@@ -224,27 +227,80 @@ namespace rdf::game::menu
 			void Draw()
 			{
 				auto& s = State::Get().Draft();
-				if (!hotkey_.isBinding) {
-					hotkey_.kKey = ToFlickKbm(s);
-					hotkey_.gKey = ToFlickPad(s);
-					hotkey_.kMod1 = hotkey_.kMod2 = hotkey_.gMod1 = hotkey_.gMod2 = -1;
-				}
-				hotkey_.disallowModifiers = true;
-				FUCK::DrawManagedHotkey("$RDF_DodgeKey"_T, hotkey_, FUCK::HotkeyFlags::kNoModifiers);
-				if (FUCK::IsItemHovered()) {
-					FUCK::SetTooltip("$RDF_DodgeKey_Desc"_T);
-				}
-				if (!hotkey_.isBinding && (hotkey_.kKey != ToFlickKbm(s) || hotkey_.gKey != ToFlickPad(s))) {
-					FromFlick(hotkey_.kKey, hotkey_.gKey, s);
+				if (const auto kbm = boundKbm_.exchange(kNothing); kbm != kNothing) {
+					FromFlick(kbm, ToFlickPad(s), s);
 					State::Get().Commit();
+				}
+				if (const auto pad = boundPad_.exchange(kNothing); pad != kNothing) {
+					FromFlick(ToFlickKbm(s), pad, s);
+					State::Get().Commit();
+				}
+				if (slot_.load() != Slot::None && !FUCK::IsBinding()) {
+					slot_ = Slot::None;  // FLICK ended it (another widget, the menu closed)
+				}
+				Row("$RDF_DodgeKeyKbm"_T, "$RDF_DodgeKeyKbm_Desc"_T, Slot::Kbm, ToFlickKbm(s));
+				Row("$RDF_DodgeKeyPad"_T, "$RDF_DodgeKeyPad_Desc"_T, Slot::Pad, ToFlickPad(s));
+			}
+
+			// Input thread. While one of our rows binds, every press is ours.
+			bool OnInput(const void* e)
+			{
+				const auto slot = slot_.load();
+				if (slot == Slot::None) {
+					return false;
+				}
+				std::uint32_t key = 0;
+				std::int32_t  mod1 = -1, mod2 = -1;
+				switch (FUCK::UpdateBinding(e, &key, &mod1, &mod2)) {
+				case FUCK::BindResult::kBound:
+					if ((slot == Slot::Pad) == (key >= FUCK::Keys::kGPBase)) {
+						(slot == Slot::Pad ? boundPad_ : boundKbm_).store(key);
+						slot_ = Slot::None;
+					} else {
+						FUCK::StartBinding(0, -1, -1, true);  // the other device's button: keep waiting for this one
+					}
+					break;
+				case FUCK::BindResult::kCancelled:
+					slot_ = Slot::None;
+					break;
+				default:
+					break;
+				}
+				return true;
+			}
+
+		private:
+			enum class Slot : std::uint8_t
+			{
+				None,
+				Kbm,
+				Pad,
+			};
+			static constexpr std::uint32_t kNothing = 0xFFFFFFFF;
+
+			void Row(const char* label, const char* tooltip, Slot slot, std::uint32_t key)
+			{
+				const bool binding = slot_.load() == slot;
+				const std::string text = binding ? std::string("$RDF_PressKey"_T) + "###" + label : std::string(label) + "###" + label;
+				const bool busy = !binding && FUCK::IsBinding();
+				if (busy) {
+					FUCK::BeginDisabled();
+				}
+				if (FUCK::Hotkey(text.c_str(), binding ? 0 : key, -1, -1, true, true, binding) && !binding) {
+					slot_ = slot;
+					FUCK::StartBinding(0, -1, -1, true);
+				}
+				if (busy) {
+					FUCK::EndDisabled();
+				}
+				if (FUCK::IsItemHovered()) {
+					FUCK::SetTooltip(tooltip);
 				}
 			}
 
-			// While binding, FLICK reads the next press from the game's input stream.
-			bool OnInput(const void* e) { return hotkey_.isBinding && FUCK::UpdateManagedHotkey(e, hotkey_); }
-
-		private:
-			FUCK::ManagedHotkey hotkey_;
+			std::atomic<Slot>          slot_{ Slot::None };
+			std::atomic<std::uint32_t> boundKbm_{ kNothing };
+			std::atomic<std::uint32_t> boundPad_{ kNothing };
 		};
 
 		class PageTool final : public FUCK::ITool
