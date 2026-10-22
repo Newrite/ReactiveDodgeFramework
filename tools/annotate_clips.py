@@ -91,7 +91,8 @@ def render(notes):
                    f"{INDENT}\t<hkparam name=\"text\">{s}</hkparam>\n{INDENT}</hkobject>" for t, s in notes)
 
 
-def annotate(clip, rule):
+def annotate(clip, rule, drop=()):
+    """drop: prefixes of the clip's own annotations to remove (another framework's events, see build_clip_set)."""
     xml = WORK / (clip.stem + ".xml")
     hkxc(clip, xml, "xml")
     text = xml.read_text(encoding="utf-8")
@@ -104,7 +105,7 @@ def annotate(clip, rule):
         return None, "no animmotion root motion"
 
     marks, peak_t, peak = windows(curve, rule)
-    kept = [(t, s) for t, s in notes if not s.startswith("RDF_")]
+    kept = [(t, s) for t, s in notes if not s.startswith(("RDF_",) + tuple(drop))]
     merged = sorted(kept + [(t, s) for s, t in marks.items()], key=lambda n: n[0])
     body = f'<hkparam name="annotations" numelements="{len(merged)}">{render(merged)}\n\t\t\t\t\t</hkparam>'
     text = text[:m.start()] + m.group(1) + body + m.group(4) + text[m.end():]
@@ -117,6 +118,9 @@ def annotate(clip, rule):
     missing = [s for s in marks if s not in found]
     if missing:
         sys.exit(f"{clip.name}: annotations missing after repack: {missing}")
+    leftover = [s for s in found if drop and s.startswith(tuple(drop))]
+    if leftover:
+        sys.exit(f"{clip.name}: dropped annotations still there after repack: {leftover}")
     return {"peakTime": round(peak_t, 4), "peakSpeed": round(peak, 1),
             **{k: round(v, 4) for k, v in marks.items()}}, None
 

@@ -435,3 +435,10 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
 * [Rules] sNoDodgeKeyword (2026-10-23): an actor with the keyword (actor, race, worn item, active effect; the
   AttackCancel lookup) cannot start or chain a dodge, reject reason "forbidden"; a running dodge plays out. Looked up
   only while a dodge press is buffered.
+* Infinity Dodge as an RDF clip set (2026-10-23): the pack (Nexus 78193) is 3 OAR submods of DMCO clips (all /
+  greatsword drawn / battleaxe-warhammer drawn), 9 clips each (F RF R RB B LB L LF N), every clip twice under DMCO's and
+  old MCO's names (same animation, 16 bytes apart). behavior/sets/infinity-dodge*.json map them onto RDF's slots (roll
+  and step share; N = neutral) in one mod, `AI - RDF Dodge Set - Infinity Dodge` (VanillaLike). Their own annotations
+  include DMCO's PIE stamina payload, SpecialFrames_Invincible i-frames and MCO_Recovery / MCO_InputBuffer, the last of
+  which is in RDF's sRecoveryEvents: build_clip_set.py gained a spec `dropAnnotations` prefix list (annotate_clips
+  checks they are gone after the repack). Clips run 1.2-2.0 s; exit windows land 0.37-0.53 s.

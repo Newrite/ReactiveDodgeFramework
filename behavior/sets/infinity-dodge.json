@@ -1,0 +1,28 @@
+{
+  "mod": "AI - RDF Dodge Set - Infinity Dodge",
+  "oarMod": "RDF Dodge Set - Infinity Dodge",
+  "author": "newrite",
+  "description": "Infinity Dodge (slimTHEalien & Infinity, Nexus 78193, an Elden Ring style DMCO pack) for the Reactive Dodge Framework: its 9 clips per weapon group (8 directions + in place) in RDF's slots, roll and step sharing one clip, with RDF_* window annotations. Needs the Infinity Dodge files, not DMCO.",
+  "source": "F:\\MO2 - Skyrim - VanillaLike\\mods\\Infinity Dodge - DMCO\\meshes\\actors\\character\\animations\\OpenAnimationReplacer\\Infinity Dodge",
+  "submod": {
+    "name": "Default",
+    "priority": 9200000,
+    "conditions": []
+  },
+  "clips": {
+    "f": "777222999/MCO_Dodge-F-1.HKX",
+    "fr": "777222999/MCO_Dodge-RF-1.HKX",
+    "r": "777222999/MCO_Dodge-R-1.HKX",
+    "br": "777222999/MCO_Dodge-RB-1.HKX",
+    "b": "777222999/MCO_Dodge-B-1.HKX",
+    "bl": "777222999/MCO_Dodge-LB-1.HKX",
+    "l": "777222999/MCO_Dodge-L-1.HKX",
+    "fl": "777222999/MCO_Dodge-LF-1.HKX",
+    "n": "777222999/MCO_Dodge-N-1.HKX"
+  },
+  "dropAnnotations": [
+    "PIE.",
+    "SpecialFrames_",
+    "MCO_"
+  ]
+}

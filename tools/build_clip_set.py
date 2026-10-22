@@ -4,7 +4,9 @@ RDF's graph always plays meshes\\actors\\character\\animations\\RDF\\rdf_{roll,s
 an OAR replacer mod whose submod mirrors those 16 paths and gates them with conditions (weapon type...),
 so sets are added without touching the Pandora patch. The spec (behavior/sets/*.json) names one source
 clip per direction; it is copied into both the roll and the step slot, then annotated with the RDF_*
-windows (tools/annotate_clips.py, the source clip's own annotations are kept).
+windows (tools/annotate_clips.py, the source clip's own annotations are kept, except those starting with one of the
+spec's "dropAnnotations" prefixes: another dodge framework's events, such as DMCO's stamina payload, its
+SpecialFrames i-frames or MCO's recovery / input-buffer events, which RDF would take for an attack's).
 
     python tools/build_clip_set.py behavior/sets/greatsword-2hm.json --src <extracted archive folder>
 """
@@ -62,7 +64,7 @@ def build(spec_path, src, mods):
     report = {"rule": {"iframeOn": annotate_clips.IFRAME_ON, "actionLatest": annotate_clips.ACTION_LATEST,
                        **annotate_clips.DEFAULT_RULE}, "clips": {}}
     for clip in sorted(clips.glob("*.hkx")):
-        marks, problem = annotate_clips.annotate(clip, annotate_clips.DEFAULT_RULE)
+        marks, problem = annotate_clips.annotate(clip, annotate_clips.DEFAULT_RULE, spec.get("dropAnnotations", []))
         if problem:
             sys.exit(f"{clip.name}: {problem}")
         report["clips"][clip.stem] = marks

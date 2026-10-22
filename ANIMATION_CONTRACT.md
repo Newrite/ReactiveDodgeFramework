@@ -140,6 +140,15 @@ regenerating behaviours:
 Example: `behavior/sets/greatsword-2hm.json` -> mod `AI - RDF Dodge Set - Greatsword` (greatsword in the right
 hand, not a spear).
 
+Example with several submods in one mod: `behavior/sets/infinity-dodge*.json` -> mod `AI - RDF Dodge Set - Infinity Dodge`
+(Infinity Dodge, a DMCO pack: `Default` for everything at 9200000, `Greatsword` 9200005 and `Battleaxe and Warhammer`
+9200006 with the weapon drawn, as in the original). Build each spec into the same mod; `--src` is the pack's own OAR
+folder (`...\OpenAnimationReplacer\Infinity Dodge`), `--mods` the MO2 mods folder. A clip made for another dodge
+framework carries its events: list their prefixes in the spec's `dropAnnotations` (for DMCO packs `PIE.` = DMCO's stamina
+payload and `MCO_nextdodge`, `SpecialFrames_` = extra i-frames, `MCO_` = MCO_Recovery / MCO_InputBuffer, which RDF's
+attack-cancel rules would read as an attack's recovery). `Soundplay.MCO_DodgeSound` is kept: it sounds only while
+DMCO's `Dodge_MCO-DXP.esl` (which defines that sound descriptor) is active.
+
 ### Replacing the default set
 
 
