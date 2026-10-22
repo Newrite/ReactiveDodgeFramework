@@ -204,15 +204,17 @@ namespace rdf::game::update
 			});
 		}
 
-		void Player::OnDodgeStarted(RE::Actor* actor, bool ownsYaw)
+		void Player::OnDodgeStarted(RE::Actor*, bool ownsYaw)
 		{
 			startCameraYaw_ = input::CameraYaw();
 			if (ownsYaw) {
 				lockon::AcquireYaw();  // TDM would otherwise turn the player back toward its own target yaw
 			}
+			// Dev only (DevLog's arguments are evaluated even with the log off). The player singleton, not a cast of
+			// `actor`: As<PlayerCharacter>() returned null in a 1P crash (2026-10-22).
 			const auto* camera = RE::PlayerCamera::GetSingleton();
-			if (camera && camera->IsInFirstPerson()) {
-				DevLog("1P dodge: mouse turn rate {:.3f} rad/s x {:.2f}", engine::LookTurnRate(actor->As<RE::PlayerCharacter>()),
+			if (Settings::Get().devLog && camera && camera->IsInFirstPerson()) {
+				DevLog("1P dodge: mouse turn rate {:.3f} rad/s x {:.2f}", engine::LookTurnRate(RE::PlayerCharacter::GetSingleton()),
 					Settings::Get().firstPersonLookScale);
 			}
 		}

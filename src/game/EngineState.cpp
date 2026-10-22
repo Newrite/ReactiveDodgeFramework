@@ -63,6 +63,9 @@ namespace rdf::game::engine
 		constexpr std::size_t kGetMovementData = 8;
 		constexpr std::size_t kRotateInPlaceRun = 9;  // speeds[4][2], rotateInPlaceWalk, rotateInPlaceRun, ...
 		using GetMovementData_t = bool (*)(RE::ActorState*, float*);
+		if (!player) {
+			return 0.0f;
+		}
 		auto* state = player->AsActorState();
 		alignas(16) float data[16]{};  // the callee writes 56 bytes
 		const auto fn = reinterpret_cast<GetMovementData_t>((*reinterpret_cast<std::uintptr_t**>(state))[kGetMovementData]);
