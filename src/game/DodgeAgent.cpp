@@ -464,6 +464,9 @@ namespace rdf::game
 		const float stance = in.firstPerson ? settings.armStanceFirstPerson : step ? settings.armStanceStep : settings.armStanceRoll;
 		const float armStance = HasStanceToKeep(actor) ? stance : 0.0f;
 		const float clipLength = in.firstPerson ? settings.clipLengthFirstPerson : settings.clipLength;
+		if (!chain) {
+			capture::StopSprint(actor, true);  // before the start event: the graph takes the stop first
+		}
 		// RDF_ChainIndex: 0 for a fresh dodge, the running dodge's index + 1 for a chain (ChainCount is 1-based).
 		const int   chainIndex = chain ? core_->ChainCount() : 0;
 		if (!graph::SendStart(actor, entry, clip, settings.core.timing.PlaybackSpeed(clipLength, settings.animSpeed), armStance, chainIndex)) {
@@ -516,6 +519,7 @@ namespace rdf::game
 		} else {
 			// The attempt the dodge held back, exactly as it was made (a framework's idle or action); else our own action.
 			capture::SetCapturing(formID_, false);
+			capture::FinishSprint(actor, false);  // the attack the dodge became is not a sprint attack
 			performed = capture::Replay(actor, d.kind == DecisionKind::PowerAttack) || (driver_ && driver_->PerformAction(actor, d));
 		}
 		if (d.kind != DecisionKind::Block) {
@@ -641,6 +645,7 @@ namespace rdf::game
 			carry_ = 0.0f;
 		}
 		tailFrames_ = 30;  // follow the hand-over into locomotion in the dev trace
+		capture::FinishSprint(actor, !core_->CancelledIntoAction());
 		graph::SetChainIndex(actor, 0);  // the chain is over, whatever ended it
 		effects::SetInvulnerable(actor, false);
 		awaitingEnter_ = false;

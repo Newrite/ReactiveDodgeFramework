@@ -366,3 +366,11 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   target, or the same action), and only falls back to our own action without one. TESActionData::Clone was not usable:
   it does not copy the idle at +0x48. The per-mod key reader of 893c708 is removed. Not covered: attacks a mod starts
   by sending a raw graph event (NotifyAnimationGraph) without an action or idle.
+* Sprint around the dodge (2026-10-22, user: with the dodge on the sprint button, a power attack out of a dodge played
+  BFCO's sprint power attack even when the button was only tapped; the normal attack was fine): the press starts a
+  sprint (MovementHandlerAgentSprintActionTrigger 0x1406FD8A0 processes kActionSprintStart 65 / kActionSprintStop 66
+  through TESActionData::Process) before our tick sees the dodge, and the release's stop came while the graph sat in
+  the dodge, so the sprint state survived and BFCO's power attack took its sprint branch. Now the dodge stops a running
+  sprint before it sends its start event, holds sprint starts back while it captures, follows start / stop through the
+  whole dodge, and at its end resumes the sprint only if no stop came (button still held, the Elden Ring feel), else
+  stops a sprint state the graph kept. A cancel into an attack ends the sprint first.

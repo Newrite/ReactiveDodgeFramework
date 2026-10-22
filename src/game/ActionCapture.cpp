@@ -54,6 +54,7 @@ namespace rdf::game::capture
 		{
 			std::vector<CommandKind> fresh;  // not yet taken by the agent
 			std::optional<Attempt>   last[2];  // [power]
+			bool                     sprintWanted{ false };  // a sprint the dodge interrupted or held back, not stopped since
 		};
 
 		std::mutex                                   g_lock;
@@ -71,6 +72,8 @@ namespace rdf::game::capture
 			None,
 			Attack,
 			Power,
+			SprintStart,
+			SprintStop,
 		};
 
 		// The vanilla attack actions by name; anything else (idles, framework actions) is an attack when the actor's race
@@ -83,6 +86,14 @@ namespace rdf::game::capture
 				DefaultAction(D::kActionLeftPowerAttack), DefaultAction(D::kActionDualPowerAttack) };
 			static const std::array<RE::BGSAction*, 3> normal{ DefaultAction(D::kActionRightAttack), DefaultAction(D::kActionLeftAttack),
 				DefaultAction(D::kActionDualAttack) };
+			static RE::BGSAction* const sprintStart = DefaultAction(D::kActionSprintStart);
+			static RE::BGSAction* const sprintStop = DefaultAction(D::kActionSprintStop);
+			if (data->action && data->action == sprintStart) {
+				return Kind::SprintStart;
+			}
+			if (data->action && data->action == sprintStop) {
+				return Kind::SprintStop;
+			}
 			if (data->action) {
 				if (std::find(power.begin(), power.end(), data->action) != power.end()) {
 					return Kind::Power;
@@ -119,14 +130,26 @@ namespace rdf::game::capture
 				return false;
 			}
 			const auto id = actor->GetFormID();
+			bool       capturing = false;
+			bool       tracked = false;
 			{
 				std::scoped_lock lock(g_lock);
-				if (!g_capturing.contains(id)) {
-					return false;
-				}
+				capturing = g_capturing.contains(id);
+				tracked = g_actors.contains(id);
+			}
+			if (!capturing && !tracked) {
+				return false;
 			}
 			const auto kind = Classify(actor, data);
-			if (kind == Kind::None) {
+			// Sprint (the dodge button is often the sprint button): no sprint starts while the dodge captures; whether
+			// the actor still wants one at the dodge's end is followed through the whole dodge, exit included (a stop
+			// always passes and forgets it).
+			if (kind == Kind::SprintStart || kind == Kind::SprintStop) {
+				std::scoped_lock lock(g_lock);
+				g_actors[id].sprintWanted = kind == Kind::SprintStart;
+				return kind == Kind::SprintStart && capturing;
+			}
+			if (kind == Kind::None || !capturing) {
 				return false;
 			}
 			Attempt attempt;
@@ -245,6 +268,61 @@ namespace rdf::game::capture
 			attempt->idle ? "idle" : "action", attempt->idle ? attempt->idle->GetFormID() : (attempt->action ? attempt->action->GetFormID() : 0u),
 			ok ? "accepted" : "refused");
 		return ok;
+	}
+
+	namespace
+	{
+		bool PerformDefault(RE::Actor* actor, RE::DEFAULT_OBJECT object)
+		{
+			auto* action = DefaultAction(object);
+			if (!actor || !action) {
+				return false;
+			}
+			const std::unique_ptr<RE::TESActionData> data(RE::TESActionData::Create());
+			data->source = RE::NiPointer<RE::TESObjectREFR>(actor);
+			data->action = action;
+			g_replaying = true;
+			const bool ok = data->Process();
+			g_replaying = false;
+			return ok;
+		}
+	}
+
+	bool StopSprint(RE::Actor* actor, bool remember)
+	{
+		if (!actor || !actor->AsActorState()->IsSprinting()) {
+			return false;
+		}
+		const bool ok = PerformDefault(actor, RE::DEFAULT_OBJECT::kActionSprintStop);
+		if (remember) {
+			std::scoped_lock lock(g_lock);
+			g_actors[actor->GetFormID()].sprintWanted = true;
+		}
+		DevLog("{:08X}: sprint stopped for the dodge: {} (still sprinting: {})", actor->GetFormID(), ok ? "accepted" : "refused",
+			actor->AsActorState()->IsSprinting());
+		return ok;
+	}
+
+	void FinishSprint(RE::Actor* actor, bool resume)
+	{
+		if (!actor) {
+			return;
+		}
+		bool wanted = false;
+		{
+			std::scoped_lock lock(g_lock);
+			if (const auto it = g_actors.find(actor->GetFormID()); it != g_actors.end()) {
+				wanted = std::exchange(it->second.sprintWanted, false);
+			}
+		}
+		if (resume && wanted) {
+			const bool ok = PerformDefault(actor, RE::DEFAULT_OBJECT::kActionSprintStart);
+			DevLog("{:08X}: sprint resumed after the dodge: {}", actor->GetFormID(), ok ? "accepted" : "refused");
+		} else if (actor->AsActorState()->IsSprinting()) {
+			// a stop the graph refused while it was in the dodge
+			const bool ok = PerformDefault(actor, RE::DEFAULT_OBJECT::kActionSprintStop);
+			DevLog("{:08X}: stale sprint stopped after the dodge: {}", actor->GetFormID(), ok ? "accepted" : "refused");
+		}
 	}
 
 	void Forget(std::uint32_t formID)

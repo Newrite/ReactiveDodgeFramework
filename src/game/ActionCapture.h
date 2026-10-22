@@ -22,6 +22,11 @@ namespace rdf::game::capture
 	// Replays the latest held-back attempt of that kind (a power attack falls back to any). False if there is none or
 	// the game refused it again. A replayed idle is queued: its outcome shows a few frames later.
 	bool Replay(RE::Actor* actor, bool power);
+	// Sprint: the dodge stops a running sprint when it starts (remembering it), holds sprint starts back while it runs,
+	// and at its end resumes the sprint if no stop came meanwhile (the button is still held) and `resume`, otherwise
+	// ends a sprint state the graph kept because it refused the stop during the dodge.
+	bool StopSprint(RE::Actor* actor, bool remember);
+	void FinishSprint(RE::Actor* actor, bool resume);
 	void Forget(std::uint32_t formID);
 	void Clear();  // load / new game
 }
