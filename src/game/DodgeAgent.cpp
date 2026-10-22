@@ -520,10 +520,14 @@ namespace rdf::game
 		}
 		auto& p = *pendingAttack_;
 		p.age += dt;
+		// The graph's word, not the engine's: an accepted attack action sets the attack state to Draw at once
+		// (ActorMediator 0x14063D0F0), even if the graph then drops the attack. IsAttacking is driven by the attack
+		// states of 1hm_behavior themselves (isActive bindings), so it shows the attack really plays.
 		bool attacking = false;
 		actor->GetGraphVariableBool("IsAttacking"sv, attacking);
-		if (attackState != attack_state::kNone || attacking) {
-			DevLog("{:08X}: {} from the dodge started after {:.3f}s ({} attempt(s))", formID_, ToString(p.decision.kind), p.age, p.attempts);
+		if (attacking) {
+			DevLog("{:08X}: {} from the dodge started after {:.3f}s ({} attempt(s), attack state {})", formID_, ToString(p.decision.kind),
+				p.age, p.attempts, attackState);
 			pendingAttack_.reset();
 			return;
 		}
@@ -531,8 +535,8 @@ namespace rdf::game
 		constexpr float kSettle = 0.1f;      // after the graph left the dodge: time for an accepted attack to show
 		constexpr float kRetryEvery = 0.1f;
 		if (p.age > kGiveUp) {
-			logger::info("{:08X}: {} from the dodge never started ({} attempt(s) in {:.2f}s); the attack framework refused it",
-				formID_, ToString(p.decision.kind), p.attempts, p.age);
+			logger::info("{:08X}: {} from the dodge never started ({} attempt(s) in {:.2f}s, attack state {}); the graph refused it",
+				formID_, ToString(p.decision.kind), p.attempts, p.age, attackState);
 			pendingAttack_.reset();
 			return;
 		}
