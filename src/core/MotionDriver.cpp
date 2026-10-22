@@ -139,9 +139,9 @@ namespace rdf
 		return cmd;
 	}
 
-	void MotionDriver::BeginStop(float t, float blend)
+	void MotionDriver::BeginStop(float t, float blend, bool toRun)
 	{
-		profile_.BlendOut(t, 0.0f, blend);
+		profile_.BlendOut(t, ExitSpeed(toRun), blend);
 		exiting_ = true;
 		if (exitFrom_ < 0.0f) {
 			exitFrom_ = t;

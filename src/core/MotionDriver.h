@@ -41,8 +41,9 @@ namespace rdf
 		// `velocity` is the average over the step so integrating it with the same dt is exact.
 		MotionCommand Step(float t0, float t1, float dt, DodgePhase phase, const DriverInput& in);
 		void          BeginExit(float t, bool moveHeld);
-		// Cancel into an action: decelerate to rest over `blend` instead of stopping dead.
-		void          BeginStop(float t, float blend);
+		// Cancel into an action: decelerate over `blend` instead of stopping dead, to rest, or to running speed when the
+		// move input is held (an attack out of a running dodge is an attack out of running).
+		void          BeginStop(float t, float blend, bool toRun = false);
 
 		float Speed() const { return speed_; }
 		float Heading() const { return steering_.Heading(); }

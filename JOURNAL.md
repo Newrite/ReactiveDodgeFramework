@@ -398,3 +398,12 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   the attack (the held-back attempt, else our action) is performed on the first tick the graph reports it left the dodge,
   like an attack made from locomotion in other dodge mods, then verified / retried as before. The sprint stop / hold /
   resume code and the Speed reset went out: they addressed an effect that was not ours.
+* Attack out of a running dodge = attack out of running (2026-10-22, user on 9f42cf6: in place the power attack works;
+  with move input a wrong one, and only once the dodge is completely over; light attacks fine). Log: after the cancel
+  the motion stopped dead (fAttackExitBlend 0, no speed floor because the dodge was "cancelled into an action"), the
+  graph went tailCombatIdle and back to tailCombatLocomotion 0.25 s later, and in between every attack (the replayed
+  BFCO idle, the vanilla power-attack action) was refused. Before that change the dodge's own speed (~600) reached
+  the attack and BFCO took its sprint power attack. Now a cancel into an attack with the move input held hands over at
+  the running speed (fRunSpeed): the core blends to it (MotionDriver::BeginStop toRun) and the agent keeps the speed
+  floor at it like a hand-over into running, so BFCO sees an attack out of running (PowerAttackA etc.); without move
+  input the dodge still ends at rest.

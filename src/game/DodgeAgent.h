@@ -125,6 +125,7 @@ namespace rdf::game
 		int             tailFrames_{ 0 };         // dev trace keeps running this many ticks after a dodge
 		bool            inStateB_{ true };        // dodge state used last; the first dodge goes to A
 		bool            moveHeld_{ false };
+		bool            intoAttack_{ false };     // the current dodge was cancelled into an attack (runs on when moving)
 		float           carry_{ 0.0f };           // post-dodge speed floor for the controls-driven engine, u/s
 
 		// measured motion (previous frame's displacement, seen at the start of this tick)

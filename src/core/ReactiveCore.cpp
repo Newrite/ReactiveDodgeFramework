@@ -195,9 +195,10 @@ namespace rdf
 			// The action owns the actor from now on; the dodge only lets its momentum run out.
 			Consume(d);
 			{
-				const float blend = d.kind == DecisionKind::Block ? cfg_.timing.actionExitBlend : cfg_.timing.attackExitBlend;
+				const bool  attack = d.kind != DecisionKind::Block;
+				const float blend = attack ? cfg_.timing.attackExitBlend : cfg_.timing.actionExitBlend;
 				action_.RequestExit(blend);
-				driver_.BeginStop(action_.Time(), blend);
+				driver_.BeginStop(action_.Time(), blend, attack && MoveHeld());
 			}
 			intoAction_ = true;
 			break;

@@ -82,6 +82,7 @@ namespace rdf::game
 		prevDepth_ = 0;
 		retry_ = {};
 		pendingAttack_.reset();
+		intoAttack_ = false;
 		havePos_ = false;
 		measuredSpeed_ = 0.0f;
 		last3D_ = nullptr;
@@ -474,6 +475,7 @@ namespace rdf::game
 		}
 		inStateB_ = entry == graph::DodgeEntry::Chain ? !inStateB_ : entry == graph::DodgeEntry::StartB;
 		perfectFired_ = false;
+		intoAttack_ = false;
 		pendingAttack_.reset();
 		if (escapeStagger_) {
 			// The graph leaves the stagger state through our wildcard, so its staggerStop annotation never
@@ -510,6 +512,14 @@ namespace rdf::game
 			// (BFCO's in-place power attack never got past its first frame).
 			capture::SetCapturing(formID_, false);
 			core_->Apply(d, true);
+			// With the move input held the actor goes on running (speed floor at the run speed) until the attack takes
+			// over: an attack framework then sees an attack out of running, as without a dodge. Stopping dead put the
+			// graph into idle and back into a move start, which refuses attacks for ~0.25 s; the dodge's own speed made
+			// BFCO pick its sprint power attack.
+			intoAttack_ = true;
+			if (moveHeld_) {
+				carry_ = Settings::Get().core.motion.runSpeed;
+			}
 			pendingAttack_ = PendingAttack{ d };
 			DevLog("{:08X}: {} from the dodge: waiting for the graph to leave the dodge", formID_, ToString(d.kind));
 			return;
@@ -595,7 +605,7 @@ namespace rdf::game
 			// finish, and one frame without the floor dropped its speed to ~70 (a one-frame stance jerk).
 			// The instantaneous speed, not the command's tick average: on the tick the dodge ends that
 			// average spreads its last milliseconds over the whole frame and was a fraction of it.
-			const bool handingOver = core_->Exiting() && moveHeld_ && !core_->CancelledIntoAction();
+			const bool handingOver = core_->Exiting() && moveHeld_ && (!core_->CancelledIntoAction() || intoAttack_);
 			carry_ = handingOver ? core_->Speed() : 0.0f;
 		} else {
 			carry_ = moveHeld_ ? std::max(0.0f, carry_ - settings.carryDecay * dt) : 0.0f;
@@ -624,7 +634,7 @@ namespace rdf::game
 	void DodgeAgent::OnStopped(RE::Actor* actor)
 	{
 		// Only a dodge that ran its course into running carries its speed; an interrupted one does not.
-		if (core_->Phase() != DodgePhase::Done || !moveHeld_ || core_->CancelledIntoAction()) {
+		if (core_->Phase() != DodgePhase::Done || !moveHeld_ || (core_->CancelledIntoAction() && !intoAttack_)) {
 			carry_ = 0.0f;
 		}
 		tailFrames_ = 30;  // follow the hand-over into locomotion in the dev trace

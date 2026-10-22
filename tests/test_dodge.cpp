@@ -225,6 +225,31 @@ TEST(attack_cancel_hands_motion_to_the_attack_at_once_by_default)
 	CHECK(!s.core.DodgeRunning());
 }
 
+TEST(attack_cancel_with_move_held_hands_over_at_running_speed)
+{
+	// With a blend the dodge eases to the running speed, not to rest (with the default 0 it ends at once and the game
+	// layer's speed floor holds the running speed).
+	auto cfg = ExactConfig();
+	cfg.timing.attackExitBlend = 0.1f;
+	Sim  s(cfg);
+	s.Frame(kDt64, Dir(0), { CommandKind::Dodge });
+	int   cancelled = -1;
+	float last = 0.0f, beforeLast = 0.0f;
+	for (int n = 1; n < 40; ++n) {
+		const auto f = n == 10 ? s.Frame(kDt64, Dir(0), { CommandKind::Attack }) : s.Frame(kDt64, Dir(0));
+		if (f.decision.kind == DecisionKind::Attack) {
+			cancelled = n;
+		}
+		if (cancelled > 0 && f.cmd.active) {
+			beforeLast = last;
+			last = f.cmd.speed;
+		}
+	}
+	CHECK(cancelled > 0);
+	// the last full driven step is near running speed, not near rest (the very last one averages a partial step)
+	CHECK(beforeLast > cfg.motion.runSpeed * 0.95f && beforeLast < cfg.motion.runSpeed * 1.1f);
+}
+
 TEST(dodge_beats_attack_and_block_when_all_eligible)
 {
 	Sim s(ExactConfig());
