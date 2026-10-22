@@ -30,6 +30,7 @@ namespace rdf
 		bool         attackRecovery{ false };
 		std::optional<bool> attackClipCancel;
 		bool         cancelAnyTime{ false };
+		bool         dodgeForbidden{ false };
 		bool         staminaOk{ true };
 	};
 

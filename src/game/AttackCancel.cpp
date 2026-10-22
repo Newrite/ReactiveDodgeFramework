@@ -38,7 +38,7 @@ namespace rdf::game::attack
 			RE::BGSKeyword* keyword{ nullptr };
 			bool            resolved{ false };
 		};
-		Cached g_light, g_power;
+		Cached g_light, g_power, g_noDodge;
 
 		RE::BGSKeyword* Resolve(Cached& c, const std::string& text)
 		{
@@ -116,6 +116,12 @@ namespace rdf::game::attack
 	{
 		const auto& ac = Settings::Get().attackCancel;
 		auto*       keyword = power ? Resolve(g_power, ac.anyTimePowerKeyword) : Resolve(g_light, ac.anyTimeKeyword);
+		return keyword && actor && HasKeyword(actor, keyword);
+	}
+
+	bool DodgeForbidden(RE::Actor* actor)
+	{
+		auto* keyword = Resolve(g_noDodge, Settings::Get().attackCancel.noDodgeKeyword);
 		return keyword && actor && HasKeyword(actor, keyword);
 	}
 }

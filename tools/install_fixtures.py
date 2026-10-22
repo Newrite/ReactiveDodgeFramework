@@ -25,6 +25,9 @@ SRC_SUFFIX = {"f": "forward", "fr": "forwardright", "r": "right", "br": "backwar
               "bl": "backwardleft", "l": "left", "fl": "forwardleft",
               "n": "backward"}  # neutral (no move input): the backward clip until a set provides its own
 KINDS = {"roll": "roll", "step": "sidestep"}
+# TUDM's own roll_backwardright.hkx is a byte copy of its roll_forwardright.hkx (and sidestep_forwardright.hkx): a
+# back-right roll played the forward-right animation. Its back-right sidestep is a real one, so it fills both slots.
+SOURCE_OVERRIDE = {("roll", "br"): "sidestep_backwardright"}
 
 
 def main():
@@ -46,7 +49,7 @@ def main():
         n = 0
         for kind, tudm in KINDS.items():
             for d, suf in SRC_SUFFIX.items():
-                src = os.path.join(SRC_ANIMS, "%s_%s.hkx" % (tudm, suf))
+                src = os.path.join(SRC_ANIMS, SOURCE_OVERRIDE.get((kind, d), "%s_%s" % (tudm, suf)) + ".hkx")
                 if not os.path.isfile(src):
                     print("MISSING", src)
                     return 1

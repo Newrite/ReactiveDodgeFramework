@@ -53,7 +53,9 @@ namespace rdf
 			d.reject = RejectReason::NoCommand;
 			return d;
 		}
-		if (state.engine != EngineBlock::None) {
+		if (state.dodgeForbidden) {
+			NoteReject(d, RejectReason::Forbidden, cmd->kind);
+		} else if (state.engine != EngineBlock::None) {
 			NoteReject(d, RejectReason::EngineBlocked, cmd->kind);
 		} else if (!state.staminaOk) {
 			NoteReject(d, RejectReason::StaminaLow, cmd->kind);
@@ -88,7 +90,9 @@ namespace rdf
 		const OpenWindows open = WindowsFor(state);
 
 		if (const auto* dodge = buffer.Peek(CommandKind::Dodge, now)) {
-			if (!open.chain) {
+			if (state.dodgeForbidden) {
+				NoteReject(d, RejectReason::Forbidden, dodge->kind);
+			} else if (!open.chain) {
 				NoteReject(d, RejectReason::TooEarly, dodge->kind);
 			} else if (policy_.maxChain > 0 && state.chainCount >= policy_.maxChain) {
 				NoteReject(d, RejectReason::ChainLimit, dodge->kind);
@@ -132,6 +136,7 @@ namespace rdf
 		case RejectReason::None: return "none";
 		case RejectReason::NoCommand: return "no-command";
 		case RejectReason::EngineBlocked: return "engine-blocked";
+		case RejectReason::Forbidden: return "forbidden";
 		case RejectReason::StaminaLow: return "stamina-low";
 		case RejectReason::ChainLimit: return "chain-limit";
 		case RejectReason::AttackStateBlocked: return "attack-state";

@@ -36,6 +36,7 @@ namespace rdf
 		ChainLimit,
 		AttackStateBlocked,
 		TooEarly,
+		Forbidden,  // a keyword on the actor forbids dodging
 	};
 
 	enum class DecisionKind : std::uint8_t
@@ -71,6 +72,7 @@ namespace rdf
 		bool          attackRecovery{ false };   // the attack reached its recovery (MCO_IsInRecovery, BFCO_DIY_recovery, ...)
 		std::optional<bool> attackClipCancel;    // RDF_DodgeCancelOpen / Close of the attack's clip, once it announced one
 		bool          cancelAnyTime{ false };    // the actor's keyword lets it cancel this attack at any moment
+		bool          dodgeForbidden{ false };   // the actor's keyword forbids dodging (no start, no chain)
 		bool          staminaOk{ true };
 		bool          moveHeld{ false };
 		std::optional<OpenWindows> annotated;  // windows announced by the clip; empty = ini timers

@@ -326,6 +326,7 @@ namespace rdf::game
 		ac.attackStartEvents = Split(ReadString("AttackCancel", "sAttackStartEvents", Join(ac.attackStartEvents)));
 		ac.anyTimeKeyword = ReadString("AttackCancel", "sAnyTimeKeyword", ac.anyTimeKeyword);
 		ac.anyTimePowerKeyword = ReadString("AttackCancel", "sAnyTimePowerKeyword", ac.anyTimePowerKeyword);
+		ac.noDodgeKeyword = ReadString("Rules", "sNoDodgeKeyword", ac.noDodgeKeyword);
 		auto& pf = s.perfect;
 		pf.enabled = ReadBool("Perfect", "bPerfectDodge", pf.enabled);
 		pf.windowStart = ReadFloat("Perfect", "fPerfectWindowStart", pf.windowStart, 0.0f, 3.0f);

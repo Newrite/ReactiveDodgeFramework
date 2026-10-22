@@ -111,6 +111,8 @@ namespace rdf::game
 			// a dodge cancels its normal / power attacks at any moment.
 			std::string anyTimeKeyword;
 			std::string anyTimePowerKeyword;
+			// [Rules] sNoDodgeKeyword: an actor with this keyword (same sources) cannot dodge at all.
+			std::string noDodgeKeyword;
 		} attackCancel;
 
 		// [Perfect]: a hit the i-frames dodge inside this part of the dodge (seconds from its start) is a perfect

@@ -31,15 +31,15 @@
       "RDF_ExitOpen": 0.3667
     },
     "rdf_roll_br": {
-      "peakTime": 0.4,
-      "peakSpeed": 558.8,
+      "peakTime": 0.2333,
+      "peakSpeed": 684.4,
       "RDF_Windows": 0.0,
       "RDF_IFrameStart": 0.0333,
-      "RDF_IFrameEnd": 0.5333,
-      "RDF_ChainOpen": 0.5,
-      "RDF_AttackOpen": 0.35,
-      "RDF_BlockOpen": 0.35,
-      "RDF_ExitOpen": 0.5
+      "RDF_IFrameEnd": 0.4333,
+      "RDF_ChainOpen": 0.3667,
+      "RDF_AttackOpen": 0.3333,
+      "RDF_BlockOpen": 0.3333,
+      "RDF_ExitOpen": 0.3667
     },
     "rdf_roll_f": {
       "peakTime": 0.4,
@@ -84,6 +84,17 @@
       "RDF_AttackOpen": 0.2,
       "RDF_BlockOpen": 0.2,
       "RDF_ExitOpen": 0.2333
+    },
+    "rdf_roll_n": {
+      "peakTime": 0.2667,
+      "peakSpeed": 648.3,
+      "RDF_Windows": 0.0,
+      "RDF_IFrameStart": 0.0333,
+      "RDF_IFrameEnd": 0.4667,
+      "RDF_ChainOpen": 0.4333,
+      "RDF_AttackOpen": 0.35,
+      "RDF_BlockOpen": 0.35,
+      "RDF_ExitOpen": 0.4333
     },
     "rdf_roll_r": {
       "peakTime": 0.2,
@@ -172,6 +183,17 @@
       "RDF_AttackOpen": 0.2,
       "RDF_BlockOpen": 0.2,
       "RDF_ExitOpen": 0.2333
+    },
+    "rdf_step_n": {
+      "peakTime": 0.2667,
+      "peakSpeed": 648.3,
+      "RDF_Windows": 0.0,
+      "RDF_IFrameStart": 0.0333,
+      "RDF_IFrameEnd": 0.4667,
+      "RDF_ChainOpen": 0.4333,
+      "RDF_AttackOpen": 0.35,
+      "RDF_BlockOpen": 0.35,
+      "RDF_ExitOpen": 0.4333
     },
     "rdf_step_r": {
       "peakTime": 0.2,

@@ -427,3 +427,11 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   cancel, before the attack is performed one update later; cleared when IsAttacking drops, when an attack-start event
   ([AttackCancel] sAttackStartEvents) comes after the one counted when the attack showed, when the attack never starts,
   at a new dodge, on release and on a 3D (re)load. OAR example in ANIMATION_CONTRACT.md "Dodge attacks".
+* Back-right roll was a forward-right roll (2026-10-23, a tester with Nemesis: "Dodge backR does not play"): the
+  Nemesis patch is right (offline apply: stateId 3 -> rdf_roll_br, 11 -> rdf_step_br in every 3P selector); TUDM's own
+  roll_backwardright.hkx is a byte copy of roll_forwardright.hkx (md5 3f14f0c1...). install_fixtures.py now fills the
+  roll_br placeholder slot from TUDM's real sidestep_backwardright; clip_windows.json re-annotated. A tester using his
+  own clip needs meshes\actors\character\animations\RDF\rdf_roll_br.hkx / rdf_step_br.hkx under those exact names.
+* [Rules] sNoDodgeKeyword (2026-10-23): an actor with the keyword (actor, race, worn item, active effect; the
+  AttackCancel lookup) cannot start or chain a dodge, reject reason "forbidden"; a running dodge plays out. Looked up
+  only while a dodge press is buffered.

@@ -147,6 +147,8 @@ namespace rdf::game
 		view.attackState = state.attackState;
 		view.dodgeWindowOpen = graph::DodgeWindowOpen(actor);
 		ReadAttack(actor, state.attackState, view);
+		// The keyword walk only while a dodge press waits on it.
+		view.dodgeForbidden = core_->Buffer().Peek(CommandKind::Dodge, core_->Now()) && attack::DodgeForbidden(actor);
 		view.staminaOk = !settings.costResource || state.resource >= settings.minimum;
 		const Decision decision = core_->Evaluate(view);
 		if (decision.reject == RejectReason::StaminaLow) {

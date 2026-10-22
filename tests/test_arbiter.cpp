@@ -86,6 +86,21 @@ TEST(attack_cancel_rules_in_order)
 	CHECK(arb.Arbitrate(a, b, 0.0).kind == DecisionKind::StartDodge);
 }
 
+TEST(forbidden_keyword_stops_dodge_and_chain)
+{
+	ActionArbiter arb{ ActionPolicy{} };
+	InputBuffer   b(5.0f, 0.0f);
+	b.Push(CommandKind::Dodge, 1.0);
+	ArbiterState s;
+	s.dodgeForbidden = true;
+	CHECK(arb.Arbitrate(s, b, 1.0).reject == RejectReason::Forbidden);
+	auto r = Running(0.34f);
+	r.dodgeForbidden = true;
+	CHECK(arb.Arbitrate(r, b, 1.0).kind != DecisionKind::ChainDodge);
+	r.dodgeForbidden = false;
+	CHECK(arb.Arbitrate(r, b, 1.0).kind == DecisionKind::ChainDodge);
+}
+
 TEST(arbiter_ignores_attack_and_block_when_not_dodging)
 {
 	ActionArbiter arb{ ActionPolicy{} };

@@ -60,6 +60,7 @@ namespace rdf
 		s.attackRecovery = engine.attackRecovery;
 		s.attackClipCancel = engine.attackClipCancel;
 		s.cancelAnyTime = engine.cancelAnyTime;
+		s.dodgeForbidden = engine.dodgeForbidden;
 		s.staminaOk = engine.staminaOk;
 		s.annotated = windows_.Annotated();
 		s.moveHeld = MoveHeld();
