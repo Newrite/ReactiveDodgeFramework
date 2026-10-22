@@ -150,6 +150,11 @@ namespace rdf::game::capture
 				return kind == Kind::SprintStart && capturing;
 			}
 			if (kind == Kind::None || !capturing) {
+				if (capturing) {
+					// dev: what else is tried during a dodge (an attack framework's action or idle we do not classify)
+					DevLog("{:08X}: action passed during the dodge (action {:08X}, event '{}', idle {:08X})", id,
+						data->action ? data->action->GetFormID() : 0u, data->animEvent.c_str(), data->animObjIdle ? data->animObjIdle->GetFormID() : 0u);
+				}
 				return false;
 			}
 			Attempt attempt;
