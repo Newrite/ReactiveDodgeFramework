@@ -239,15 +239,6 @@ namespace rdf::game
 			s.core.input.bufferWindow = ReadFloat("Input", "fBufferWindow", s.core.input.bufferWindow, 0.0f, 2.0f);
 			s.core.input.debounce = ReadFloat("Input", "fDebounce", s.core.input.debounce, 0.0f, 1.0f);
 			s.powerAttackHold = ReadFloat("Input", "fPowerAttackHold", s.powerAttackHold, 0.05f, 2.0f);
-			s.powerAttackKeys.clear();
-			for (const auto& item : Split(ReadString("Input", "sPowerAttackKeys", ""))) {
-				try {
-					s.powerAttackKeys.push_back(static_cast<std::uint32_t>(std::stoul(item, nullptr, 0)));
-				} catch (...) {
-					logger::warn("[Input] sPowerAttackKeys: '{}' is not a key code", item);
-				}
-			}
-			s.readBfcoPowerKey = ReadBool("Input", "bReadBFCOPowerKey", s.readBfcoPowerKey);
 
 			s.costResource = ParseResource(ReadString("Cost", "sResource", "Stamina"));
 			s.cost = ReadFloat("Cost", "fCost", s.cost, 0.0f, 1000.0f);

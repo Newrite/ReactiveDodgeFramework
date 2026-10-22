@@ -1,3 +1,4 @@
+#include "game/ActionCapture.h"
 #include "game/Api.h"
 #include "game/Effects.h"
 #include "game/GraphCoordinator.h"
@@ -65,7 +66,7 @@ SKSEPluginLoad(const SKSE::LoadInterface* a_skse)
 	const auto* plugin = SKSE::PluginDeclaration::GetSingleton();
 	logger::info("{} v{} is loading...", plugin->GetName(), plugin->GetVersion());
 
-	SKSE::Init(a_skse, { .log = false, .trampoline = true, .trampolineSize = 64 });
+	SKSE::Init(a_skse, { .log = false, .trampoline = true, .trampolineSize = 512 });
 
 	rdf::game::Settings::Load();
 	rdf::game::graph::Init();
@@ -90,6 +91,7 @@ SKSEPluginLoad(const SKSE::LoadInterface* a_skse)
 	}
 	rdf::game::update::Install();
 	rdf::game::jump::Install();
+	rdf::game::capture::Install();
 	rdf::game::api::Install();
 
 	SKSE::GetMessagingInterface()->RegisterListener(OnMessage);

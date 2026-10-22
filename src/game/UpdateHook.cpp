@@ -1,6 +1,7 @@
 #include "UpdateHook.h"
 
 #include "Diagnostics.h"
+#include "ActionCapture.h"
 #include "DodgeAgent.h"
 #include "Effects.h"
 #include "EngineState.h"
@@ -411,6 +412,7 @@ namespace rdf::game::update
 		g_npcs.Clear();
 		g_player.Reset();
 		motion::Reset();
+		capture::Clear();
 		graph::ClearAll();
 		effects::ClearInvulnerable();
 	}

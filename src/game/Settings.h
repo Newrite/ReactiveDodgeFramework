@@ -37,10 +37,6 @@ namespace rdf::game
 		int   dodgeMouse{ -1 };
 		int   dodgeGamepad{ RE::BSWin32GamepadDevice::Keys::kRightThumb };  // XInput mask
 		float powerAttackHold{ 0.30f };
-		// Separate power-attack buttons (attack frameworks): SKSE key codes (keyboard scan code, 256 + mouse button,
-		// 266 + gamepad button). A press during a dodge cancels it into a power attack like a held attack does.
-		std::vector<std::uint32_t> powerAttackKeys;
-		bool                       readBfcoPowerKey{ true };  // also BFCO's own power-attack key from its MCM settings
 
 		// [Cost]
 		// Resource a dodge costs; nullopt = free.

@@ -44,6 +44,8 @@
   1hm_behavior), and the anytime keywords ([AttackCancel]). Needs a Pandora re-run; not yet tried with MCO or BFCO.
 * Dodge -> attack verified by the attack state and repeated after the graph left the dodge (MCO / BFCO dropped it);
   not yet tried with either.
+* Attack attempts of any source (input, BFCO power idles, Input Support actions, AI) held back during the dodge and
+  replayed as they were when it cancels into an attack (ActorMediator::PerformAction callers); not yet tried in game.
 
 ## Known limitations
 * A one-frame upper-body pop at dodge start, visible only in slow motion (parked; findings in JOURNAL.md).

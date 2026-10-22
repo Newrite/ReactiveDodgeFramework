@@ -351,3 +351,18 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   Now two rows (keyboard / mouse, gamepad) drawn with FUCK::Hotkey, each with its own StartBinding; OnAsyncInput takes
   the UpdateBinding result for the row being bound (a button of the other device restarts the wait) and hands it to
   Draw through atomics, which writes it into the draft and commits.
+* Attack attempts held back by the dodge, generic (2026-10-22, user: no per-mod key reading; BFCO's separate
+  power-attack key did nothing during a dodge): IDA shows one door for every action and special idle,
+  ActorMediator::PerformAction (37996 = 0x14063AF10). TESActionData::Process (40551) tail-jumps to it; PlayerControls'
+  action dispatch (41271, what Input Support uses) and the player's attack input go through Process; AIProcess::
+  SetupSpecialIdle (38290, PlayIdle, what BFCO uses for its power attacks) queues a RunActionAnimationLoadedCallback
+  (0x140677B10) that rebuilds a TESActionData (action = default object, animEvent and the idle at +0x48) and calls
+  Process. All 11 callers of PerformAction (10 E8 calls + the E9 tail jump) are hooked per site (each chains to its own
+  previous target). While a dodge can still be cancelled into an attack (entering, or running and neither exiting nor
+  already cancelled), an attack attempt of the dodging actor reports "not performed" and becomes an attack / power-attack
+  press: vanilla Right/Left/Dual (Power)Attack actions by form, anything else when the race's attack data has its
+  animation event (power by the attack data's kPowerAttack flag; BFCO's power idles use vanilla events such as
+  attackPowerStartForward); pa_* killmoves never. The cancel replays that exact attempt (PlayIdle of the same idle and
+  target, or the same action), and only falls back to our own action without one. TESActionData::Clone was not usable:
+  it does not copy the idle at +0x48. The per-mod key reader of 893c708 is removed. Not covered: attacks a mod starts
+  by sending a raw graph event (NotifyAnimationGraph) without an action or idle.

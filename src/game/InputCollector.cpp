@@ -4,12 +4,6 @@
 
 #include <array>
 #include <atomic>
-#include <bitset>
-#include <filesystem>
-#include <mutex>
-#include <vector>
-
-#include <Windows.h>
 
 namespace rdf::game::input
 {
@@ -49,69 +43,6 @@ namespace rdf::game::input
 		std::atomic<float>         g_stickY{ 0.0f };
 
 		void TrackMoveKey(const RE::ButtonEvent& b, const RE::UserEvents& events);
-
-		// SKSE key code of a button: keyboard scan code, 256 + mouse button, 266 + gamepad button.
-		std::uint32_t SkseCode(RE::INPUT_DEVICE device, std::uint32_t code)
-		{
-			switch (device) {
-			case RE::INPUT_DEVICE::kKeyboard: return code;
-			case RE::INPUT_DEVICE::kMouse: return SKSE::InputMap::kMacro_MouseButtonOffset + code;
-			case RE::INPUT_DEVICE::kGamepad: return SKSE::InputMap::GamepadMaskToKeycode(code);
-			default: return 0;
-			}
-		}
-
-		// Separate power-attack buttons: the ini's, plus BFCO's (main key and optional modifier) from its MCM settings.
-		struct PowerKey
-		{
-			std::uint32_t key{ 0 };
-			std::uint32_t modifier{ 0 };  // 0 = none
-		};
-		std::mutex            g_powerLock;
-		std::vector<PowerKey> g_powerKeys;
-
-		// GetPrivateProfileInt looks a relative path up in the Windows directory: make it absolute (the game's folder,
-		// where MO2's virtual Data holds the mods' MCM files).
-		int ReadMcmInt(const char* relative, const char* key, int def)
-		{
-			const auto path = (std::filesystem::current_path() / relative).string();
-			return static_cast<int>(::GetPrivateProfileIntA("Controls", key, def, path.c_str()));
-		}
-
-		void LoadPowerKeys()
-		{
-			std::vector<PowerKey> keys;
-			const auto& s = Settings::Get();
-			for (const auto k : s.powerAttackKeys) {
-				keys.push_back({ k, 0 });
-			}
-			if (s.readBfcoPowerKey) {
-				// MCM Helper: the user's values in MCM\Settings, the defaults in MCM\Config\<mod>\settings.ini.
-				constexpr auto kUser = "Data\\MCM\\Settings\\SCSI-ACTbfco-Main.ini";
-				constexpr auto kDefault = "Data\\MCM\\Config\\SCSI-ACTbfco-Main\\settings.ini";
-				const int key = ReadMcmInt(kUser, "iKeyAttackPowerNUM", ReadMcmInt(kDefault, "iKeyAttackPowerNUM", -1));
-				const int mod = ReadMcmInt(kUser, "iKeyAttackPowerNUMmodf", ReadMcmInt(kDefault, "iKeyAttackPowerNUMmodf", -1));
-				if (key > 0) {
-					keys.push_back({ static_cast<std::uint32_t>(key), mod > 0 ? static_cast<std::uint32_t>(mod) : 0u });
-					logger::info("input: BFCO power-attack key {} (modifier {})", key, mod);
-				}
-			}
-			std::scoped_lock lock(g_powerLock);
-			g_powerKeys = std::move(keys);
-		}
-
-		class JournalSink final : public RE::BSTEventSink<RE::MenuOpenCloseEvent>
-		{
-		public:
-			RE::BSEventNotifyControl ProcessEvent(const RE::MenuOpenCloseEvent* e, RE::BSTEventSource<RE::MenuOpenCloseEvent>*) override
-			{
-				if (e && !e->opening && e->menuName == RE::JournalMenu::MENU_NAME) {
-					LoadPowerKeys();  // MCM settings may have changed
-				}
-				return RE::BSEventNotifyControl::kContinue;
-			}
-		};
-		JournalSink g_journalSink;
 
 		bool GameIsInputBlocked()
 		{
@@ -180,16 +111,10 @@ namespace rdf::game::input
 					g_blockHeld.store(b.IsPressed(), std::memory_order_relaxed);
 				}
 
-				const auto skse = SkseCode(device, code);
-				if (skse < held_.size()) {
-					held_[skse] = b.IsPressed();
-				}
 				if (b.IsDown()) {
 					promoted_ = false;
 					if (IsDodgeKey(device, code)) {
 						Enqueue({ CommandKind::Dodge, false });
-					} else if (IsPowerKey(skse)) {
-						Enqueue({ CommandKind::PowerAttack, false });
 					} else if (IsMapped(events->rightAttack, device, code)) {
 						Enqueue({ CommandKind::Attack, false });
 					} else if (IsMapped(events->leftAttack, device, code)) {
@@ -205,19 +130,7 @@ namespace rdf::game::input
 				}
 			}
 
-			bool IsPowerKey(std::uint32_t skse) const
-			{
-				std::scoped_lock lock(g_powerLock);
-				for (const auto& k : g_powerKeys) {
-					if (k.key == skse && (k.modifier == 0 || (k.modifier < held_.size() && held_[k.modifier]))) {
-						return true;
-					}
-				}
-				return false;
-			}
-
-			bool               promoted_{ false };
-			std::bitset<512>   held_;  // SKSE codes held down (power-key modifiers)
+			bool promoted_{ false };
 		};
 
 		Sink g_sink;
@@ -268,10 +181,6 @@ namespace rdf::game::input
 			return;
 		}
 		devices->AddEventSink(&g_sink);
-		if (auto* ui = RE::UI::GetSingleton()) {
-			ui->AddEventSink<RE::MenuOpenCloseEvent>(&g_journalSink);
-		}
-		LoadPowerKeys();
 		logger::info("input sink registered");
 	}
 

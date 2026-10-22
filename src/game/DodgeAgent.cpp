@@ -1,5 +1,6 @@
 #include "DodgeAgent.h"
 
+#include "ActionCapture.h"
 #include "AttackCancel.h"
 #include "Diagnostics.h"
 #include "Effects.h"
@@ -98,6 +99,7 @@ namespace rdf::game
 			graph::UnregisterSink(actor);
 			effects::TakeDodgedHit(actor);
 		}
+		capture::Forget(formID_);
 		motion::Release(formID_);
 		Reset();
 	}
@@ -115,6 +117,11 @@ namespace rdf::game
 		core_->BeginFrame(frame);
 		if (feed) {
 			feed(*core_);
+		}
+		// attack attempts the dodge held back (any source: input, attack frameworks, AI) are attack presses
+		for (const auto kind : capture::TakeNew(formID_)) {
+			core_->Press(kind, {});
+			DevLog("{:08X}: held-back {} buffered", formID_, kind == CommandKind::PowerAttack ? "power attack" : "attack");
 		}
 		HandleGraphEvents(actor);
 		ReleaseOrphanedState(actor, dt);
@@ -145,6 +152,9 @@ namespace rdf::game
 		Execute(actor, decision, in);
 
 		StepAndPublish(actor, dt, in);
+		// Attack attempts are held back while the dodge can still be cancelled into one; once it is cancelled or hands
+		// over they pass (a combo continuing from the attack the dodge became).
+		capture::SetCapturing(formID_, awaitingEnter_ || (core_->DodgeRunning() && !core_->Exiting() && !core_->CancelledIntoAction()));
 		Trace(actor);
 		prevRequestedDistance_ = requestedDistance_;
 		prevRequestedHeading_ = requestedHeading_;
@@ -498,7 +508,16 @@ namespace rdf::game
 		// on its own key): then there is nothing to perform, only to verify.
 		bool alreadyAttacking = false;
 		actor->GetGraphVariableBool("IsAttacking"sv, alreadyAttacking);
-		const bool performed = d.kind != DecisionKind::Block && alreadyAttacking ? true : driver_ && driver_->PerformAction(actor, d);
+		bool performed = false;
+		if (d.kind == DecisionKind::Block) {
+			performed = driver_ && driver_->PerformAction(actor, d);
+		} else if (alreadyAttacking) {
+			performed = true;
+		} else {
+			// The attempt the dodge held back, exactly as it was made (a framework's idle or action); else our own action.
+			capture::SetCapturing(formID_, false);
+			performed = capture::Replay(actor, d.kind == DecisionKind::PowerAttack) || (driver_ && driver_->PerformAction(actor, d));
+		}
 		if (d.kind != DecisionKind::Block) {
 			// An attack is only trusted once it shows: the action can be accepted while the root is still in our dodge
 			// state and then be dropped by an attack framework's behavior (MCO / BFCO). VerifyAttack repeats it once the

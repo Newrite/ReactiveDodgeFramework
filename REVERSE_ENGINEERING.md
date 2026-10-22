@@ -148,3 +148,13 @@ with serde-hkx into `_work/attackfw`.
   calls the visitor's vfunc 1 (Visit) and stops on anything but 1 (kContinue); the WornHasKeyword condition's visitor
   vtable 0x1415483D8 has dtor, Visit, ShouldVisit, Unk_03 in CommonLib's order.
 - `VATS::SetMagicTimeSlowdown` = 43103 (0x140759360), see the perfect-dodge entry in JOURNAL.md.
+- `ActorMediator::PerformAction` = 37996 (0x14063AF10): the single entry of every action and special idle. Callers:
+  36698+0xB9, 36699+0xC6, 36764+0x11C, 36765+0x131, 36766+0x155, 36768+0x11F, 36771+0x11B, 37035+0x208, 37842+0xD0,
+  37997+0x36 (E8 calls) and TESActionData::Process 40551+0x0A (E9 tail jump). On success it ends in 0x14063D0F0, which
+  sets the attack state from the attack data of the action's event.
+- `AIProcess::SetupSpecialIdle` = 38290 (0x14064B140) does not process the idle itself: FUN_14065D710 queues a
+  RunActionAnimationLoadedCallback (ctor 0x140675910 copies source, target, animEvent, targetAnimEvent, the idle at
+  +0x48 and the DEFAULT_OBJECT index); its Func1 (0x140677B10) rebuilds a TESActionData and calls Process.
+- BGSActionData (0x60): ActionInput {source 0x08, target 0x10, action 0x18, priority 0x20}, ActionOutput at 0x28
+  {animEvent 0x28, targetAnimEvent 0x30, result 0x38, sequence 0x40, animObjIdle 0x48, sequenceIndex 0x50}, flags 0x58;
+  CommonLib matches. TESActionData::Clone (vfunc 4, 0x1406E5FE0) copies everything but animObjIdle.
