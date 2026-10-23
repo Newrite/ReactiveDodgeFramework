@@ -530,3 +530,13 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   mod edits is taken from the vanilla dump (unconfirmed, logged). validate_rdf 248/248, validate_onehand 128/128 (STB,
   VanillaLike), Nemesis 82/82, unit tests 80/80. Deployed to STB and VanillaLike ([Casting] appended to both live inis,
   keywords empty = off). Not run in game; needs a Pandora re-run.
+* First in-game run of the bow / magic layers (2026-10-23, VanillaLike, Input Support on): the bow layer works (23 dodges,
+  draw kept, held arrows replayed and accepted). Fixed from the log: (1) a magic release replayed in the exit frame is
+  refused (magicbehavior restarts the cast arms: SBF_CastStop / Start), so a refused release is retried for 0.4 s;
+  (2) a held-back attack left from an earlier dodge was replayed by a later one: a new hold drops it; (3) a cast or a
+  bow draw now counts as the attack out of a dodge having started (IsAttacking stays false for them: 5 refused own
+  actions and a false "never started"); (4) under a bow / magic dodge the busy hands' attack / power-attack actions pass
+  to the game: Input Support's tap-hold crossed the power-attack delay mid-dodge and its RightPowerAttack, held as a
+  press, cancelled the dodge. Open: a tap during a 1hm dodge (bow not drawn yet) is held back until the attack window;
+  Input Support sees no draw starting in that frame and releases at once, so the draw replayed later stays drawn until
+  the next click. Belongs in Input Support (wait for the draw to start); not changed.

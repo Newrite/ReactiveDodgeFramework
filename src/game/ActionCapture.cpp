@@ -64,6 +64,8 @@ namespace rdf::game::capture
 		// [Casting] actors whose dodge keeps a draw / a cast going: their release actions wait for the dodge's end.
 		std::unordered_set<std::uint32_t>                                g_holdingReleases;
 		std::unordered_map<std::uint32_t, std::vector<RE::BGSAction*>> g_releases;  // held, in order, each action once
+		// ... and the attack actions of the hands that go on drawing / casting under it: part of that draw / cast, not presses
+		std::unordered_map<std::uint32_t, std::vector<RE::BGSAction*>> g_passThrough;
 
 		RE::BGSAction* DefaultAction(RE::DEFAULT_OBJECT object)
 		{
@@ -268,6 +270,10 @@ namespace rdf::game::capture
 				if (!g_capturing.contains(id)) {
 					return false;
 				}
+				if (const auto it = g_passThrough.find(id); data->action && it != g_passThrough.end() &&
+															std::find(it->second.begin(), it->second.end(), data->action) != it->second.end()) {
+					return false;
+				}
 			}
 			const auto kind = Classify(actor, data);
 			if (kind == Kind::None) {
@@ -341,7 +347,13 @@ namespace rdf::game::capture
 	{
 		std::scoped_lock lock(g_lock);
 		if (on) {
-			g_capturing.insert(formID);
+			if (g_capturing.insert(formID).second) {
+				// A new hold: an attempt left from an earlier one (held, never replayed) is not this dodge's.
+				if (const auto it = g_actors.find(formID); it != g_actors.end()) {
+					it->second.last[0].reset();
+					it->second.last[1].reset();
+				}
+			}
 		} else {
 			g_capturing.erase(formID);
 		}
@@ -406,10 +418,10 @@ namespace rdf::game::capture
 		}
 	}
 
-	int ReplayReleases(RE::Actor* actor)
+	ReleaseReplay ReplayReleases(RE::Actor* actor)
 	{
 		if (!actor) {
-			return 0;
+			return {};
 		}
 		std::vector<RE::BGSAction*> held;
 		{
@@ -418,7 +430,8 @@ namespace rdf::game::capture
 				held = std::exchange(it->second, {});
 			}
 		}
-		int count = 0;
+		ReleaseReplay result;
+		std::vector<RE::BGSAction*> refused;
 		for (auto* action : held) {
 			const std::unique_ptr<RE::TESActionData> data(RE::TESActionData::Create());
 			data->source = RE::NiPointer<RE::TESObjectREFR>(actor);
@@ -426,11 +439,55 @@ namespace rdf::game::capture
 			g_replaying = true;
 			const bool ok = data->Process();
 			g_replaying = false;
-			count += ok ? 1 : 0;
+			if (ok) {
+				++result.accepted;
+			} else {
+				refused.push_back(action);
+			}
 			DevLog("{:08X}: replayed the release held by the dodge (action {:08X}): {}", actor->GetFormID(), action->GetFormID(),
-				ok ? "accepted" : "refused");
+				ok ? "accepted" : "refused, kept for another try");
 		}
-		return count;
+		result.remaining = static_cast<int>(refused.size());
+		if (!refused.empty()) {
+			std::scoped_lock lock(g_lock);
+			auto& again = g_releases[actor->GetFormID()];
+			again.insert(again.begin(), refused.begin(), refused.end());
+		}
+		return result;
+	}
+
+	void DropReleases(std::uint32_t formID)
+	{
+		std::scoped_lock lock(g_lock);
+		g_releases.erase(formID);
+	}
+
+	void SetBusyHands(std::uint32_t formID, bool right, bool left, bool dual)
+	{
+		using D = RE::DEFAULT_OBJECT;
+		std::vector<RE::BGSAction*> actions;
+		const auto add = [&](D attack, D power) {
+			for (auto* a : { DefaultAction(attack), DefaultAction(power) }) {
+				if (a) {
+					actions.push_back(a);
+				}
+			}
+		};
+		if (right) {
+			add(D::kActionRightAttack, D::kActionRightPowerAttack);
+		}
+		if (left) {
+			add(D::kActionLeftAttack, D::kActionLeftPowerAttack);
+		}
+		if (dual) {
+			add(D::kActionDualAttack, D::kActionDualPowerAttack);
+		}
+		std::scoped_lock lock(g_lock);
+		if (actions.empty()) {
+			g_passThrough.erase(formID);
+		} else {
+			g_passThrough[formID] = std::move(actions);
+		}
 	}
 
 	void Forget(std::uint32_t formID)
@@ -440,6 +497,7 @@ namespace rdf::game::capture
 		g_actors.erase(formID);
 		g_holdingReleases.erase(formID);
 		g_releases.erase(formID);
+		g_passThrough.erase(formID);
 	}
 
 	void Clear()
@@ -449,5 +507,6 @@ namespace rdf::game::capture
 		g_actors.clear();
 		g_holdingReleases.clear();
 		g_releases.clear();
+		g_passThrough.clear();
 	}
 }

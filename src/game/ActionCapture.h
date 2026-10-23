@@ -24,9 +24,20 @@ namespace rdf::game::capture
 	bool Replay(RE::Actor* actor, bool power);
 	// [Casting] While on, the actor's release actions (Right / Left / Dual Release: an arrow loosed, a spell let go) are
 	// held back: one under a dodge that keeps the draw / the cast would end the bow / casting state the dodge plays in.
-	// ReplayReleases makes them once that dodge is over (each action once, in order); returns how many were accepted.
-	void SetHoldingReleases(std::uint32_t formID, bool on);
-	int  ReplayReleases(RE::Actor* actor);
+	// ReplayReleases makes them once that dodge is over (each action once, in order); a refused one is kept for the next
+	// call (the graph may still be settling into the cast / draw state the dodge left), DropReleases gives up on them.
+	struct ReleaseReplay
+	{
+		int accepted{ 0 };
+		int remaining{ 0 };
+	};
+	void          SetHoldingReleases(std::uint32_t formID, bool on);
+	ReleaseReplay ReplayReleases(RE::Actor* actor);
+	void          DropReleases(std::uint32_t formID);
+	// [Casting] The hands that go on drawing / casting under the dodge: their attack and power-attack actions pass to the
+	// game instead of being held as presses (a held draw keeps sending them: the bow's power attack past the power-attack
+	// delay, Input Support's tap-hold doing so every frame). All false = none.
+	void          SetBusyHands(std::uint32_t formID, bool right, bool left, bool dual);
 	void Forget(std::uint32_t formID);
 	void Clear();  // load / new game
 }

@@ -89,6 +89,7 @@ namespace rdf::game
 		last3D_ = nullptr;
 		charged_ = 0.0f;
 		releasesHeld_ = false;
+		releaseRetry_ = 0.0f;
 	}
 
 	void DodgeAgent::Release(RE::Actor* actor)
@@ -168,7 +169,7 @@ namespace rdf::game
 		Execute(actor, decision, in);
 
 		StepAndPublish(actor, dt, in);
-		HoldReleases(actor);
+		HoldReleases(actor, dt);
 		// Attack attempts are held back while the dodge can still be cancelled into one; once it is cancelled or hands
 		// over they pass (a combo continuing from the attack the dodge became).
 		capture::SetCapturing(formID_, awaitingEnter_ || (core_->DodgeRunning() && !core_->Exiting() && !core_->CancelledIntoAction()));
@@ -714,18 +715,52 @@ namespace rdf::game
 
 	// [Casting] A bow / magic dodge plays inside the draw / the cast; a release (an arrow loosed, a spell let go) would end
 	// that state and the dodge with it, so releases wait until the graph has left the dodge, then go out as they were made.
-	void DodgeAgent::HoldReleases(RE::Actor* actor)
+	// A release refused right at the exit (magicbehavior restarts the cast arms as the dodge leaves: SBF_CastStop / Start in
+	// the same frame) is tried again on the next ticks, for kReleaseRetry at most.
+	void DodgeAgent::HoldReleases(RE::Actor* actor, float dt)
 	{
+		constexpr float kReleaseRetry = 0.4f;
 		const bool layered = layer_ == graph::Layer::Bow || layer_ == graph::Layer::Magic;
 		const bool hold = layered && (awaitingEnter_ || (core_->DodgeRunning() && graph::Depth(actor) > 0));
-		if (hold == releasesHeld_) {
+		if (hold != releasesHeld_) {
+			releasesHeld_ = hold;
+			capture::SetHoldingReleases(formID_, hold);
+			if (hold) {
+				releaseRetry_ = 0.0f;
+				if (layer_ == graph::Layer::Bow) {
+					capture::SetBusyHands(formID_, true, false, false);
+				} else {
+					const auto var = [&](const char* name) {
+						bool value = false;
+						return actor->GetGraphVariableBool(name, value) && value;
+					};
+					const bool dual = var("IsCastingDual");
+					capture::SetBusyHands(formID_, dual || var("IsCastingRight"), dual || var("IsCastingLeft"), dual);
+				}
+				return;
+			}
+			capture::SetBusyHands(formID_, false, false, false);
+			releaseRetry_ = kReleaseRetry;
+			const auto r = capture::ReplayReleases(actor);
+			DevLog("{:08X}: the {} dodge is over: {} held release(s) replayed, {} refused", formID_, graph::ToString(layer_), r.accepted,
+				r.remaining);
+			if (r.remaining == 0) {
+				releaseRetry_ = 0.0f;
+			}
 			return;
 		}
-		releasesHeld_ = hold;
-		capture::SetHoldingReleases(formID_, hold);
-		if (!hold) {
-			const int replayed = capture::ReplayReleases(actor);
-			DevLog("{:08X}: the {} dodge is over: {} held release(s) replayed", formID_, graph::ToString(layer_), replayed);
+		if (hold || releaseRetry_ <= 0.0f) {
+			return;
+		}
+		releaseRetry_ -= dt;
+		const auto r = capture::ReplayReleases(actor);
+		if (r.accepted > 0 || r.remaining == 0) {
+			DevLog("{:08X}: held release(s) accepted on a retry ({:.2f}s after the dodge)", formID_, kReleaseRetry - releaseRetry_);
+			releaseRetry_ = 0.0f;
+		} else if (releaseRetry_ <= 0.0f) {
+			capture::DropReleases(formID_);
+			logger::info("{:08X}: held release(s) still refused {:.1f}s after the {} dodge; dropped", formID_, kReleaseRetry,
+				graph::ToString(layer_));
 		}
 	}
 
@@ -741,6 +776,13 @@ namespace rdf::game
 		// states of 1hm_behavior themselves (isActive bindings), so it shows the attack really plays.
 		bool attacking = false;
 		actor->GetGraphVariableBool("IsAttacking"sv, attacking);
+		// A spell hand's "attack" is a cast and a bow's a draw: neither sets IsAttacking.
+		const auto& casting = Settings::Get().casting.castingVariables;
+		attacking = attacking || attackState == attack_state::kBowDraw || attackState == attack_state::kBowAttached ||
+		            attackState == attack_state::kBowDrawn || std::any_of(casting.begin(), casting.end(), [&](const std::string& name) {
+						bool value = false;
+						return actor->GetGraphVariableBool(name, value) && value;
+					});
 		if (attacking) {  // ours, or one the framework started from a press after the dodge let go
 			fromDodge_.started = true;
 			DevLog("{:08X}: {} from the dodge started after {:.3f}s ({} attempt(s), attack state {})", formID_, ToString(p.decision.kind),

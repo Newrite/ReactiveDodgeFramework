@@ -80,7 +80,7 @@ namespace rdf::game
 		void              CancelInto(RE::Actor* actor, const Decision& d);
 		bool              CancelInPlace(RE::Actor* actor, const Decision& d);
 		void              GateGraphEvents(RE::Actor* actor);
-		void              HoldReleases(RE::Actor* actor);
+		void              HoldReleases(RE::Actor* actor, float dt);
 		graph::Layer      CastingLayer(RE::Actor* actor, std::uint8_t attackState, bool firstPerson) const;
 		bool              StaggerEscape(RE::Actor* actor);
 		void              RetryDeferred(RE::Actor* actor);
@@ -148,6 +148,7 @@ namespace rdf::game
 		bool            oneHandBroken_{ false };  // a 1hm start never entered: root dodges until the 3D reloads
 		bool            layerBroken_{ false };    // ... a bow / magic start never entered: no layer dodges until then
 		bool            releasesHeld_{ false };   // [Casting] release actions wait for this dodge's end
+		float           releaseRetry_{ 0.0f };    // ... and refused ones are tried again for this long after it, seconds
 		bool            moveHeld_{ false };
 		bool            intoAttack_{ false };     // the current dodge was cancelled into an attack (runs on when moving)
 		float           carry_{ 0.0f };           // post-dodge speed floor for the controls-driven engine, u/s
