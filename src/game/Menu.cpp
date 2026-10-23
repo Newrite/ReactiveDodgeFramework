@@ -129,15 +129,14 @@ namespace rdf::game::menu
 			auto&        s = State::Get().Draft();
 			std::string& text = *f.str(s);
 			bool         changed = false;
-			FUCK::PushItemWidth(FUCK::GetContentRegionAvail().x * 0.55f);
+			// The host lays a labelled widget out as label | field stretched to the row's end (item width ignored), so the
+			// buttons go on the line below, in front of the resolution.
 			FUCK::InputText(label, &text);
-			FUCK::PopItemWidth();
 			const bool editing = FUCK::IsItemActive();
 			changed |= FUCK::IsItemDeactivatedAfterEdit();
 			if (FUCK::IsItemHovered()) {
 				FUCK::SetTooltip("$RDF_Form_Hint"_T);  // no % in the text: the host formats it printf-style
 			}
-			FUCK::SameLine();
 			if (FUCK::Button(ICON_FA_MAGNIFYING_GLASS "##pick")) {
 				FUCK::OpenPopup("pick");
 			}
@@ -146,6 +145,7 @@ namespace rdf::game::menu
 				text.clear();
 				changed = true;
 			}
+			FUCK::SameLine();
 			if (FUCK::BeginPopup("pick")) {
 				static std::string filter;
 				FUCK::InputText("$RDF_Form_Filter"_T, &filter);
