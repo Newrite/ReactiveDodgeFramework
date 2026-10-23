@@ -350,6 +350,7 @@ namespace rdf::game
 		s.casting.drawKeyword = ReadString("Casting", "sDrawDuringDodgeKeyword", s.casting.drawKeyword);
 		s.casting.castKeyword = ReadString("Casting", "sCastDuringDodgeKeyword", s.casting.castKeyword);
 		s.casting.castingVariables = Split(ReadString("Casting", "sCastingVariables", Join(s.casting.castingVariables)));
+		s.castOn = ReadBool("CastOn", "bCastOn", s.castOn);
 		s.suppressLegacyDodge = ReadBool("Compat", "bSuppressLegacyDodge", s.suppressLegacyDodge);
 		s.useTrueDirectionalMovement = ReadBool("Compat", "bUseTrueDirectionalMovement", s.useTrueDirectionalMovement);
 		s.usePrecision = ReadBool("Compat", "bUsePrecision", s.usePrecision);

@@ -550,3 +550,13 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   RDF_AttackFromDodgeClip as conditions on the attack frameworks' own clips. Own attack states in 1HM_Behavior next to the
   dodge states were weighed and not taken: they would work without MCO / BFCO, but need attack data for the hits and
   would only reach the first hit of a framework's combo.
+* CastOn phase 1 (2026-10-24, docs/CASTON_DESIGN.md 10): rules in SKSE/Plugins/ReactiveDodgeFramework/CastOn/*.json
+  (.user.json shadows), read and written with glaze (the user's choice, as in Dreamsleeve; no exceptions, JSONC, unknown
+  keys are errors). Native conditions compiled at kDataLoaded and evaluated on the Dodge and PerfectDodge triggers;
+  casts through the instant caster with Free / Engine / Custom cost (engine functions checked in IDA: CalculateCost
+  11213, GetActorValueForCost 33817, RemoveMagicEffectsDueToAction 37864, the HUD flash 51907). Timing per rule, with
+  the clip annotations RDF_CastOnClip / RDF_CastOnDodge[.tag] / RDF_CastOnPerfectDodge[.tag] (registered in every
+  patched file). validate_rdf 263/263, validate_onehand 137/137 (STB, VanillaLike), Nemesis 105/105, unit tests 87/87
+  (the model's JSON, the shipped examples). Deployed with the example file (all rules disabled) and [CastOn] bCastOn=1
+  in both live inis. Not run in game; the payload split of "RDF_CastOnDodge.<tag>" is assumed from PIE's annotations
+  and handled both ways in the sink.

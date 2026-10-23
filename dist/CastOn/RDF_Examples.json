@@ -1,0 +1,50 @@
+// CastOn rule examples (docs/CASTON_DESIGN.md). Every rule here is disabled: copy one into your own file, or set
+// "enabled": true in RDF_Examples.user.json (a .user.json beside a file replaces it whole, so copy the file first).
+// Forms: "Plugin.esp|0xID" (the id as xEdit shows it) or an EditorID (keywords always keep theirs).
+{
+   "version": 1,
+   "rules": [
+      {
+         // A perfect dodge answers with Flames at the attacker, paid as a real cast would be (skill, perks, cost mods).
+         "name": "Example: flames on a perfect dodge",
+         "enabled": false,
+         "priority": 10,
+         "trigger": "PerfectDodge",
+         "conditions": [
+            { "kind": "Equipped", "text": "Spell", "hand": "Either" },
+            { "kind": "ActorValue", "subject": "Attacker", "text": "Health", "mode": "Percent", "compare": "Gt", "value": 0 }
+         ],
+         "casts": [ { "spell": "Skyrim.esm|0x12FCD", "caster": "Dodger", "target": "Attacker" } ],
+         "cost": { "mode": "Engine", "realCast": true },
+         "limits": { "cooldown": 1.5 }
+      },
+      {
+         // A dodge out of a stagger heals a little, paid in stamina; the clip may place the moment
+         // (RDF_CastOnClip at 0.0, RDF_CastOnDodge.heal where it should fire), else 0.2 s after the start.
+         "name": "Example: a breath after the stagger",
+         "enabled": false,
+         "trigger": "Dodge",
+         "conditions": [ { "kind": "FromStagger" } ],
+         "casts": [ { "spell": "Skyrim.esm|0x12FCC", "target": "Self", "effectiveness": 0.5 } ],
+         "cost": { "mode": "Custom", "value": "Stamina", "flat": 15, "spellShare": 0, "shortfall": "Scale" },
+         "timing": { "delay": 0.2, "tag": "heal" },
+         "limits": { "oncePerChain": true }
+      },
+      {
+         // The reverse cast (Reflyem's caster swap): the attacker hits itself with Frostbite when a dodger with this
+         // keyword dodges it perfectly. Free.
+         "name": "Example: the attacker's own frost",
+         "enabled": false,
+         "trigger": "PerfectDodge",
+         "conditions": [
+            { "kind": "HasKeyword", "form": "RDF_Example_FrostRetort" },
+            { "kind": "Or", "children": [
+               { "kind": "PowerAttacking", "subject": "Attacker" },
+               { "kind": "Random", "value": 25 }
+            ] }
+         ],
+         "casts": [ { "spell": "Skyrim.esm|0x2B96B", "caster": "Attacker", "target": "Self" } ],
+         "exclusive": true
+      }
+   ]
+}

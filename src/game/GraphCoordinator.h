@@ -41,6 +41,9 @@ namespace rdf::game::graph
 		std::uint32_t       starts{ 0 };  // attack-start events seen so far (changes when a new attack starts)
 	};
 	AttackWindows ReadAttack(RE::Actor* actor);
+	// CastOn clip annotations seen since the last call (docs/CASTON_DESIGN.md 5), in order: kind 0 RDF_CastOnDodge,
+	// 1 RDF_CastOnPerfectDodge, 2 RDF_CastOnClip (the clip places its own moments); tag = the annotation's payload.
+	void DrainCastOn(RE::Actor* actor, const std::function<void(int kind, std::string_view tag)>& sink);
 	// [Stagger] the stagger framework's recovery window: an open event since the stagger started (and no close), or a
 	// recovery variable true.
 	bool StaggerRecoveryOpen(RE::Actor* actor);

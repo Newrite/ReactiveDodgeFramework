@@ -50,7 +50,24 @@ namespace rdf::game::graph
 			bool                                  staggerRecovery{ false };  // the stagger's recovery window is open
 			// Several graphs (the player's first / third person): only this one counts; null = every graph.
 			const RE::BSTEventSource<RE::BSAnimationGraphEvent>* activeSource{ nullptr };
+			std::vector<std::pair<int, std::string>>              castOn;  // CastOn annotations since the last drain
 		};
+
+		// "RDF_CastOnDodge" with payload "tag", or the whole "RDF_CastOnDodge.tag" as the tag when the graph did not split it.
+		constexpr std::array kCastOnNames{ "RDF_CastOnDodge"sv, "RDF_CastOnPerfectDodge"sv, "RDF_CastOnClip"sv };
+		bool CastOnEvent(std::string_view tag, std::string_view payload, int& kind, std::string& out)
+		{
+			for (int i = 0; i < static_cast<int>(kCastOnNames.size()); ++i) {
+				const auto name = kCastOnNames[i];
+				if (tag.size() >= name.size() && _strnicmp(tag.data(), name.data(), name.size()) == 0 &&
+					(tag.size() == name.size() || tag[name.size()] == '.')) {
+					kind = i;
+					out = tag.size() > name.size() ? std::string(tag.substr(name.size() + 1)) : std::string(payload);
+					return true;
+				}
+			}
+			return false;
+		}
 
 		// Graph events come from the threads that update the graphs; the main thread reads. Keyed by ref handle.
 		std::mutex                                    g_lock;
@@ -129,6 +146,11 @@ namespace rdf::game::graph
 					g.staggerRecovery = false;
 				} else if (Contains(g_names.staggerOpen, event->tag)) {
 					g.staggerRecovery = true;
+				}
+				int         castOnKind = 0;
+				std::string castOnTag;
+				if (CastOnEvent(event->tag.c_str(), event->payload.c_str(), castOnKind, castOnTag)) {
+					g.castOn.emplace_back(castOnKind, std::move(castOnTag));
 				}
 				if (event->tag == g_names.entered) {
 					++g.entered;
@@ -304,6 +326,14 @@ namespace rdf::game::graph
 			if (bits & (1u << i)) {
 				sink(static_cast<WindowEvent>(i));
 			}
+		}
+	}
+
+	void DrainCastOn(RE::Actor* actor, const std::function<void(int kind, std::string_view tag)>& sink)
+	{
+		const auto events = WithActor(actor, [](ActorGraph& g) { return std::exchange(g.castOn, {}); });
+		for (const auto& [kind, tag] : events) {
+			sink(kind, tag);
 		}
 	}
 

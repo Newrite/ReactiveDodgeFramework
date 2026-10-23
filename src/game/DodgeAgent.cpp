@@ -106,6 +106,7 @@ namespace rdf::game
 			effects::TakeDodgedHit(actor);
 		}
 		capture::Forget(formID_);
+		castOn_.Clear();
 		gate::Forget(formID_);
 		motion::Release(formID_);
 		Reset();
@@ -134,6 +135,7 @@ namespace rdf::game
 		HandleGraphEvents(actor);
 		GateGraphEvents(actor);
 		ReleaseOrphanedState(actor, dt);
+		DrainCastOnAnnotations(actor);
 		HandleDodgedHits(actor);
 		RetryDeferred(actor);
 
@@ -170,6 +172,7 @@ namespace rdf::game
 
 		StepAndPublish(actor, dt, in);
 		HoldReleases(actor, dt);
+		castOn_.Update(actor, core_->Now(), !awaitingEnter_);
 		// Attack attempts are held back while the dodge can still be cancelled into one; once it is cancelled or hands
 		// over they pass (a combo continuing from the attack the dodge became).
 		capture::SetCapturing(formID_, awaitingEnter_ || (core_->DodgeRunning() && !core_->Exiting() && !core_->CancelledIntoAction()));
@@ -335,6 +338,7 @@ namespace rdf::game
 
 	void DodgeAgent::RollbackStart(RE::Actor* actor)
 	{
+		castOn_.CancelDodge();
 		logger::warn("{:08X}: graph did not report {} within {} frames, rolling back (behavior patch installed? a creature graph?)",
 			formID_, Settings::Get().graph.entered, Settings::Get().enterTimeoutFrames);
 		effects::RefundCost(actor, charged_);
@@ -433,6 +437,7 @@ namespace rdf::game
 		if (driver_) {
 			driver_->OnPerfectDodge(actor, t);
 		}
+		TriggerCastOn(actor, caston::Trigger::PerfectDodge, attackerActor);
 	}
 
 	int DodgeAgent::ClipIndex(float angleDeg, bool keepFacing, bool neutral)
@@ -589,6 +594,16 @@ namespace rdf::game
 		if (driver_) {
 			driver_->OnDodgeStarted(actor, core_->OwnsYaw());
 		}
+		// [CastOn] the dodge this one continues is over for its rules; a fresh dodge starts a new chain for them
+		if (chain) {
+			castOn_.OnDodgeEnd(actor);
+		} else {
+			castOn_.OnChainOver();
+		}
+		lastChainIndex_ = chainIndex;
+		lastFromStagger_ = escapeStagger_;
+		lastFirstPerson_ = in.firstPerson;
+		TriggerCastOn(actor, caston::Trigger::Dodge, nullptr);
 		DevLog("{:08X}: dodge {} #{} ({}) angle={:.1f} clip={} keepFacing={} holdFacing={} ownsYaw={} freeRotation={} ({})", formID_,
 			chain ? "chain" : "start", chainIndex, graph::ToString(layer_), angle, clip, core_->KeepsFacing(), core_->HoldsFacing(), core_->OwnsYaw(), in.freeRotation, in.modeName);
 	}
@@ -764,6 +779,35 @@ namespace rdf::game
 		}
 	}
 
+	// [CastOn] A trigger with the facts of the dodge playing (docs/CASTON_DESIGN.md).
+	void DodgeAgent::TriggerCastOn(RE::Actor* actor, caston::Trigger trigger, RE::Actor* attacker)
+	{
+		const auto      combatTarget = actor->GetActorRuntimeData().currentCombatTarget.get();
+		caston::Context ctx;
+		ctx.dodger = actor;
+		ctx.attacker = attacker;
+		ctx.combatTarget = combatTarget.get();
+		ctx.layer = layer_;
+		ctx.clip = lastClip_;
+		ctx.chainIndex = lastChainIndex_;
+		ctx.fromStagger = lastFromStagger_;
+		ctx.firstPerson = lastFirstPerson_;
+		castOn_.OnTrigger(trigger, ctx, core_->Now());
+	}
+
+	void DodgeAgent::DrainCastOnAnnotations(RE::Actor* actor)
+	{
+		graph::DrainCastOn(actor, [this](int kind, std::string_view tag) {
+			DevLog("{:08X}: CastOn annotation {} '{}' at t={:.3f}", formID_, kind == 0 ? "Dodge" : kind == 1 ? "PerfectDodge" : "Clip", tag,
+				core_->ActionTime());
+			if (kind == 2) {
+				castOn_.OnClipPlacesMoments();
+			} else {
+				castOn_.OnAnnotation(kind == 0 ? caston::Trigger::Dodge : caston::Trigger::PerfectDodge, tag);
+			}
+		});
+	}
+
 	void DodgeAgent::VerifyAttack(RE::Actor* actor, float dt, std::uint8_t attackState)
 	{
 		if (!pendingAttack_) {
@@ -899,6 +943,7 @@ namespace rdf::game
 
 	void DodgeAgent::OnStopped(RE::Actor* actor)
 	{
+		castOn_.OnDodgeEnd(actor);  // [CastOn] what still waits fires at the dodge's end
 		// Only a dodge that ran its course into running carries its speed; an interrupted one does not.
 		if (core_->Phase() != DodgePhase::Done || !moveHeld_ || (core_->CancelledIntoAction() && !intoAttack_)) {
 			carry_ = 0.0f;

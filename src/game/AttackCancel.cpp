@@ -79,6 +79,18 @@ namespace rdf::game::attack
 		}
 	}
 
+	bool ActorHasKeyword(RE::Actor* actor, RE::BGSKeyword* keyword)
+	{
+		return actor && keyword && HasKeyword(actor, keyword);
+	}
+
+	std::optional<float> EffectMagnitudes(RE::Actor* actor, RE::BGSKeyword* keyword)
+	{
+		std::optional<float> sum;
+		ForEffectsWith(actor, keyword, [&](float magnitude) { sum = sum.value_or(0.0f) + magnitude; });
+		return sum;
+	}
+
 	bool AnyTime(RE::Actor* actor, bool power)
 	{
 		const auto& ac = Settings::Get().attackCancel;

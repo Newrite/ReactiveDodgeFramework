@@ -1,4 +1,4 @@
-# CastOn rules: design (draft for review, 2026-10-24)
+# CastOn rules: design (phase 1 built 2026-10-24, not run in game)
 
 Spells cast because of a dodge (CastOnDodge, CastOnPerfectDodge, more triggers later), described by rules a combat
 designer or animator edits in game, in an OAR-like window: conditions, who casts on whom, what it costs, when it fires.
@@ -171,3 +171,42 @@ A FUCK `IWindow`, "CastOn rules", opened from the Rules page (button) and from t
 - Is JSON with `.user.json` shadows right, or should rules live in the ini?
 - Which triggers in phase 1 besides Dodge and PerfectDodge (DodgeEnd? StaggerEscape?)
 - Skill XP on Engine-cost casts (the real cast awards it elsewhere; not yet traced in IDA).
+
+## 10. Phase 1 as built (2026-10-24)
+
+- **Model and files.** `src/core/CastOnRules` (engine-free, unit-tested): the rule structs, read and written with
+  glaze. Options:
+  - reading: JSONC comments allowed, an unknown key is an error with `glz::format_error` context;
+  - writing: prettified. Every field is written: glaze's `skip_default_members` compares with the type's zero, so a
+    `false` / 0 would come back as its non-zero default.
+
+  Enums are written by name. `Validate` drops a rule with a kind-specific problem (a condition without its form, an
+  unknown layer...) and names the reason; the file's other rules load.
+- **In game.** `src/game/CastOn`:
+  - `Load` at kDataLoaded: the files, `.user.json` winning; forms resolved; conditions compiled into flat nodes with the
+    cheap ones first in an AND. A missing form or spell, or an ability, drops the rule with a log line.
+  - `Scheduler`, one per `DodgeAgent`: trigger, limits, pending casts, annotations.
+  - The keyword walk runs once per (actor, keyword) and trigger. With `bDevLog` the evaluation time is logged per trigger.
+- **Cost.**
+  - Engine: `CalculateCost` (ID 11213, 0x140101A30, the function `CheckCast` and `SpellCast` use), times
+    `fMagicDualCastingCostMult` and plus `fMagicDualCastingCostBase` when dual. Taken from the AV that
+    `GetActorValueForCost` (ID 33817) names, through `ModActorValue(kDamage)`. God mode is free.
+  - `realCast` adds what `SpellCast` does besides paying: `RemoveMagicEffectsDueToAction` (ID 37864), keeping an
+    invisibility / ethereal effect the spell itself carries, then `TESSpellCastEvent`.
+  - A refusal flashes the HUD meter (ID 51907) for the player. No fail sound yet.
+- **Triggers.**
+  - Dodge: after the start was sent.
+  - PerfectDodge: in `HandleDodgedHits`.
+  - A chain ends the previous dodge's waits (they fire); a fresh dodge starts a new chain for `oncePerChain`; a
+    rolled-back start drops its Dodge casts.
+- **Missing participant.** A condition on a participant that is absent fails, negated or not. A cast without its caster
+  or target is skipped and logged.
+- **Example file.** `dist/CastOn/RDF_Examples.json` (all rules disabled), deployed to
+  `SKSE/Plugins/ReactiveDodgeFramework/CastOn/`.
+- **Switch.** `[CastOn] bCastOn` (Rules page).
+- **Not yet:**
+  - the window (phase 2);
+  - vanilla condition functions (phase 3);
+  - a reload without restarting the game;
+  - the fail sound;
+  - skill XP for Engine casts.

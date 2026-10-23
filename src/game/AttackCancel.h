@@ -19,6 +19,11 @@ namespace rdf::game::attack
 	// The summed magnitudes of the actor's active magic effects with sEscapeCostKeyword.
 	float StaggerEscapeCostBonus(RE::Actor* actor);
 
+	// The keyword walk itself (CastOn conditions): the actor, its race, a worn item or an active magic effect.
+	bool ActorHasKeyword(RE::Actor* actor, RE::BGSKeyword* keyword);
+	// The summed magnitudes of the actor's active effects with the keyword; nullopt when it has none.
+	std::optional<float> EffectMagnitudes(RE::Actor* actor, RE::BGSKeyword* keyword);
+
 	// [Casting] keywords (same sources): a dodge keeps the actor's bow draw / its cast going.
 	bool DrawDuringDodge(RE::Actor* actor);
 	bool CastDuringDodge(RE::Actor* actor);

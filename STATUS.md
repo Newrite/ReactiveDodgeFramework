@@ -56,6 +56,10 @@
   third and first person; releases during it go out after it. 3P bow verified in game (2026-10-23); magic after the
   release-retry fix and both 1P layers built and staged-validated, not yet run. Needs a Pandora re-run and a keyword.
 
+* CastOn rules, phase 1 (docs/CASTON_DESIGN.md): JSON rules with conditions, casts, three cost modes, timing and clip
+  annotations on the Dodge and PerfectDodge triggers. Built, unit- and staged-validated, not run in game; no menu window
+  yet (phase 2).
+
 ## Known limitations
 * A one-frame upper-body pop at dodge start, visible only in slow motion (parked; findings in JOURNAL.md).
 * Fixture animations are TUDM's clips (local only, not redistributable); visual quality is bounded by them, e.g. they

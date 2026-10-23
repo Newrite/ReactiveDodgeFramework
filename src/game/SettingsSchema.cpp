@@ -174,6 +174,7 @@ namespace rdf::game::schema
 				Form(Page::Rules, "Stagger", "sEscapeCostKeyword", RDF_S(stagger.escapeCostKeyword), RE::FormType::Keyword),
 				Form(Page::Rules, "Casting", "sDrawDuringDodgeKeyword", RDF_S(casting.drawKeyword), RE::FormType::Keyword),
 				Form(Page::Rules, "Casting", "sCastDuringDodgeKeyword", RDF_S(casting.castKeyword), RE::FormType::Keyword),
+				Bool(Page::Rules, "CastOn", "bCastOn", RDF_B(castOn)),
 				// --- debug
 				Bool(Page::Debug, "Dev", "bDevLog", RDF_B(devLog)),
 			};

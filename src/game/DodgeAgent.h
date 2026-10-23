@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CastOn.h"
 #include "GraphCoordinator.h"
 #include "core/ReactiveCore.h"
 
@@ -81,6 +82,8 @@ namespace rdf::game
 		bool              CancelInPlace(RE::Actor* actor, const Decision& d);
 		void              GateGraphEvents(RE::Actor* actor);
 		void              HoldReleases(RE::Actor* actor, float dt);
+		void              TriggerCastOn(RE::Actor* actor, caston::Trigger trigger, RE::Actor* attacker);
+		void              DrainCastOnAnnotations(RE::Actor* actor);
 		graph::Layer      CastingLayer(RE::Actor* actor, std::uint8_t attackState) const;
 		bool              StaggerEscape(RE::Actor* actor);
 		void              RetryDeferred(RE::Actor* actor);
@@ -148,6 +151,10 @@ namespace rdf::game
 		bool            oneHandBroken_{ false };  // a 1hm start never entered: root dodges until the 3D reloads
 		bool            layerBroken_{ false };    // ... a bow / magic start never entered: no layer dodges until then
 		bool            releasesHeld_{ false };   // [Casting] release actions wait for this dodge's end
+		caston::Scheduler castOn_;                // [CastOn] the rules this actor's dodges trigger
+		int             lastChainIndex_{ 0 };     // ... the facts of the current dodge, for a PerfectDodge trigger
+		bool            lastFromStagger_{ false };
+		bool            lastFirstPerson_{ false };
 		float           releaseRetry_{ 0.0f };    // ... and refused ones are tried again for this long after it, seconds
 		bool            moveHeld_{ false };
 		bool            intoAttack_{ false };     // the current dodge was cancelled into an attack (runs on when moving)

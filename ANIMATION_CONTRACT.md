@@ -111,6 +111,9 @@ When a dodge's clip sends `RDF_Windows`, that dodge ignores the ini timers (`fCh
 | `RDF_AttackOpen` | a buffered attack may cancel the dodge from here |
 | `RDF_BlockOpen` | a buffered block may cancel the dodge from here |
 | `RDF_ExitOpen` | with move input held, hand over to running from here |
+| `RDF_CastOnClip` | at 0: this clip places its own CastOn moments. CastOn rules that accept an annotation wait for it instead of their delay (or fire at the dodge's end if the clip never reaches it) |
+| `RDF_CastOnDodge` / `RDF_CastOnDodge.<tag>` | the moment the CastOn rules of the Dodge trigger fire: untagged ones on the plain annotation, tagged ones on their tag (docs/CASTON_DESIGN.md) |
+| `RDF_CastOnPerfectDodge` / `RDF_CastOnPerfectDodge.<tag>` | the same for PerfectDodge rules; reached before the perfect hit, they fire at the hit |
 
 Times are clip-local; the plugin does not need to know the playback speed. Windows reset at every dodge, including a
 chain, so the incoming clip announces its own.

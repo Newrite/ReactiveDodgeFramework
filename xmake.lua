@@ -18,6 +18,9 @@ set_warnings("allextra")
 set_policy("build.fence", true)
 set_policy("check.auto_ignore_flags", false)
 
+-- CastOn rule files (JSON): glaze reflects the rule structs and reports errors by return value, no exceptions.
+add_requires("glaze 7.0.2")
+
 -- Skyrim SE 1.5.97 only.
 set_config("skyrim_vr", false)
 set_config("skyrim_ae", false)
@@ -28,6 +31,7 @@ local deploy_dir = "F:/STB/Skyrim/[STB] Mod Organizer/mods/AI - Reactive Dodge F
 
 target("ReactiveDodgeFramework")
     add_deps("commonlibsse-ng")
+    add_packages("glaze")
     add_rules("commonlibsse-ng.plugin", {
         name = "ReactiveDodgeFramework",
         author = "newrite",
@@ -57,6 +61,10 @@ target("ReactiveDodgeFramework")
         os.mkdir(path.join(scripts, "Source"))
         os.cp("dist/Scripts/*.pex", scripts)
         os.cp("dist/Scripts/Source/*.psc", path.join(scripts, "Source"))
+        -- CastOn rule examples (all disabled): SKSE/Plugins/ReactiveDodgeFramework/CastOn/
+        local caston = path.join(deploy_dir, "ReactiveDodgeFramework", "CastOn")
+        os.mkdir(caston)
+        os.cp("dist/CastOn/*.json", caston)
         local ini = path.join(deploy_dir, "ReactiveDodgeFramework.ini")
         if not os.isfile(ini) then
             os.cp("dist/ReactiveDodgeFramework.ini", ini)
@@ -66,6 +74,8 @@ target("ReactiveDodgeFramework")
 -- Engine-free core + unit tests: no CommonLib.
 target("rdf_tests")
     set_kind("binary")
+    set_rundir("$(projectdir)")  -- tests read dist/ files by their repo path
+    add_packages("glaze")
     add_includedirs("src", "tests")
     add_headerfiles("src/core/**.h", "tests/**.h")
     add_files("src/core/**.cpp", "tests/**.cpp")

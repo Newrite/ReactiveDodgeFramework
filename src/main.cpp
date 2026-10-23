@@ -1,5 +1,6 @@
 #include "game/ActionCapture.h"
 #include "game/Api.h"
+#include "game/CastOn.h"
 #include "game/Effects.h"
 #include "game/Forms.h"
 #include "game/GraphCoordinator.h"
@@ -49,6 +50,7 @@ namespace
 			break;
 		case SKSE::MessagingInterface::kDataLoaded:
 			rdf::game::forms::OnDataLoaded();
+			rdf::game::caston::Load();
 			rdf::game::input::Install();
 			rdf::game::menu::Install();
 			break;

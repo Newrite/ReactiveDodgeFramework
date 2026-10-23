@@ -28,6 +28,10 @@ EVENTS = ["RDF_DodgeStart", "RDF_DodgeStartB", "RDF_DodgeChain", "RDF_DodgeExit"
 ANNOTATION_EVENTS = ["RDF_Windows", "RDF_IFrameStart", "RDF_IFrameEnd", "RDF_ChainOpen",
                      "RDF_AttackOpen", "RDF_BlockOpen", "RDF_ExitOpen", "RDF_PerfectStart", "RDF_PerfectEnd"]
 EVENTS += ANNOTATION_EVENTS
+# CastOn moments (docs/CASTON_DESIGN.md 5): "RDF_CastOnDodge.<tag>" arrives as RDF_CastOnDodge + payload <tag> (the graph
+# splits an annotation at its first '.', as PIE's "PIE.@..."); RDF_CastOnClip at 0.0 = the clip places its own moments.
+CASTON_EVENTS = ["RDF_CastOnDodge", "RDF_CastOnPerfectDodge", "RDF_CastOnClip"]
+EVENTS += CASTON_EVENTS
 # Sent by the plugin on a perfect dodge (to the player and to the attacker); registered so behaviors, OAR and other
 # plugins' graph-event sinks receive them (NotifyAnimationGraph drops a name the graph does not know).
 EVENTS += ["RDF_PerfectDodge", "RDF_PerfectDodged"]

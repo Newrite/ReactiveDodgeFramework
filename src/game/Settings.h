@@ -125,6 +125,9 @@ namespace rdf::game
 			std::vector<std::string> castingVariables{ "IsCastingRight", "IsCastingLeft", "IsCastingDual" };  // bool: a cast runs
 		} casting;
 
+		// [CastOn] rules from SKSE/Plugins/ReactiveDodgeFramework/CastOn/*.json (docs/CASTON_DESIGN.md)
+		bool castOn{ true };
+
 		// [IFrames]
 		bool  iFrames{ true };
 		bool  projectileIFrames{ true };  // every projectile type passes through during i-frames
