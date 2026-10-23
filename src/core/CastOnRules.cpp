@@ -212,6 +212,9 @@ namespace rdf::caston
 			if (cast.effectiveness < 0.0f) {
 				errors.push_back(std::format("casts[{}]: negative effectiveness", i));
 			}
+			if (!(cast.duration > 0.0f) || cast.duration > 60.0f) {
+				errors.push_back(std::format("casts[{}]: duration is seconds, above 0 and up to 60", i));
+			}
 		}
 		if (rule.timing.delay < 0.0f) {
 			errors.push_back("timing.delay is negative");

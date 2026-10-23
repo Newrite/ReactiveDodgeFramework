@@ -428,6 +428,7 @@ namespace rdf::game::update
 				// included, faster than the world by this factor; the player's dodge clock follows them.
 				g_player.Tick(player, dt * slowmo::PlayerDtScale(), forPlayer);
 				g_npcs.Tick(dt);
+				caston::UpdateChannels(dt);
 			}
 
 			static inline REL::Relocation<decltype(thunk)> func;
@@ -458,6 +459,7 @@ namespace rdf::game::update
 		capture::Clear();
 		graph::ClearAll();
 		effects::ClearInvulnerable();
+		caston::ClearChannels();
 	}
 
 	bool RequestDodge(RE::Actor* actor, float angleDeg)

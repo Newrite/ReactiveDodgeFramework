@@ -38,6 +38,12 @@ namespace rdf::game::caston
 	void Load();
 	RuleSetPtr Current();
 
+	// Every frame (game seconds, not while paused): ends the concentration spells CastOn started once their duration is
+	// over, or (Engine cost) once the caster has nothing left to pay.
+	void UpdateChannels(float dt);
+	// Load / new game: forgets them (the casters of the last session are gone).
+	void ClearChannels();
+
 	// The CastOn state of one dodging actor (its DodgeAgent owns it): evaluates a trigger's rules, keeps their limits,
 	// and fires the casts at their moment.
 	class Scheduler

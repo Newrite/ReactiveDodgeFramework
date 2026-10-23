@@ -84,6 +84,7 @@ namespace rdf::game::caston
 			float          effectiveness{ 1.0f };
 			float          magnitude{ 0.0f };
 			bool           noHitEffectArt{ false };
+			float          duration{ 1.0f };  // a concentration spell's
 		};
 
 		struct CompiledRule
@@ -114,6 +115,26 @@ namespace rdf::game::caston
 	{
 		std::mutex g_lock;  // Current() may be read by the menu thread later
 		RuleSetPtr g_current;
+
+		// Concentration spells CastOn started: CastSpellImmediate leaves the instant caster casting them and nothing else
+		// releases it (Character::Update 0x140632E50 updates all four casters each frame; ActorMagicCaster::Update keeps a
+		// concentration spell going). Module-wide, not per agent: an NPC's agent is dropped a second after its dodge.
+		struct Channel
+		{
+			RE::ObjectRefHandle caster;
+			RE::MagicItem*      spell{ nullptr };
+			float               left{ 0.0f };                      // game seconds
+			RE::ActorValue      drained{ RE::ActorValue::kNone };  // Engine: the value the engine drains; stops at 0
+			std::string         rule;
+		};
+		std::vector<Channel> g_channels;  // main thread
+
+		void StartChannel(RE::Actor* caster, RE::MagicItem* spell, float duration, RE::ActorValue drained, const std::string& rule)
+		{
+			const auto handle = caster->GetHandle();
+			std::erase_if(g_channels, [&](const Channel& c) { return c.caster == handle; });  // its instant caster now casts this
+			g_channels.push_back({ handle, spell, duration, drained, rule });
+		}
 
 		std::mt19937& Rng()
 		{
@@ -497,7 +518,10 @@ namespace rdf::game::caston
 
 		// ------------------------------------------------------------------------------------------------ casting
 		// Pays the rule's cost for one cast; false = refused. Scale may lower the effectiveness.
-		bool Pay(const Cost& cost, RE::Actor* caster, RE::MagicItem* spell, float& effectiveness, const std::string& rule)
+		// A concentration spell (`duration` seconds): Engine pays nothing up front (the engine drains its cost per second while
+		// it runs, as for a real cast; refused at 0), Custom's spell share is the cost per second x the duration.
+		bool Pay(const Cost& cost, RE::Actor* caster, RE::MagicItem* spell, bool concentration, float duration, float& effectiveness,
+			const std::string& rule)
 		{
 			if (cost.mode == CostMode::Free) {
 				return true;
@@ -508,6 +532,16 @@ namespace rdf::game::caston
 				value = ActorValueForCost(spell, RE::MagicSystem::CastingSource::kInstant);
 				if (value == RE::ActorValue::kNone) {
 					return true;  // a power, a potion...: the engine charges nothing either
+				}
+				if (concentration) {
+					if (caster->AsActorValueOwner()->GetActorValue(value) > 0.0f || (caster->IsPlayerRef() && RE::PlayerCharacter::IsGodMode())) {
+						return true;
+					}
+					if (cost.feedback && caster->IsPlayerRef()) {
+						FlashMeter(value);
+					}
+					DevLog("CastOn '{}': {:08X} has no {} left for a concentration spell", rule, caster->GetFormID(), static_cast<int>(value));
+					return false;
 				}
 				amount = CalculateCost(spell, caster);
 				if (cost.dualCast) {
@@ -522,7 +556,8 @@ namespace rdf::game::caston
 				                                           RE::ActorValue::kMagicka;
 				auto*       owner = caster->AsActorValueOwner();
 				const float max = owner->GetPermanentActorValue(value) + caster->GetActorValueModifier(RE::ACTOR_VALUE_MODIFIER::kTemporary, value);
-				amount = (cost.flat + cost.spellShare * CalculateCost(spell, caster) + cost.maxShare * max) * cost.mult;
+				const float spellCost = CalculateCost(spell, caster) * (concentration ? duration : 1.0f);  // per second for concentration
+				amount = (cost.flat + cost.spellShare * spellCost + cost.maxShare * max) * cost.mult;
 			}
 			if (amount <= 0.0f) {
 				return true;
@@ -589,11 +624,23 @@ namespace rdf::game::caston
 				if (!magicCaster) {
 					continue;
 				}
-				float effectiveness = cast.effectiveness;
-				if (!Pay(rule.cost, caster, cast.spell, effectiveness, rule.name)) {
+				const bool concentration = cast.spell->GetCastingType() == RE::MagicSystem::CastingType::kConcentration;
+				float      effectiveness = cast.effectiveness;
+				if (!Pay(rule.cost, caster, cast.spell, concentration, cast.duration, effectiveness, rule.name)) {
 					continue;
 				}
 				magicCaster->CastSpellImmediate(cast.spell, cast.noHitEffectArt, target, effectiveness, false, cast.magnitude, caster);
+				if (concentration) {
+					// Free / Custom: no per-second drain (ActorMagicCaster::Update skips it under kSkipCheckCast, vfunc 0x13 sets it
+					// at 0x140543620; InterruptCastImpl clears it again). Engine: the engine's own drain, stopped at 0.
+					auto drained = RE::ActorValue::kNone;
+					if (rule.cost.mode == CostMode::Engine) {
+						drained = ActorValueForCost(cast.spell, RE::MagicSystem::CastingSource::kInstant);
+					} else {
+						magicCaster->SetSkipCheckCast();
+					}
+					StartChannel(caster, cast.spell, cast.duration, drained, rule.name);
+				}
 				if (rule.cost.mode == CostMode::Engine && rule.cost.realCast) {
 					// what SpellCast does besides paying (0x140542470): the effects a cast breaks, then the cast event
 					const auto keep = cast.spell->HasEffect(RE::EffectArchetypes::ArchetypeID::kInvisibility) ? 11 :
@@ -602,8 +649,9 @@ namespace rdf::game::caston
 					RemoveEffectsDueToCast(caster, keep);
 					SendSpellCastEvent(caster, cast.spell);
 				}
-				DevLog("CastOn '{}': {:08X} cast {:08X} '{}' on {:08X} (effectiveness {:.2f})", rule.name, caster->GetFormID(),
-					cast.spell->GetFormID(), cast.spell->GetName(), target ? target->GetFormID() : 0u, effectiveness);
+				DevLog("CastOn '{}': {:08X} cast {:08X} '{}' on {:08X} (effectiveness {:.2f}{})", rule.name, caster->GetFormID(),
+					cast.spell->GetFormID(), cast.spell->GetName(), target ? target->GetFormID() : 0u, effectiveness,
+					concentration ? std::format(", concentration for {:.2f}s", cast.duration) : std::string());
 			}
 		}
 
@@ -653,13 +701,8 @@ namespace rdf::game::caston
 					auto* spell = form ? form->As<RE::MagicItem>() : nullptr;
 					if (spell && spell->GetCastingType() == RE::MagicSystem::CastingType::kConstantEffect) {
 						error = std::format("{} is a constant effect (an ability): it cannot be cast", cast.spell);
-					} else if (spell && spell->GetCastingType() == RE::MagicSystem::CastingType::kConcentration) {
-						// CastSpellImmediate leaves the instant caster casting it (state 6) and nothing releases it: Character::Update
-						// (0x140632E50) updates all four casters every frame and ActorMagicCaster::Update keeps a concentration spell
-						// going, draining its cost per second. Refused until CastOn can stop it (a duration).
-						error = std::format("{} is a concentration spell: not supported yet (it would never stop)", cast.spell);
 					} else if (spell) {
-						c.casts.push_back({ spell, cast.caster, cast.target, cast.effectiveness, cast.magnitude, cast.noHitEffectArt });
+						c.casts.push_back({ spell, cast.caster, cast.target, cast.effectiveness, cast.magnitude, cast.noHitEffectArt, cast.duration });
 					}
 				}
 				if (!root || !error.empty()) {
@@ -680,6 +723,32 @@ namespace rdf::game::caston
 		logger::info("CastOn: {} rule(s) from {} file(s) in {} ({} dropped)", set->rules.size(), files, kFolder, dropped);
 		std::scoped_lock lock(g_lock);
 		g_current = std::move(set);
+	}
+
+	void UpdateChannels(float dt)
+	{
+		std::erase_if(g_channels, [&](Channel& c) {
+			const auto ref = c.caster.get();
+			auto*      actor = ref ? ref->As<RE::Actor>() : nullptr;
+			auto*      magicCaster = actor ? actor->GetMagicCaster(RE::MagicSystem::CastingSource::kInstant) : nullptr;
+			if (!actor || actor->IsDead() || !magicCaster || magicCaster->currentSpell != c.spell) {
+				return true;  // gone, or its instant caster went on to something else: not ours to stop
+			}
+			c.left -= dt;
+			const bool spent = c.drained != RE::ActorValue::kNone && actor->AsActorValueOwner()->GetActorValue(c.drained) <= 0.0f;
+			if (c.left > 0.0f && !spent) {
+				return false;
+			}
+			magicCaster->InterruptCast(false);
+			DevLog("CastOn '{}': {:08X} concentration {:08X} stopped ({})", c.rule, actor->GetFormID(), c.spell->GetFormID(),
+				spent ? "nothing left to pay" : "its duration is over");
+			return true;
+		});
+	}
+
+	void ClearChannels()
+	{
+		g_channels.clear();
 	}
 
 	RuleSetPtr Current()

@@ -115,6 +115,19 @@ TEST(caston_invalid_rules_are_dropped_with_reasons_and_valid_ones_kept)
 	CHECK(r.errors.size() == 4 && r.errors[1].find("Sideways") != std::string::npos);
 }
 
+TEST(caston_a_cast_duration_reads_and_is_checked)
+{
+	const auto r = ParseRules(R"({ "rules": [
+		{ "name": "ok", "casts": [ { "spell": "a", "duration": 2.5 } ] },
+		{ "name": "zero", "casts": [ { "spell": "a", "duration": 0 } ] },
+		{ "name": "long", "casts": [ { "spell": "a", "duration": 120 } ] }
+	] })");
+	CHECK(r.rules.size() == 1 && r.rules[0].casts[0].duration == 2.5f);
+	CHECK(r.errors.size() == 2);
+	const auto d = ParseRules(R"({ "rules": [ { "casts": [ { "spell": "a" } ] } ] })");
+	CHECK(d.rules.size() == 1 && d.rules[0].casts[0].duration == 1.0f);  // the default
+}
+
 TEST(caston_compare_holds)
 {
 	CHECK(Holds(Compare::Ge, 2.0f, 2.0f));

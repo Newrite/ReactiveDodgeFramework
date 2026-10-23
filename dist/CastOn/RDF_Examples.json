@@ -5,9 +5,10 @@
    "version": 1,
    "rules": [
       {
-         // A perfect dodge answers with a Firebolt at the attacker, paid as a real cast would be (skill, perks, cost mods).
-         // Fire-and-forget spells only: concentration spells are refused (nothing would stop them).
-         "name": "Example: a firebolt on a perfect dodge",
+         // A perfect dodge answers with a stream of Flames at the attacker for 1.5 s (a concentration spell: "duration" is
+         // how long it runs). Engine cost: the engine drains its cost per second while it runs, as for a real cast (skill,
+         // perks, cost mods), and it stops early when there is no magicka left. Free / Custom would not drain.
+         "name": "Example: flames on a perfect dodge",
          "enabled": false,
          "priority": 10,
          "trigger": "PerfectDodge",
@@ -15,7 +16,7 @@
             { "kind": "Equipped", "text": "Spell", "hand": "Either" },
             { "kind": "ActorValue", "subject": "Attacker", "text": "Health", "mode": "Percent", "compare": "Gt", "value": 0 }
          ],
-         "casts": [ { "spell": "Skyrim.esm|0x12FD0", "caster": "Dodger", "target": "Attacker" } ],
+         "casts": [ { "spell": "Skyrim.esm|0x12FCD", "caster": "Dodger", "target": "Attacker", "duration": 1.5 } ],
          "cost": { "mode": "Engine", "realCast": true },
          "limits": { "cooldown": 1.5 }
       },

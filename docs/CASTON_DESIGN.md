@@ -123,14 +123,24 @@ With `bDevLog` on, the dev log records the evaluation time per trigger. Target: 
 
 On refusal, the player optionally gets the HUD meter flash and the fail sound.
 
-Constant effects (abilities) are refused. So are concentration spells, for now. `CastSpellImmediate` leaves the instant
-caster in state 6 with the spell, and nothing releases it:
-- `Character::Update` (0x140632E50) updates all four casters every frame;
-- `ActorMagicCaster::Update` (0x140541FC0) keeps a concentration spell going (`sub_14054C1A0`) and drains its cost per
-  second.
+Constant effects (abilities) are refused.
 
-Supporting them needs a duration after which CastOn interrupts the instant caster, and a decision on that per-second
-drain (Free mode would still pay it unless the caster's skip-cost flag is set). Checked in IDA 2026-10-24.
+**Concentration spells** run for the cast's `duration` (seconds, default 1, up to 60). Why that is needed (IDA,
+2026-10-24): `CastSpellImmediate` leaves the instant caster in state 6 with the spell, and nothing releases it.
+- `Character::Update` (0x140632E50) updates all four casters every frame.
+- `ActorMagicCaster::Update` (0x140541FC0) keeps a concentration spell going (`sub_14054C1A0`) and drains its cost per
+  second, unless the caster's `kSkipCheckCast` flag (bit 1 of +0xF8) is set.
+
+So CastOn:
+- keeps a module-wide list of the concentration casts it started, advanced from the per-frame tick on game time;
+- ends each with `MagicCaster::InterruptCast` (ID 33630: `InterruptCastImpl`, which also clears `kSkipCheckCast`, then
+  state 9 and `SpellCast(false)`, so nothing is charged);
+- forgets a cast whose caster died, unloaded, or went on to another spell (a load or a new game forgets them all).
+
+The cost by mode:
+- **Engine:** nothing up front; the engine's own per-second drain, as on a real cast. Refused at 0, stopped at 0.
+- **Free:** `SetSkipCheckCast()` (vfunc 0x13, 0x140543620) right after the cast, so there is no drain.
+- **Custom:** the spell share is the cost per second × the duration, paid up front, then no drain as in Free.
 
 ## 5. Timing and annotations
 

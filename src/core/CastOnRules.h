@@ -128,6 +128,8 @@ namespace rdf::caston
 		float       effectiveness{ 1.0f };
 		float       magnitude{ 0.0f };  // magnitude override; 0 = the spell's own
 		bool        noHitEffectArt{ false };
+		// A concentration spell keeps going this long, then the caster is interrupted (seconds; other spells ignore it).
+		float       duration{ 1.0f };
 	};
 
 	struct Cost

@@ -560,3 +560,10 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   (the model's JSON, the shipped examples). Deployed with the example file (all rules disabled) and [CastOn] bCastOn=1
   in both live inis. Not run in game; the payload split of "RDF_CastOnDodge.<tag>" is assumed from PIE's annotations
   and handled both ways in the sink.
+* CastOn concentration spells (2026-10-24, user: Flames in the example would not work): traced in IDA that the instant
+  caster keeps a concentration spell going forever (Character::Update updates all four casters; ActorMagicCaster::Update
+  drains and spawns while in state 6). Now a cast has "duration"; a module-wide list (game time, per-frame tick) ends it
+  with InterruptCast. Engine cost leaves the engine's per-second drain on and stops at 0; Free / Custom set
+  kSkipCheckCast (vfunc 0x13; cleared again by InterruptCastImpl) so nothing drains, Custom paying cost per second x
+  duration up front. The examples use Flames (1.5 s, Engine), Fast Healing and Ice Spike; the user's test copy has the
+  Flames rule on. Not run in game.
