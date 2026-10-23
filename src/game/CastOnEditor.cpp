@@ -162,6 +162,18 @@ namespace rdf::game::caston_editor
 			return FUCK::IsItemDeactivatedAfterEdit();
 		}
 
+		// A tooltip on the last item. The host formats tooltips printf-style: '%' doubled.
+		void Tip(const std::string& text)
+		{
+			if (FUCK::IsItemHovered()) {
+				std::string safe;
+				for (const char ch : text) {
+					safe += ch == '%' ? "%%" : std::string(1, ch);
+				}
+				FUCK::SetTooltip(safe.c_str());
+			}
+		}
+
 		void LiveIcon(std::int8_t v)
 		{
 			switch (v) {
@@ -438,6 +450,7 @@ namespace rdf::game::caston_editor
 							if (FUCK::Selectable(label.c_str(), doc_ == d && what_ == Selected::Rule && rule_ == r)) {
 								Select(d, Selected::Rule, r, {});
 							}
+							Tip(rule.name);
 							FUCK::PopID();
 						}
 						for (const auto& [name, list] : doc.presets) {
@@ -496,6 +509,7 @@ namespace rdf::game::caston_editor
 				}
 				FUCK::SetNextItemWidth(300.0f);
 				FUCK::InputText("$RDF_CO_PresetName"_T, &rename_);
+				Tip("$RDF_CO_PresetNote"_T);
 				if (FUCK::IsItemDeactivatedAfterEdit() && !rename_.empty() && rename_ != preset_ && !doc.presets.contains(rename_)) {
 					auto node = doc.presets.extract(preset_);
 					node.key() = rename_;
@@ -505,7 +519,6 @@ namespace rdf::game::caston_editor
 					changed_ = true;
 					return;  // `list` belonged to the old node
 				}
-				FUCK::TextDisabledWrapped("%s", "$RDF_CO_PresetNote"_T);
 				DrawLiveHeader();
 				DrawConditionTable(list);
 				FUCK::Spacing();
@@ -522,15 +535,22 @@ namespace rdf::game::caston_editor
 				changed_ |= FUCK::Checkbox("$RDF_CO_Enabled"_T, &rule.enabled);
 				changed_ |= EnumCombo("$RDF_CO_Trigger"_T, rule.trigger, kTriggers, -1.0f);
 				changed_ |= FUCK::DragInt("$RDF_CO_Priority"_T, &rule.priority, 1.0f, -100000, 100000);
+				Tip("$RDF_CO_Priority_Tip"_T);
 				changed_ |= FUCK::Checkbox("$RDF_CO_Exclusive"_T, &rule.exclusive);
+				Tip("$RDF_CO_Exclusive_Tip"_T);
 				if (!rule.extends.empty()) {
-					FUCK::TextDisabledWrapped("%s %s", "$RDF_CO_FromTemplate"_T, rule.extends.c_str());
+					FUCK::TextDisabled("%s %s", "$RDF_CO_FromTemplate"_T, rule.extends.c_str());
+					Tip("$RDF_CO_FromTemplate_Tip"_T);
 				}
 
+				FUCK::HelpMarker("$RDF_CO_Conditions_Tip"_T);
+				FUCK::SameLine();
 				FUCK::SeparatorText("$RDF_CO_Conditions"_T);
 				DrawLiveHeader();
 				DrawConditionTable(rule.conditions);
 
+				FUCK::HelpMarker("$RDF_CO_CastsNote"_T);
+				FUCK::SameLine();
 				FUCK::SeparatorText("$RDF_CO_Casts"_T);
 				DrawCasts(rule.casts);
 
@@ -539,12 +559,16 @@ namespace rdf::game::caston_editor
 
 				FUCK::SeparatorText("$RDF_CO_Timing"_T);
 				changed_ |= FUCK::DragFloat("$RDF_CO_Delay"_T, &rule.timing.delay, 0.01f, 0.0f, 10.0f, "%.2f s");
+				Tip("$RDF_CO_Delay_Tip"_T);
 				changed_ |= Text("$RDF_CO_Tag"_T, rule.timing.tag, -1.0f);
+				Tip("$RDF_CO_Tag_Tip"_T);
 				changed_ |= FUCK::Checkbox("$RDF_CO_Annotation"_T, &rule.timing.annotation);
+				Tip("$RDF_CO_Annotation_Tip"_T);
 
 				FUCK::SeparatorText("$RDF_CO_Limits"_T);
 				changed_ |= FUCK::DragFloat("$RDF_CO_Cooldown"_T, &rule.limits.cooldown, 0.05f, 0.0f, 600.0f, "%.2f s");
 				changed_ |= FUCK::Checkbox("$RDF_CO_OncePerChain"_T, &rule.limits.oncePerChain);
+				Tip("$RDF_CO_OncePerChain_Tip"_T);
 				changed_ |= FUCK::DragFloat("$RDF_CO_Chance"_T, &rule.limits.chance, 0.5f, 0.0f, 100.0f, "%.0f");
 
 				if (const auto problems = Validate(rule); !problems.empty()) {
@@ -643,7 +667,18 @@ namespace rdf::game::caston_editor
 							FUCK::SetNextItemOpen(true, 1 /* Always */);
 							openList_ = nullptr;
 						}
-						const bool open = FUCK::TreeNode("##open", kNodeFlags);
+						LiveIcon(result);
+						FUCK::SameLine();
+						const auto summary = Summary(c);
+						const auto label = std::format("{}{}{}{}###open", c.negated ? "NOT " : "", Info(c.kind).name, summary.empty() ? "" : "     ", summary);
+						const bool colored = c.kind == ConditionKind::Preset || Info(c.kind).group;
+						if (colored) {
+							FUCK::PushStyleColor(0 /* Text */, c.kind == ConditionKind::Preset ? ImVec4(0.55f, 0.75f, 1.0f, 1.0f) : ImVec4(0.95f, 0.8f, 0.45f, 1.0f));
+						}
+						const bool open = FUCK::TreeNode(label.c_str(), kNodeFlags);
+						if (colored) {
+							FUCK::PopStyleColor();
+						}
 						if (FUCK::BeginPopupContextItem("##menu")) {
 							if (FUCK::Selectable(FUCK::IconText(ICON_FA_COPY, "$RDF_CO_Copy"_T))) {
 								clipboard_ = c;
@@ -661,21 +696,6 @@ namespace rdf::game::caston_editor
 								at = i;
 							}
 							FUCK::EndPopup();
-						}
-						FUCK::SameLine();
-						LiveIcon(result);
-						FUCK::SameLine();
-						const auto title = std::format("{}{}", c.negated ? "NOT " : "", Info(c.kind).name);
-						if (c.kind == ConditionKind::Preset) {
-							FUCK::TextColored(ImVec4(0.55f, 0.75f, 1.0f, 1.0f), "%s", title.c_str());
-						} else if (Info(c.kind).group) {
-							FUCK::TextColored(ImVec4(0.95f, 0.8f, 0.45f, 1.0f), "%s", title.c_str());
-						} else {
-							FUCK::Text("%s", title.c_str());
-						}
-						if (const auto summary = Summary(c); !summary.empty()) {
-							FUCK::SameLine(0.0f, 24.0f);
-							FUCK::TextDisabled("%s", summary.c_str());
 						}
 						++row;
 						if (open) {
@@ -720,6 +740,7 @@ namespace rdf::game::caston_editor
 			void DrawConditionBody(Condition& c, int i, int count, Op& op, int& at, int& row, const std::vector<std::int8_t>& live)
 			{
 				changed_ |= FUCK::Checkbox("$RDF_CO_Negate"_T, &c.negated);
+				Tip("$RDF_CO_Negate_Tip"_T);
 				int kind = static_cast<int>(c.kind);
 				if (FUCK::ComboWithFilter("$RDF_CO_ColKind"_T, &kind, KindNames().data(), static_cast<int>(KindNames().size()), 16)) {
 					c.kind = static_cast<ConditionKind>(kind);
@@ -729,7 +750,7 @@ namespace rdf::game::caston_editor
 					}
 					changed_ = true;
 				}
-				FUCK::TextDisabledWrapped("%s", Describe(c.kind));
+				Tip(Describe(c.kind));
 				if (HasSubject(c.kind)) {
 					changed_ |= EnumCombo("$RDF_CO_ColWho"_T, c.subject, kSubjects, -1.0f);
 				}
@@ -886,23 +907,33 @@ namespace rdf::game::caston_editor
 							FUCK::SetNextItemOpen(true, 1 /* Always */);
 							openCast_ = -1;
 						}
-						const bool open = FUCK::TreeNode("##open", kNodeFlags);
-						FUCK::SameLine();
 						const auto r = forms::Peek(cast.spell, RE::FormType::Spell);
-						const auto name = cast.spell.empty() ? std::string("$RDF_CO_NoSpell"_T) : cast.spell;
-						FUCK::TextColored(r.status == forms::Status::Found ? ImVec4(0.85f, 0.85f, 0.85f, 1.0f) : ImVec4(1.0f, 0.55f, 0.35f, 1.0f), "%s %s",
-							ICON_FA_WAND_MAGIC_SPARKLES, name.c_str());
-						FUCK::SameLine(0.0f, 24.0f);
-						FUCK::TextDisabled("%s > %s%s", kSubjects[static_cast<int>(cast.caster)], kTargets[static_cast<int>(cast.target)],
-							cast.effectiveness != 1.0f ? std::format("  x{:g}", cast.effectiveness).c_str() : "");
+						const bool found = r.status == forms::Status::Found;
+						auto       spell = cast.spell.empty() ? std::string("$RDF_CO_NoSpell"_T) : cast.spell;
+						if (found) {
+							spell = r.detail.substr(0, r.detail.find(" ["));  // "EditorID / name"
+						}
+						const auto label = std::format("{} {}     {} > {}{}###open", ICON_FA_WAND_MAGIC_SPARKLES, spell,
+							kSubjects[static_cast<int>(cast.caster)], kTargets[static_cast<int>(cast.target)],
+							cast.effectiveness != 1.0f ? std::format("  x{:g}", cast.effectiveness) : std::string());
+						if (!found) {
+							FUCK::PushStyleColor(0 /* Text */, ImVec4(1.0f, 0.55f, 0.35f, 1.0f));
+						}
+						const bool open = FUCK::TreeNode(label.c_str(), kNodeFlags);
+						if (!found) {
+							FUCK::PopStyleColor();
+						}
 						if (open) {
 							changed_ |= menu::FormInput("$RDF_CO_ColSpell"_T, cast.spell, RE::FormType::Spell);
 							changed_ |= EnumCombo("$RDF_CO_ColCaster"_T, cast.caster, kSubjects, -1.0f);
 							changed_ |= EnumCombo("$RDF_CO_ColTarget"_T, cast.target, kTargets, -1.0f);
 							changed_ |= FUCK::DragFloat("$RDF_CO_Effectiveness"_T, &cast.effectiveness, 0.01f, 0.0f, 100.0f, "%.2f");
 							changed_ |= FUCK::DragFloat("$RDF_CO_Magnitude"_T, &cast.magnitude, 0.5f, 0.0f, 100000.0f, "%.1f");
+							Tip("$RDF_CO_Magnitude_Tip"_T);
 							changed_ |= FUCK::DragFloat("$RDF_CO_Duration"_T, &cast.duration, 0.05f, 0.05f, 60.0f, "%.2f s");
+							Tip("$RDF_CO_Duration_Tip"_T);
 							changed_ |= FUCK::Checkbox("$RDF_CO_NoArt"_T, &cast.noHitEffectArt);
+							Tip("$RDF_CO_NoArt_Tip"_T);
 							if (FUCK::Button(FUCK::IconText(ICON_FA_TRASH, "$RDF_CO_DeleteCast"_T))) {
 								remove = i;
 							}
@@ -921,16 +952,18 @@ namespace rdf::game::caston_editor
 					openCast_ = static_cast<int>(casts.size()) - 1;
 					changed_ = true;
 				}
-				FUCK::TextDisabledWrapped("%s", "$RDF_CO_CastsNote"_T);
 			}
 
 			void DrawCost(Cost& cost)
 			{
 				changed_ |= EnumCombo("$RDF_CO_Mode"_T, cost.mode, kCostModes, -1.0f);
+				Tip("$RDF_CO_Mode_Tip"_T);
 				switch (cost.mode) {
 				case CostMode::Engine:
 					changed_ |= FUCK::Checkbox("$RDF_CO_DualCast"_T, &cost.dualCast);
+					Tip("$RDF_CO_DualCast_Tip"_T);
 					changed_ |= FUCK::Checkbox("$RDF_CO_RealCast"_T, &cost.realCast);
+					Tip("$RDF_CO_RealCast_Tip"_T);
 					break;
 				case CostMode::Custom:
 					changed_ |= EnumCombo("$RDF_CO_Value"_T, cost.value, kCostValues, -1.0f);
@@ -944,7 +977,9 @@ namespace rdf::game::caston_editor
 				}
 				if (cost.mode != CostMode::Free) {
 					changed_ |= EnumCombo("$RDF_CO_Shortfall"_T, cost.shortfall, kShortfalls, -1.0f);
+					Tip("$RDF_CO_Shortfall_Tip"_T);
 					changed_ |= FUCK::Checkbox("$RDF_CO_Feedback"_T, &cost.feedback);
+					Tip("$RDF_CO_Feedback_Tip"_T);
 				}
 			}
 
@@ -966,7 +1001,7 @@ namespace rdf::game::caston_editor
 			const std::vector<Condition>*  openList_{ nullptr };                  // a node just added opens
 			std::size_t                    openIndex_{ 0 };
 			int                            openCast_{ -1 };
-			static constexpr int           kNodeFlags = (1 << 2) | (1 << 10) | (1 << 11);  // AllowOverlap | FramePadding | SpanAvailWidth
+			static constexpr int           kNodeFlags = (1 << 10) | (1 << 11);  // FramePadding | SpanAvailWidth
 		};
 
 		Editor& Window()
