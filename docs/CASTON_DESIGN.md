@@ -123,8 +123,14 @@ With `bDevLog` on, the dev log records the evaluation time per trigger. Target: 
 
 On refusal, the player optionally gets the HUD meter flash and the fail sound.
 
-Concentration spells cast through the instant caster fire once (the engine's behaviour), noted in the menu. Constant
-effects (abilities) are refused.
+Constant effects (abilities) are refused. So are concentration spells, for now. `CastSpellImmediate` leaves the instant
+caster in state 6 with the spell, and nothing releases it:
+- `Character::Update` (0x140632E50) updates all four casters every frame;
+- `ActorMagicCaster::Update` (0x140541FC0) keeps a concentration spell going (`sub_14054C1A0`) and drains its cost per
+  second.
+
+Supporting them needs a duration after which CastOn interrupts the instant caster, and a decision on that per-second
+drain (Free mode would still pay it unless the caster's skip-cost flag is set). Checked in IDA 2026-10-24.
 
 ## 5. Timing and annotations
 

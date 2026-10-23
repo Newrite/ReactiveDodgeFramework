@@ -653,6 +653,11 @@ namespace rdf::game::caston
 					auto* spell = form ? form->As<RE::MagicItem>() : nullptr;
 					if (spell && spell->GetCastingType() == RE::MagicSystem::CastingType::kConstantEffect) {
 						error = std::format("{} is a constant effect (an ability): it cannot be cast", cast.spell);
+					} else if (spell && spell->GetCastingType() == RE::MagicSystem::CastingType::kConcentration) {
+						// CastSpellImmediate leaves the instant caster casting it (state 6) and nothing releases it: Character::Update
+						// (0x140632E50) updates all four casters every frame and ActorMagicCaster::Update keeps a concentration spell
+						// going, draining its cost per second. Refused until CastOn can stop it (a duration).
+						error = std::format("{} is a concentration spell: not supported yet (it would never stop)", cast.spell);
 					} else if (spell) {
 						c.casts.push_back({ spell, cast.caster, cast.target, cast.effectiveness, cast.magnitude, cast.noHitEffectArt });
 					}
