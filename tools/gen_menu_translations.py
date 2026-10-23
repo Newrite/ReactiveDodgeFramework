@@ -418,6 +418,8 @@ T = {
     "CO_ArgRef": ('Dodger, Attacker, CombatTarget, or a placed reference Plugin.esp|0xID.', 'Dodger, Attacker, CombatTarget или размещённый референс Plugin.esp|0xID.'),
     "CO_ArgRefFirst": ('Dodger, Attacker, CombatTarget, or a placed reference Plugin.esp|0xID. Empty: the other participant (for the dodger: the attacker).', 'Dodger, Attacker, CombatTarget или размещённый референс Plugin.esp|0xID. Пусто: другой участник (для доджера: атакующий).'),
     "CO_ArgNumber": ('A number.', 'Число.'),
+    "CO_Reading": ('Magnitude', 'Магнитуда'),
+    "CO_Reading_Tip": ("Authored: the number the spell gives (perks and taper applied), with the author's sign. Applied: what the effect does to its value, so a Detrimental effect counts negative; a value modifier without Recover is a rate per second.", 'Authored: число из заклинания (с перками и затуханием) со знаком автора. Applied: как эффект действует на значение, Detrimental считается отрицательным; модификатор без Recover: скорость в секунду.'),
     "CO_Comment": ('Comment', 'Комментарий'),
     "CO_Comment_Tip": ('A note for people, shown on the line of the condition.', 'Заметка для людей, видна в строке условия.'),
     "CO_Delay_Tip": ("Seconds after the trigger; past the dodge's end it fires at the end.", 'Секунды после триггера; если дольше доджа, срабатывает в его конце.'),

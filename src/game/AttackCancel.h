@@ -22,10 +22,6 @@ namespace rdf::game::attack
 	// The keyword walk itself (CastOn conditions): the actor, its race, a worn item or an active magic effect.
 	// `inactiveEffects`: also effects their spell's conditions switched off, and dispelled ones (the engine's way).
 	bool ActorHasKeyword(RE::Actor* actor, RE::BGSKeyword* keyword, bool inactiveEffects = false);
-	// The summed magnitudes of the actor's active effects with the keyword; nullopt when it has none.
-	std::optional<float> EffectMagnitudes(RE::Actor* actor, RE::BGSKeyword* keyword, bool inactiveEffects = false);
-	// The same for one base effect.
-	std::optional<float> EffectMagnitudes(RE::Actor* actor, const RE::EffectSetting* effect, bool inactiveEffects = false);
 
 	// [Casting] keywords (same sources): a dodge keeps the actor's bow draw / its cast going.
 	bool DrawDuringDodge(RE::Actor* actor);

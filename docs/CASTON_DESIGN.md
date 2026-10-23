@@ -371,3 +371,52 @@ effects flagged kInactive.
   parameter gets a box by its kind: a form picker, a list for X / Y / Z or sex, or text with a hint. Effect conditions
   get an "Inactive effects too" tick.
 - Example: the preset `Seasoned` in RDF_Examples.json (Vanilla GetLevel >= 10).
+
+## 15. Magic effects, read one way (2026-10-24)
+
+**The engine (IDA, SE 1.5.97).**
+- Inactive and dispelled effects stay in the list.
+  - An effect whose spell's conditions fail keeps ActiveEffect flag kInactive (0x8000 at +0x7C), set by vfunc 5
+    (0x14053E636).
+  - A dispelled one keeps kDispelled (0x40000).
+  - The engine's HasMagicEffect counts both (section 14).
+- `ActiveEffect::GetMagnitude` (33282 = 0x14053E120) is the magnitude now.
+  - With the ActiveEffect flag 0x200 (the effect recovers), it is the magnitude as cast.
+  - Otherwise it is tapered by the base effect's taper weight, curve and duration over the time left (none when the
+    base effect has NoDuration or NoMagnitude, 0x600). So it changes while the effect runs.
+- `ValueModifierEffect::OnAdd` (0x140567470) negates the stored magnitude when the base effect is Detrimental (bit 2),
+  XOR the actor value's inverted flag. Other archetypes keep the sign as cast.
+- A value modifier with Recover changes its value once on start and gives it back on finish:
+  - ShouldModifyOnStart (vfunc 1A, 0x140567590) and ShouldModifyOnFinish (vfunc 1E, 0x140567860) both follow Recover;
+  - ModifyActorValue (vfunc 20, 0x140567A80) applies it as modifier 1 with Recover, 2 without.
+- Without Recover, a value modifier with a duration, a concentration spell or an ability changes the value every update
+  (vfunc 1C, 0x140567730): its magnitude is a rate per second.
+- ModifyOnStart (vfunc 1B) also rewrites the stored magnitude of a damaging one to what the value could lose.
+
+**`game/MagicEffects`** is the one place that walks an actor's effects; every other place calls it.
+- `Counts`: active and not dispelled, unless `inactive` asks for the engine's view.
+- `MagnitudeOf(effect, Reading)` starts from |GetMagnitude()|:
+  - **Authored** gives it the sign of the spell's effect item (the number as the author wrote it, with perks and taper,
+    undoing the value modifier's flip);
+  - **Applied** makes it negative when the base effect is Detrimental, whatever its archetype. A value modifier without
+    Recover stays a per-second rate; this is documented, not converted.
+- `Any(actor, {keyword | effect, inactive})` and `Query(...)` give count, total, lowest and highest.
+
+**Callers.**
+
+| Caller | What it uses |
+| --- | --- |
+| Keyword checks: actor, race, worn items, then effects (AttackCancel: no-dodge, any-time, stagger rules, keep draw / cast; CastOn HasKeyword) | `Any` |
+| sDelayKeyword | the lowest **Authored** magnitude |
+| sEscapeCostKeyword | the **Authored** total |
+| CastOn HasEffectKeyword / HasMagicEffect | `inactiveEffects`, and `reading`: Authored by default, Applied on request, shown when there is a comparison |
+| Vanilla HasMagicEffect / HasMagicEffectKeyword | `Any` |
+
+A detrimental "+2 s" delay effect therefore stays +2 s, where the raw magnitude would have read -2.
+
+**When this runs.** Nothing evaluates every frame while the menu is closed.
+- CastOn conditions run on a trigger only (`Scheduler::OnTrigger`: a dodge start, a perfect dodge).
+- The editor's live results run only while its window draws (`PollLive`, at most every 0.25 s, as an SKSE task);
+  closing the window clears the watch.
+- The per-frame CastOn work is the pending-cast queue and the concentration channels; neither evaluates conditions.
+- DodgeAgent's keyword walks run only while a dodge press waits in the buffer (or at the dodge's start).

@@ -590,3 +590,10 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   engine's HasMagicEffect counts effects switched off by their spell's conditions (no flag check, IDA), so CastOn answers
   HasMagicEffect[Keyword] itself. A new "inactiveEffects" key (default off, OAR's "active only") covers every effect
   check. The editor has a function picker and a box per parameter. 97 tests; built and deployed; not run in game.
+* Magic effects read one way (2026-10-24; docs/CASTON_DESIGN.md 15). game/MagicEffects is the only effect walk:
+  inactive and dispelled effects do not count unless asked. A magnitude is either Authored (the spell's number with the
+  author's sign, taper and perks applied) or Applied (Detrimental negative). This was verified in IDA:
+  GetMagnitude tapers non-recovering effects, ValueModifierEffect::OnAdd negates detrimental ones, and without Recover
+  the magnitude is a per-second rate. The stagger delay and escape-cost keywords read Authored, so a detrimental effect
+  no longer flips their sign. CastOn effect conditions gained "reading". Checked: nothing evaluates per frame with the
+  menu closed. 98 tests, deployed.

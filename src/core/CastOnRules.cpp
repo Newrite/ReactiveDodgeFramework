@@ -61,6 +61,12 @@ struct glz::meta<rdf::caston::ValueMode>
 	static constexpr auto value = glz::enumerate(Current, Max, Percent, Base);
 };
 template <>
+struct glz::meta<rdf::caston::Reading>
+{
+	using enum rdf::caston::Reading;
+	static constexpr auto value = glz::enumerate(Authored, Applied);
+};
+template <>
 struct glz::meta<rdf::caston::ConditionKind>
 {
 	using enum rdf::caston::ConditionKind;
@@ -102,6 +108,7 @@ struct glz::json_schema<rdf::caston::Condition>
 	schema compare{ .description = "None, Eq, Ne, Lt, Le, Gt, Ge (against 'value')." };
 	schema args{ .description = "Vanilla: the function's parameters as text: a form (\"Plugin.esp|0xID\" or an EditorID), a number, an actor value name, or Dodger / Attacker / CombatTarget for a reference." };
 	schema inactiveEffects{ .description = "Also count magic effects switched off by their spell's conditions, or dispelled (the engine's own functions do)." };
+	schema reading{ .description = "Effect magnitudes: Authored (as the spell gives it, the author's sign) or Applied (what it does to its value: Detrimental subtracts)." };
 	schema disabled{ .description = "Switched off: the condition (a group with all inside) is as if not written." };
 	schema comment{ .description = "A note for people; the editor shows it on the condition." };
 };

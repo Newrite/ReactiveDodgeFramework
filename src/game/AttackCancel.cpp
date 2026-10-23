@@ -1,6 +1,7 @@
 #include "AttackCancel.h"
 
 #include "Forms.h"
+#include "MagicEffects.h"
 #include "Settings.h"
 
 namespace rdf::game::attack
@@ -31,14 +32,6 @@ namespace rdf::game::attack
 			const RE::BGSKeyword* keyword_;
 		};
 
-		// An effect that counts: active and not dispelled (kInactive: its spell's conditions switched it off), unless
-		// `inactive` asks for every effect as the engine's own condition functions see them.
-		bool Counts(RE::ActiveEffect* effect, bool inactive)
-		{
-			return effect && effect->GetBaseObject() &&
-			       (inactive || !effect->flags.any(RE::ActiveEffect::Flag::kInactive, RE::ActiveEffect::Flag::kDispelled));
-		}
-
 		bool HasKeyword(RE::Actor* actor, RE::BGSKeyword* keyword, bool inactive = false)
 		{
 			if (actor->HasKeyword(keyword)) {
@@ -54,65 +47,13 @@ namespace rdf::game::attack
 					return true;
 				}
 			}
-			// The engine's own active-effect walk (MagicTarget::VisitEffects): the same on SE, AE and VR.
-			bool found = false;
-			if (auto* target = actor->AsMagicTarget()) {
-				target->VisitActiveEffects([&](RE::ActiveEffect* effect) {
-					if (Counts(effect, inactive) && effect->GetBaseObject()->HasKeyword(keyword)) {
-						found = true;
-						return RE::BSContainer::ForEachResult::kStop;
-					}
-					return RE::BSContainer::ForEachResult::kContinue;
-				});
-			}
-			return found;
-		}
-
-		// The actor's magic effects that count (Counts) and match: a base effect with the keyword, or that base effect.
-		template <class Match, class F>
-		void ForEffects(RE::Actor* actor, bool inactive, Match&& match, F&& f)
-		{
-			auto* target = actor ? actor->AsMagicTarget() : nullptr;
-			if (!target) {
-				return;
-			}
-			target->VisitActiveEffects([&](RE::ActiveEffect* effect) {
-				if (Counts(effect, inactive) && match(effect->GetBaseObject())) {
-					f(effect->GetMagnitude());
-				}
-				return RE::BSContainer::ForEachResult::kContinue;
-			});
-		}
-
-		template <class F>
-		void ForEffectsWith(RE::Actor* actor, RE::BGSKeyword* keyword, F&& f, bool inactive = false)
-		{
-			if (keyword) {
-				ForEffects(actor, inactive, [&](const RE::EffectSetting* base) { return base->HasKeyword(keyword); }, f);
-			}
+			return magic::Any(actor, { .keyword = keyword, .inactive = inactive });  // effects that count (MagicEffects.h)
 		}
 	}
 
 	bool ActorHasKeyword(RE::Actor* actor, RE::BGSKeyword* keyword, bool inactiveEffects)
 	{
 		return actor && keyword && HasKeyword(actor, keyword, inactiveEffects);
-	}
-
-	std::optional<float> EffectMagnitudes(RE::Actor* actor, RE::BGSKeyword* keyword, bool inactiveEffects)
-	{
-		std::optional<float> sum;
-		ForEffectsWith(actor, keyword, [&](float magnitude) { sum = sum.value_or(0.0f) + magnitude; }, inactiveEffects);
-		return sum;
-	}
-
-	std::optional<float> EffectMagnitudes(RE::Actor* actor, const RE::EffectSetting* effect, bool inactiveEffects)
-	{
-		std::optional<float> sum;
-		if (effect) {
-			ForEffects(actor, inactiveEffects, [&](const RE::EffectSetting* base) { return base == effect; },
-				[&](float magnitude) { sum = sum.value_or(0.0f) + magnitude; });
-		}
-		return sum;
 	}
 
 	bool AnyTime(RE::Actor* actor, bool power)
@@ -140,20 +81,16 @@ namespace rdf::game::attack
 		return keyword && actor && HasKeyword(actor, keyword);
 	}
 
+	// Both carry a number: read as the spell gives it (Authored), so a detrimental effect does not flip its sign.
 	std::optional<float> StaggerDelayOverride(RE::Actor* actor)
 	{
-		std::optional<float> lowest;
-		ForEffectsWith(actor, forms::Get<RE::BGSKeyword>(Settings::Get().stagger.delayKeyword), [&](float magnitude) {
-			lowest = lowest ? std::min(*lowest, magnitude) : magnitude;
-		});
-		return lowest;
+		const auto sum = magic::Query(actor, { .keyword = forms::Get<RE::BGSKeyword>(Settings::Get().stagger.delayKeyword) }, magic::Reading::Authored);
+		return sum.count ? std::optional<float>(sum.lowest) : std::nullopt;
 	}
 
 	float StaggerEscapeCostBonus(RE::Actor* actor)
 	{
-		float sum = 0.0f;
-		ForEffectsWith(actor, forms::Get<RE::BGSKeyword>(Settings::Get().stagger.escapeCostKeyword), [&](float magnitude) { sum += magnitude; });
-		return sum;
+		return magic::Query(actor, { .keyword = forms::Get<RE::BGSKeyword>(Settings::Get().stagger.escapeCostKeyword) }, magic::Reading::Authored).total;
 	}
 
 	bool DrawDuringDodge(RE::Actor* actor)

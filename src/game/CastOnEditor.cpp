@@ -913,6 +913,11 @@ namespace rdf::game::caston_editor
 					changed_ |= FUCK::Checkbox("$RDF_CO_InactiveEffects"_T, &c.inactiveEffects);
 					Tip("$RDF_CO_InactiveEffects_Tip"_T);
 				}
+				if ((c.kind == ConditionKind::HasEffectKeyword || c.kind == ConditionKind::HasMagicEffect) && c.compare != Compare::None) {
+					static constexpr const char* kReadings[]{ "Authored", "Applied" };
+					changed_ |= EnumCombo("$RDF_CO_Reading"_T, c.reading, kReadings, -1.0f);
+					Tip("$RDF_CO_Reading_Tip"_T);
+				}
 			}
 
 			// The game's condition functions (only those whose parameters CastOn can write), for the filtered list.
@@ -1085,6 +1090,9 @@ namespace rdf::game::caston_editor
 				}
 				if (info.effects && c.inactiveEffects) {
 					add("+inactive");
+				}
+				if (c.reading == Reading::Applied && info.compare && c.compare != Compare::None && c.kind != ConditionKind::Vanilla) {
+					add("applied");
 				}
 				return out;
 			}

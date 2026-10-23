@@ -81,6 +81,13 @@ namespace rdf::caston
 		Base,
 	};
 
+	// How an effect condition reads a magnitude (game/MagicEffects.h).
+	enum class Reading
+	{
+		Authored,  // the number the spell gives, with the author's sign (a detrimental effect does not flip it)
+		Applied,   // what the effect does to its value: a Detrimental effect subtracts
+	};
+
 	enum class ConditionKind
 	{
 		And,
@@ -130,6 +137,7 @@ namespace rdf::caston
 		// Effects (HasKeyword's effect part, HasEffectKeyword, HasMagicEffect, Vanilla HasMagicEffect[Keyword]): also count
 		// effects switched off by their spell's conditions or dispelled. The engine's own functions do; by default we do not.
 		bool                   inactiveEffects{ false };
+		Reading                reading{ Reading::Authored };  // HasEffectKeyword / HasMagicEffect with a comparison
 		bool                   disabled{ false };  // switched off for now: as if not written (OAR's way)
 		std::string            comment;            // the author's note, shown on the editor's node
 	};

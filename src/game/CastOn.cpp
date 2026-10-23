@@ -3,6 +3,7 @@
 #include "AttackCancel.h"
 #include "Diagnostics.h"
 #include "Forms.h"
+#include "MagicEffects.h"
 #include "Settings.h"
 #include "VanillaConditions.h"
 
@@ -78,6 +79,7 @@ namespace rdf::game::caston
 			float          value{ 0.0f };
 			Hand           hand{ Hand::Either };
 			bool           inactiveEffects{ false };
+			magic::Reading reading{ magic::Reading::Authored };
 			// Vanilla: the function, its stored parameters, and the parameters that name a participant (filled in per check)
 			const vanilla::Function* function{ nullptr };
 			void*                    params[2]{ nullptr, nullptr };
@@ -434,6 +436,7 @@ namespace rdf::game::caston
 				out.value = c.value;
 				out.hand = c.hand;
 				out.inactiveEffects = c.inactiveEffects;
+				out.reading = c.reading == Reading::Applied ? magic::Reading::Applied : magic::Reading::Authored;
 				out.cost = CostOf(c.kind);
 				if (Info(c.kind).group) {
 					// children contiguous: reserve the block, then compile each into it (grandchildren go after)
@@ -681,13 +684,13 @@ namespace rdf::game::caston
 			case vanilla::kHasMagicEffect:
 				{
 					const auto* effect = formOf(0) ? formOf(0)->As<RE::EffectSetting>() : nullptr;
-					result = effect && attack::EffectMagnitudes(actor, effect, n.inactiveEffects) ? 1.0 : 0.0;
+					result = effect && magic::Any(actor, { .effect = effect, .inactive = n.inactiveEffects }) ? 1.0 : 0.0;
 					return true;
 				}
 			case vanilla::kHasMagicEffectKeyword:
 				{
-					auto* keyword = formOf(0) ? formOf(0)->As<RE::BGSKeyword>() : nullptr;
-					result = keyword && attack::EffectMagnitudes(actor, keyword, n.inactiveEffects) ? 1.0 : 0.0;
+					const auto* keyword = formOf(0) ? formOf(0)->As<RE::BGSKeyword>() : nullptr;
+					result = keyword && magic::Any(actor, { .keyword = keyword, .inactive = n.inactiveEffects }) ? 1.0 : 0.0;
 					return true;
 				}
 			default:
@@ -704,13 +707,13 @@ namespace rdf::game::caston
 			case ConditionKind::HasKeyword: return memo.Has(actor, n.form->As<RE::BGSKeyword>(), n.inactiveEffects);
 			case ConditionKind::HasEffectKeyword:
 				{
-					const auto sum = attack::EffectMagnitudes(actor, n.form->As<RE::BGSKeyword>(), n.inactiveEffects);
-					return sum && Holds(n.compare, *sum, n.value);
+					const auto sum = magic::Query(actor, { .keyword = n.form->As<RE::BGSKeyword>(), .inactive = n.inactiveEffects }, n.reading);
+					return sum.count > 0 && Holds(n.compare, sum.total, n.value);
 				}
 			case ConditionKind::HasMagicEffect:
 				{
-					const auto sum = attack::EffectMagnitudes(actor, n.form->As<RE::EffectSetting>(), n.inactiveEffects);
-					return sum && Holds(n.compare, *sum, n.value);
+					const auto sum = magic::Query(actor, { .effect = n.form->As<RE::EffectSetting>(), .inactive = n.inactiveEffects }, n.reading);
+					return sum.count > 0 && Holds(n.compare, sum.total, n.value);
 				}
 			case ConditionKind::Vanilla:
 				{

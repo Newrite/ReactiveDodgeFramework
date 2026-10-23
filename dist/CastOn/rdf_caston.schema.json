@@ -166,6 +166,10 @@
                "$ref": "#/$defs/bool",
                "description": "The opposite. A condition on a participant that is absent fails, negated or not."
             },
+            "reading": {
+               "$ref": "#/$defs/rdf::caston::Reading",
+               "description": "Effect magnitudes: Authored (as the spell gives it, the author's sign) or Applied (what it does to its value: Detrimental subtracts)."
+            },
             "subject": {
                "$ref": "#/$defs/rdf::caston::Subject",
                "description": "Whose: Dodger, Attacker (PerfectDodge only), CombatTarget."
@@ -402,6 +406,21 @@
             }
          },
          "additionalProperties": false
+      },
+      "rdf::caston::Reading": {
+         "type": [
+            "string"
+         ],
+         "oneOf": [
+            {
+               "title": "Authored",
+               "const": "Authored"
+            },
+            {
+               "title": "Applied",
+               "const": "Applied"
+            }
+         ]
       },
       "rdf::caston::Rule": {
          "type": [

@@ -322,3 +322,14 @@ TEST(caston_vanilla_and_magic_effect_conditions)
 	CHECK(bad.rules.empty());
 	CHECK(bad.errors.size() == 3);  // no function, three args, no form
 }
+
+TEST(caston_effect_reading_round_trips)
+{
+	const auto r = ParseRules(R"({ "rules": [ { "name": "r", "casts": [ { "spell": "X" } ], "conditions": [
+		{ "kind": "HasEffectKeyword", "form": "K", "compare": "Gt", "value": 10, "reading": "Applied" } ] } ] })");
+	CHECK(r.errors.empty() && r.rules.size() == 1);
+	CHECK(r.rules[0].conditions[0].reading == Reading::Applied);
+	const auto again = ParseRules(WriteRules(r.rules));
+	CHECK(again.rules.size() == 1 && again.rules[0].conditions[0].reading == Reading::Applied);
+	CHECK(ParseRules(R"({ "rules": [ { "name": "r", "casts": [ { "spell": "X" } ], "conditions": [ { "kind": "InCombat" } ] } ] })").rules[0].conditions[0].reading == Reading::Authored);
+}
