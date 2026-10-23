@@ -124,6 +124,7 @@ namespace rdf::game::caston
 			RE::ObjectRefHandle caster;
 			RE::MagicItem*      spell{ nullptr };
 			float               left{ 0.0f };                      // game seconds
+			float               duration{ 0.0f };
 			RE::ActorValue      drained{ RE::ActorValue::kNone };  // Engine: the value the engine drains; stops at 0
 			std::string         rule;
 		};
@@ -133,7 +134,7 @@ namespace rdf::game::caston
 		{
 			const auto handle = caster->GetHandle();
 			std::erase_if(g_channels, [&](const Channel& c) { return c.caster == handle; });  // its instant caster now casts this
-			g_channels.push_back({ handle, spell, duration, drained, rule });
+			g_channels.push_back({ handle, spell, duration, duration, drained, rule });
 		}
 
 		std::mt19937& Rng()
@@ -640,6 +641,8 @@ namespace rdf::game::caston
 						magicCaster->SetSkipCheckCast();
 					}
 					StartChannel(caster, cast.spell, cast.duration, drained, rule.name);
+					DevLog("CastOn '{}': instant caster after the cast: holds {:08X}, state {}", rule.name,
+						magicCaster->currentSpell ? magicCaster->currentSpell->GetFormID() : 0u, static_cast<int>(magicCaster->state.underlying()));
 				}
 				if (rule.cost.mode == CostMode::Engine && rule.cost.realCast) {
 					// what SpellCast does besides paying (0x140542470): the effects a cast breaks, then the cast event
@@ -731,8 +734,15 @@ namespace rdf::game::caston
 			const auto ref = c.caster.get();
 			auto*      actor = ref ? ref->As<RE::Actor>() : nullptr;
 			auto*      magicCaster = actor ? actor->GetMagicCaster(RE::MagicSystem::CastingSource::kInstant) : nullptr;
-			if (!actor || actor->IsDead() || !magicCaster || magicCaster->currentSpell != c.spell) {
-				return true;  // gone, or its instant caster went on to something else: not ours to stop
+			if (!actor || actor->IsDead() || !magicCaster) {
+				DevLog("CastOn '{}': concentration {:08X} forgotten: its caster is gone or dead", c.rule, c.spell->GetFormID());
+				return true;
+			}
+			if (magicCaster->currentSpell != c.spell) {  // its instant caster went on to something else: not ours to stop
+				DevLog("CastOn '{}': {:08X} concentration {:08X} forgotten after {:.2f}s: the instant caster now holds {:08X} (state {})",
+					c.rule, actor->GetFormID(), c.spell->GetFormID(), c.duration - c.left,
+					magicCaster->currentSpell ? magicCaster->currentSpell->GetFormID() : 0u, static_cast<int>(magicCaster->state.underlying()));
+				return true;
 			}
 			c.left -= dt;
 			const bool spent = c.drained != RE::ActorValue::kNone && actor->AsActorValueOwner()->GetActorValue(c.drained) <= 0.0f;
