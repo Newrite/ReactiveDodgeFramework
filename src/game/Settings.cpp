@@ -256,6 +256,13 @@ namespace rdf::game
 			g.oneHand = ReadBool("Graph", "bOneHandDodge", g.oneHand);
 			g.start1H = ReadString("Graph", "sEventStart1H", g.start1H);
 			g.startB1H = ReadString("Graph", "sEventStartB1H", g.startB1H);
+			g.startBow = ReadString("Graph", "sEventStartBow", g.startBow);
+			g.startBowB = ReadString("Graph", "sEventStartBowB", g.startBowB);
+			g.exitBow = ReadString("Graph", "sEventExitBow", g.exitBow);
+			g.startMagic = ReadString("Graph", "sEventStartMagic", g.startMagic);
+			g.startMagicB = ReadString("Graph", "sEventStartMagicB", g.startMagicB);
+			g.exitMagic = ReadString("Graph", "sEventExitMagic", g.exitMagic);
+			g.layer = ReadString("Graph", "sVarDodgeLayer", g.layer);
 			g.holdEvents = Split(ReadString("Graph", "sHoldEvents", Join(g.holdEvents)));
 			g.entered = ReadString("Graph", "sEventEntered", g.entered);
 			g.left = ReadString("Graph", "sEventLeft", g.left);
@@ -340,6 +347,9 @@ namespace rdf::game
 			st.escapeCost = ReadFloat("Stagger", "fEscapeCost", st.escapeCost, 0.0f, 1000.0f);
 			st.escapeCostKeyword = ReadString("Stagger", "sEscapeCostKeyword", st.escapeCostKeyword);
 		}
+		s.casting.drawKeyword = ReadString("Casting", "sDrawDuringDodgeKeyword", s.casting.drawKeyword);
+		s.casting.castKeyword = ReadString("Casting", "sCastDuringDodgeKeyword", s.casting.castKeyword);
+		s.casting.castingVariables = Split(ReadString("Casting", "sCastingVariables", Join(s.casting.castingVariables)));
 		s.suppressLegacyDodge = ReadBool("Compat", "bSuppressLegacyDodge", s.suppressLegacyDodge);
 		s.useTrueDirectionalMovement = ReadBool("Compat", "bUseTrueDirectionalMovement", s.useTrueDirectionalMovement);
 		s.usePrecision = ReadBool("Compat", "bUsePrecision", s.usePrecision);

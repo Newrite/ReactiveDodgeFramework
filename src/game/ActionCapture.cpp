@@ -61,6 +61,9 @@ namespace rdf::game::capture
 		std::mutex                                   g_lock;
 		std::unordered_set<std::uint32_t>            g_capturing;
 		std::unordered_map<std::uint32_t, ActorState> g_actors;
+		// [Casting] actors whose dodge keeps a draw / a cast going: their release actions wait for the dodge's end.
+		std::unordered_set<std::uint32_t>                                g_holdingReleases;
+		std::unordered_map<std::uint32_t, std::vector<RE::BGSAction*>> g_releases;  // held, in order, each action once
 
 		RE::BGSAction* DefaultAction(RE::DEFAULT_OBJECT object)
 		{
@@ -250,6 +253,18 @@ namespace rdf::game::capture
 			const auto id = actor->GetFormID();
 			{
 				std::scoped_lock lock(g_lock);
+				if (data->action && g_holdingReleases.contains(id)) {
+					using D = RE::DEFAULT_OBJECT;
+					static const std::array<RE::BGSAction*, 3> releases{ DefaultAction(D::kActionRightRelease),
+						DefaultAction(D::kActionLeftRelease), DefaultAction(D::kActionDualRelease) };
+					if (std::find(releases.begin(), releases.end(), data->action) != releases.end()) {
+						auto& held = g_releases[id];
+						if (std::find(held.begin(), held.end(), data->action) == held.end()) {
+							held.push_back(data->action);
+						}
+						return true;
+					}
+				}
 				if (!g_capturing.contains(id)) {
 					return false;
 				}
@@ -381,11 +396,50 @@ namespace rdf::game::capture
 		return ok;
 	}
 
+	void SetHoldingReleases(std::uint32_t formID, bool on)
+	{
+		std::scoped_lock lock(g_lock);
+		if (on) {
+			g_holdingReleases.insert(formID);
+		} else {
+			g_holdingReleases.erase(formID);
+		}
+	}
+
+	int ReplayReleases(RE::Actor* actor)
+	{
+		if (!actor) {
+			return 0;
+		}
+		std::vector<RE::BGSAction*> held;
+		{
+			std::scoped_lock lock(g_lock);
+			if (const auto it = g_releases.find(actor->GetFormID()); it != g_releases.end()) {
+				held = std::exchange(it->second, {});
+			}
+		}
+		int count = 0;
+		for (auto* action : held) {
+			const std::unique_ptr<RE::TESActionData> data(RE::TESActionData::Create());
+			data->source = RE::NiPointer<RE::TESObjectREFR>(actor);
+			data->action = action;
+			g_replaying = true;
+			const bool ok = data->Process();
+			g_replaying = false;
+			count += ok ? 1 : 0;
+			DevLog("{:08X}: replayed the release held by the dodge (action {:08X}): {}", actor->GetFormID(), action->GetFormID(),
+				ok ? "accepted" : "refused");
+		}
+		return count;
+	}
+
 	void Forget(std::uint32_t formID)
 	{
 		std::scoped_lock lock(g_lock);
 		g_capturing.erase(formID);
 		g_actors.erase(formID);
+		g_holdingReleases.erase(formID);
+		g_releases.erase(formID);
 	}
 
 	void Clear()
@@ -393,5 +447,7 @@ namespace rdf::game::capture
 		std::scoped_lock lock(g_lock);
 		g_capturing.clear();
 		g_actors.clear();
+		g_holdingReleases.clear();
+		g_releases.clear();
 	}
 }

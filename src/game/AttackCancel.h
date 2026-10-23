@@ -18,4 +18,8 @@ namespace rdf::game::attack
 	std::optional<float> StaggerDelayOverride(RE::Actor* actor);
 	// The summed magnitudes of the actor's active magic effects with sEscapeCostKeyword.
 	float StaggerEscapeCostBonus(RE::Actor* actor);
+
+	// [Casting] keywords (same sources): a dodge keeps the actor's bow draw / its cast going.
+	bool DrawDuringDodge(RE::Actor* actor);
+	bool CastDuringDodge(RE::Actor* actor);
 }

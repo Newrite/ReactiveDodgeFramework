@@ -521,3 +521,12 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   (forms::CatalogOf, built on the main thread, filterable) and a clear button; the 7 keyword settings of [Rules],
   [AttackCancel] and [Stagger] are form fields on the Rules page. Spells for CastOnDodge go through the same path (name
   them by plugin and id: spells keep no EditorID without an EditorID plugin).
+* Bow and magic layers (2026-10-23, user: a keyword-gated dodge that keeps casting / the bow draw): two dodge states in
+  `Bow_Attack_LowerBodyBehavior` (1hm_behavior) and in `DefaultMagicCastingBehavior` (magicbehavior, new patch file), under
+  the draw's upper body / the cast's arms (BEHAVIOR_INTEGRATION.md 8). Plugin: graph::Layer replaces the 1hm bool (SendStart /
+  SendExit per layer, SendAllExits for orphans, RDF_DodgeLayer), [Casting] sDrawDuringDodgeKeyword / sCastDuringDodgeKeyword
+  (form fields on the Rules page), the bow keyword allows a dodge from the draw states, release actions held during the
+  layer dodge and replayed after it (ActionCapture). Nemesis generator: magicbehavior added; a node no installed Nemesis
+  mod edits is taken from the vanilla dump (unconfirmed, logged). validate_rdf 248/248, validate_onehand 128/128 (STB,
+  VanillaLike), Nemesis 82/82, unit tests 80/80. Deployed to STB and VanillaLike ([Casting] appended to both live inis,
+  keywords empty = off). Not run in game; needs a Pandora re-run.

@@ -1,0 +1,3 @@
+		<hkobject name="#rdfm$3" class="hkbExpressionCondition" signature="0x1c3c1045">
+			<hkparam name="expression">Speed <= 20</hkparam>
+		</hkobject>

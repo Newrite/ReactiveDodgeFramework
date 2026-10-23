@@ -58,3 +58,7 @@ what is still waiting.
 * Power attack from a dodge, attack -> dodge, MCO-style windows; arm stance with fArmStance below 1.
 * Gamepad, slopes/stairs/walls, save/load and cell change mid-dodge, death, menus.
 * Visual blend quality with a proper animation set (fixtures are TUDM clips).
+* Bow / magic layers ([Casting], set a keyword first, Pandora re-run): dodge while drawing a bow (draw kept, an arrow
+  released mid-dodge flies after it: `replayed the release held by the dodge`), while charging a fire-and-forget spell and
+  during a concentration spell; a chain inside the layer; dodge -> attack / block from a layer dodge; `dodge start ... (bow)`
+  / `(magic)` in the log, and no `did not enter` warning.

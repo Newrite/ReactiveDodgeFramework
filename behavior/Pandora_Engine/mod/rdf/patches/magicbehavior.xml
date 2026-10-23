@@ -1,0 +1,803 @@
+<patch>
+  <append path="#0077/eventNames"><hkcstring>RDF_DodgeStart</hkcstring></append>
+  <append path="#0079/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
+  <append path="#0077/eventNames"><hkcstring>RDF_DodgeStartB</hkcstring></append>
+  <append path="#0079/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
+  <append path="#0077/eventNames"><hkcstring>RDF_DodgeChain</hkcstring></append>
+  <append path="#0079/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
+  <append path="#0077/eventNames"><hkcstring>RDF_DodgeExit</hkcstring></append>
+  <append path="#0079/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
+  <append path="#0077/eventNames"><hkcstring>RDF_DodgeEntered</hkcstring></append>
+  <append path="#0079/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
+  <append path="#0077/eventNames"><hkcstring>RDF_DodgeLeft</hkcstring></append>
+  <append path="#0079/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
+  <append path="#0077/eventNames"><hkcstring>RDF_Windows</hkcstring></append>
+  <append path="#0079/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
+  <append path="#0077/eventNames"><hkcstring>RDF_IFrameStart</hkcstring></append>
+  <append path="#0079/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
+  <append path="#0077/eventNames"><hkcstring>RDF_IFrameEnd</hkcstring></append>
+  <append path="#0079/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
+  <append path="#0077/eventNames"><hkcstring>RDF_ChainOpen</hkcstring></append>
+  <append path="#0079/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
+  <append path="#0077/eventNames"><hkcstring>RDF_AttackOpen</hkcstring></append>
+  <append path="#0079/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
+  <append path="#0077/eventNames"><hkcstring>RDF_BlockOpen</hkcstring></append>
+  <append path="#0079/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
+  <append path="#0077/eventNames"><hkcstring>RDF_ExitOpen</hkcstring></append>
+  <append path="#0079/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
+  <append path="#0077/eventNames"><hkcstring>RDF_PerfectStart</hkcstring></append>
+  <append path="#0079/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
+  <append path="#0077/eventNames"><hkcstring>RDF_PerfectEnd</hkcstring></append>
+  <append path="#0079/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
+  <append path="#0077/eventNames"><hkcstring>RDF_PerfectDodge</hkcstring></append>
+  <append path="#0079/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
+  <append path="#0077/eventNames"><hkcstring>RDF_PerfectDodged</hkcstring></append>
+  <append path="#0079/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
+  <append path="#0077/eventNames"><hkcstring>RDF_DodgeCancelOpen</hkcstring></append>
+  <append path="#0079/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
+  <append path="#0077/eventNames"><hkcstring>RDF_DodgeCancelClose</hkcstring></append>
+  <append path="#0079/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
+  <append path="#0077/eventNames"><hkcstring>RDF_DodgeStartMagic</hkcstring></append>
+  <append path="#0079/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
+  <append path="#0077/eventNames"><hkcstring>RDF_DodgeStartMagicB</hkcstring></append>
+  <append path="#0079/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
+  <append path="#0077/eventNames"><hkcstring>RDF_DodgeExitMagic</hkcstring></append>
+  <append path="#0079/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
+  <append path="#0077/variableNames"><hkcstring>RDF_DodgeClip</hkcstring></append>
+  <append path="#0078/wordVariableValues"><hkobject><hkparam name="value">0</hkparam></hkobject></append>
+  <append path="#0079/variableInfos"><hkobject><hkparam name="role"><hkobject><hkparam name="role">ROLE_DEFAULT</hkparam><hkparam name="flags">0</hkparam></hkobject></hkparam><hkparam name="type">VARIABLE_TYPE_INT32</hkparam></hkobject></append>
+  <append path="#0077/variableNames"><hkcstring>RDF_DodgeSpeed</hkcstring></append>
+  <append path="#0078/wordVariableValues"><hkobject><hkparam name="value">1065353216</hkparam></hkobject></append>
+  <append path="#0079/variableInfos"><hkobject><hkparam name="role"><hkobject><hkparam name="role">ROLE_DEFAULT</hkparam><hkparam name="flags">0</hkparam></hkobject></hkparam><hkparam name="type">VARIABLE_TYPE_REAL</hkparam></hkobject></append>
+  <append path="#0077/variableNames"><hkcstring>RDF_IsDodging</hkcstring></append>
+  <append path="#0078/wordVariableValues"><hkobject><hkparam name="value">0</hkparam></hkobject></append>
+  <append path="#0079/variableInfos"><hkobject><hkparam name="role"><hkobject><hkparam name="role">ROLE_DEFAULT</hkparam><hkparam name="flags">0</hkparam></hkobject></hkparam><hkparam name="type">VARIABLE_TYPE_BOOL</hkparam></hkobject></append>
+  <append path="#0077/variableNames"><hkcstring>RDF_ArmBlend</hkcstring></append>
+  <append path="#0078/wordVariableValues"><hkobject><hkparam name="value">0</hkparam></hkobject></append>
+  <append path="#0079/variableInfos"><hkobject><hkparam name="role"><hkobject><hkparam name="role">ROLE_DEFAULT</hkparam><hkparam name="flags">0</hkparam></hkobject></hkparam><hkparam name="type">VARIABLE_TYPE_REAL</hkparam></hkobject></append>
+  <append path="#0077/variableNames"><hkcstring>RDF_ChainIndex</hkcstring></append>
+  <append path="#0078/wordVariableValues"><hkobject><hkparam name="value">0</hkparam></hkobject></append>
+  <append path="#0079/variableInfos"><hkobject><hkparam name="role"><hkobject><hkparam name="role">ROLE_DEFAULT</hkparam><hkparam name="flags">0</hkparam></hkobject></hkparam><hkparam name="type">VARIABLE_TYPE_INT32</hkparam></hkobject></append>
+  <append path="#0077/variableNames"><hkcstring>RDF_AttackFromDodge</hkcstring></append>
+  <append path="#0078/wordVariableValues"><hkobject><hkparam name="value">0</hkparam></hkobject></append>
+  <append path="#0079/variableInfos"><hkobject><hkparam name="role"><hkobject><hkparam name="role">ROLE_DEFAULT</hkparam><hkparam name="flags">0</hkparam></hkobject></hkparam><hkparam name="type">VARIABLE_TYPE_INT32</hkparam></hkobject></append>
+  <append path="#0077/variableNames"><hkcstring>RDF_AttackFromDodgeClip</hkcstring></append>
+  <append path="#0078/wordVariableValues"><hkobject><hkparam name="value">0</hkparam></hkobject></append>
+  <append path="#0079/variableInfos"><hkobject><hkparam name="role"><hkobject><hkparam name="role">ROLE_DEFAULT</hkparam><hkparam name="flags">0</hkparam></hkobject></hkparam><hkparam name="type">VARIABLE_TYPE_INT32</hkparam></hkobject></append>
+  <append path="#0077/variableNames"><hkcstring>RDF_DodgeLayer</hkcstring></append>
+  <append path="#0078/wordVariableValues"><hkobject><hkparam name="value">0</hkparam></hkobject></append>
+  <append path="#0079/variableInfos"><hkobject><hkparam name="role"><hkobject><hkparam name="role">ROLE_DEFAULT</hkparam><hkparam name="flags">0</hkparam></hkobject></hkparam><hkparam name="type">VARIABLE_TYPE_INT32</hkparam></hkobject></append>
+  <append path="#0077/variableNames"><hkcstring>bAnimationDriven</hkcstring></append>
+  <append path="#0078/wordVariableValues"><hkobject><hkparam name="value">0</hkparam></hkobject></append>
+  <append path="#0079/variableInfos"><hkobject><hkparam name="role"><hkobject><hkparam name="role">ROLE_DEFAULT</hkparam><hkparam name="flags">0</hkparam></hkobject></hkparam><hkparam name="type">VARIABLE_TYPE_BOOL</hkparam></hkobject></append>
+  <insert path="">
+    <hkobject name="#rdf$0" class="hkbBlendingTransitionEffect" signature="0xfd8584fe">
+    <hkparam name="variableBindingSet">null</hkparam>
+    <hkparam name="userData">0</hkparam>
+    <hkparam name="name">RDF_DodgeInBlend</hkparam>
+    <hkparam name="selfTransitionMode">SELF_TRANSITION_MODE_RESET</hkparam>
+    <hkparam name="eventMode">EVENT_MODE_DEFAULT</hkparam>
+    <hkparam name="duration">0.120000</hkparam>
+    <hkparam name="toGeneratorStartTimeFraction">0.000000</hkparam>
+    <hkparam name="flags">FLAG_IGNORE_FROM_WORLD_FROM_MODEL</hkparam>
+    <hkparam name="endMode">END_MODE_NONE</hkparam>
+    <hkparam name="blendCurve">BLEND_CURVE_SMOOTH</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$1" class="hkbBlendingTransitionEffect" signature="0xfd8584fe">
+    <hkparam name="variableBindingSet">null</hkparam>
+    <hkparam name="userData">0</hkparam>
+    <hkparam name="name">RDF_DodgeOutBlend</hkparam>
+    <hkparam name="selfTransitionMode">SELF_TRANSITION_MODE_BLEND</hkparam>
+    <hkparam name="eventMode">EVENT_MODE_DEFAULT</hkparam>
+    <hkparam name="duration">0.250000</hkparam>
+    <hkparam name="toGeneratorStartTimeFraction">0.000000</hkparam>
+    <hkparam name="flags">FLAG_IGNORE_TO_WORLD_FROM_MODEL</hkparam>
+    <hkparam name="endMode">END_MODE_NONE</hkparam>
+    <hkparam name="blendCurve">BLEND_CURVE_SMOOTH</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$2" class="hkbExpressionCondition" signature="0x1c3c1045">
+    <hkparam name="expression">Speed &gt; 20</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$3" class="hkbExpressionCondition" signature="0x1c3c1045">
+    <hkparam name="expression">Speed &lt;= 20</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$5" class="hkbStateMachineEventPropertyArray" signature="0xb07b4388">
+    <hkparam name="events" numelements="1"><hkobject><hkparam name="id">$eventID[RDF_DodgeEntered]$</hkparam><hkparam name="payload">null</hkparam></hkobject></hkparam>
+    </hkobject>
+    <hkobject name="#rdf$6" class="hkbStateMachineEventPropertyArray" signature="0xb07b4388">
+    <hkparam name="events" numelements="1"><hkobject><hkparam name="id">$eventID[RDF_DodgeLeft]$</hkparam><hkparam name="payload">null</hkparam></hkobject></hkparam>
+    </hkobject>
+    <hkobject name="#rdf$7" class="hkbStateMachineTransitionInfoArray" signature="0xe397b11e">
+    <hkparam name="transitions" numelements="3"><hkobject><hkparam name="triggerInterval"><hkobject><hkparam name="enterEventId">-1</hkparam><hkparam name="exitEventId">-1</hkparam><hkparam name="enterTime">0.000000</hkparam><hkparam name="exitTime">0.000000</hkparam></hkobject></hkparam><hkparam name="initiateInterval"><hkobject><hkparam name="enterEventId">-1</hkparam><hkparam name="exitEventId">-1</hkparam><hkparam name="enterTime">0.000000</hkparam><hkparam name="exitTime">0.000000</hkparam></hkobject></hkparam><hkparam name="transition">#rdf$0</hkparam><hkparam name="condition">null</hkparam><hkparam name="eventId">$eventID[RDF_DodgeStartMagicB]$</hkparam><hkparam name="toStateId">9722</hkparam><hkparam name="fromNestedStateId">0</hkparam><hkparam name="toNestedStateId">0</hkparam><hkparam name="priority">0</hkparam><hkparam name="flags">FLAG_DISABLE_CONDITION</hkparam></hkobject><hkobject><hkparam name="triggerInterval"><hkobject><hkparam name="enterEventId">-1</hkparam><hkparam name="exitEventId">-1</hkparam><hkparam name="enterTime">0.000000</hkparam><hkparam name="exitTime">0.000000</hkparam></hkobject></hkparam><hkparam name="initiateInterval"><hkobject><hkparam name="enterEventId">-1</hkparam><hkparam name="exitEventId">-1</hkparam><hkparam name="enterTime">0.000000</hkparam><hkparam name="exitTime">0.000000</hkparam></hkobject></hkparam><hkparam name="transition">#rdf$1</hkparam><hkparam name="condition">#rdf$2</hkparam><hkparam name="eventId">$eventID[RDF_DodgeExitMagic]$</hkparam><hkparam name="toStateId">1</hkparam><hkparam name="fromNestedStateId">0</hkparam><hkparam name="toNestedStateId">0</hkparam><hkparam name="priority">0</hkparam><hkparam name="flags">0</hkparam></hkobject><hkobject><hkparam name="triggerInterval"><hkobject><hkparam name="enterEventId">-1</hkparam><hkparam name="exitEventId">-1</hkparam><hkparam name="enterTime">0.000000</hkparam><hkparam name="exitTime">0.000000</hkparam></hkobject></hkparam><hkparam name="initiateInterval"><hkobject><hkparam name="enterEventId">-1</hkparam><hkparam name="exitEventId">-1</hkparam><hkparam name="enterTime">0.000000</hkparam><hkparam name="exitTime">0.000000</hkparam></hkobject></hkparam><hkparam name="transition">#rdf$1</hkparam><hkparam name="condition">#rdf$3</hkparam><hkparam name="eventId">$eventID[RDF_DodgeExitMagic]$</hkparam><hkparam name="toStateId">0</hkparam><hkparam name="fromNestedStateId">0</hkparam><hkparam name="toNestedStateId">0</hkparam><hkparam name="priority">0</hkparam><hkparam name="flags">0</hkparam></hkobject></hkparam>
+    </hkobject>
+    <hkobject name="#rdf$14" class="hkbVariableBindingSet" signature="0x338ad4ff">
+    <hkparam name="bindings" numelements="1"><hkobject><hkparam name="memberPath">playbackSpeed</hkparam><hkparam name="variableIndex">$variableID[RDF_DodgeSpeed]$</hkparam><hkparam name="bitIndex">-1</hkparam><hkparam name="bindingType">BINDING_TYPE_VARIABLE</hkparam></hkobject></hkparam><hkparam name="indexOfBindingToEnable">-1</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$13" class="hkbClipGenerator" signature="0x333b85b9">
+    <hkparam name="variableBindingSet">#rdf$14</hkparam>
+    <hkparam name="userData">0</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_A_Main_RDF_Dodge_Forward</hkparam>
+    <hkparam name="animationName">Animations\RDF\RDF_Dodge_Forward.hkx</hkparam>
+    <hkparam name="triggers">null</hkparam>
+    <hkparam name="cropStartAmountLocalTime">0.000000</hkparam>
+    <hkparam name="cropEndAmountLocalTime">0.000000</hkparam>
+    <hkparam name="startTime">0.000000</hkparam>
+    <hkparam name="playbackSpeed">1.000000</hkparam>
+    <hkparam name="enforcedDuration">0.000000</hkparam>
+    <hkparam name="userControlledTimeFraction">0.000000</hkparam>
+    <hkparam name="animationBindingIndex">-1</hkparam>
+    <hkparam name="mode">MODE_SINGLE_PLAY</hkparam>
+    <hkparam name="flags">0</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$15" class="hkbStateMachineStateInfo" signature="0xed7f9d0">
+    <hkparam name="variableBindingSet">null</hkparam>
+    <hkparam name="listeners" numelements="0"></hkparam>
+    <hkparam name="enterNotifyEvents">null</hkparam>
+    <hkparam name="exitNotifyEvents">null</hkparam>
+    <hkparam name="transitions">null</hkparam>
+    <hkparam name="generator">#rdf$13</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_A_Main_S0_RDF_Dodge_Forward</hkparam>
+    <hkparam name="stateId">0</hkparam>
+    <hkparam name="probability">1.000000</hkparam>
+    <hkparam name="enable">true</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$17" class="hkbVariableBindingSet" signature="0x338ad4ff">
+    <hkparam name="bindings" numelements="1"><hkobject><hkparam name="memberPath">playbackSpeed</hkparam><hkparam name="variableIndex">$variableID[RDF_DodgeSpeed]$</hkparam><hkparam name="bitIndex">-1</hkparam><hkparam name="bindingType">BINDING_TYPE_VARIABLE</hkparam></hkobject></hkparam><hkparam name="indexOfBindingToEnable">-1</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$16" class="hkbClipGenerator" signature="0x333b85b9">
+    <hkparam name="variableBindingSet">#rdf$17</hkparam>
+    <hkparam name="userData">0</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_A_Main_RDF_Dodge_ForwardRight</hkparam>
+    <hkparam name="animationName">Animations\RDF\RDF_Dodge_ForwardRight.hkx</hkparam>
+    <hkparam name="triggers">null</hkparam>
+    <hkparam name="cropStartAmountLocalTime">0.000000</hkparam>
+    <hkparam name="cropEndAmountLocalTime">0.000000</hkparam>
+    <hkparam name="startTime">0.000000</hkparam>
+    <hkparam name="playbackSpeed">1.000000</hkparam>
+    <hkparam name="enforcedDuration">0.000000</hkparam>
+    <hkparam name="userControlledTimeFraction">0.000000</hkparam>
+    <hkparam name="animationBindingIndex">-1</hkparam>
+    <hkparam name="mode">MODE_SINGLE_PLAY</hkparam>
+    <hkparam name="flags">0</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$18" class="hkbStateMachineStateInfo" signature="0xed7f9d0">
+    <hkparam name="variableBindingSet">null</hkparam>
+    <hkparam name="listeners" numelements="0"></hkparam>
+    <hkparam name="enterNotifyEvents">null</hkparam>
+    <hkparam name="exitNotifyEvents">null</hkparam>
+    <hkparam name="transitions">null</hkparam>
+    <hkparam name="generator">#rdf$16</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_A_Main_S1_RDF_Dodge_ForwardRight</hkparam>
+    <hkparam name="stateId">1</hkparam>
+    <hkparam name="probability">1.000000</hkparam>
+    <hkparam name="enable">true</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$20" class="hkbVariableBindingSet" signature="0x338ad4ff">
+    <hkparam name="bindings" numelements="1"><hkobject><hkparam name="memberPath">playbackSpeed</hkparam><hkparam name="variableIndex">$variableID[RDF_DodgeSpeed]$</hkparam><hkparam name="bitIndex">-1</hkparam><hkparam name="bindingType">BINDING_TYPE_VARIABLE</hkparam></hkobject></hkparam><hkparam name="indexOfBindingToEnable">-1</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$19" class="hkbClipGenerator" signature="0x333b85b9">
+    <hkparam name="variableBindingSet">#rdf$20</hkparam>
+    <hkparam name="userData">0</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_A_Main_RDF_Dodge_Right</hkparam>
+    <hkparam name="animationName">Animations\RDF\RDF_Dodge_Right.hkx</hkparam>
+    <hkparam name="triggers">null</hkparam>
+    <hkparam name="cropStartAmountLocalTime">0.000000</hkparam>
+    <hkparam name="cropEndAmountLocalTime">0.000000</hkparam>
+    <hkparam name="startTime">0.000000</hkparam>
+    <hkparam name="playbackSpeed">1.000000</hkparam>
+    <hkparam name="enforcedDuration">0.000000</hkparam>
+    <hkparam name="userControlledTimeFraction">0.000000</hkparam>
+    <hkparam name="animationBindingIndex">-1</hkparam>
+    <hkparam name="mode">MODE_SINGLE_PLAY</hkparam>
+    <hkparam name="flags">0</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$21" class="hkbStateMachineStateInfo" signature="0xed7f9d0">
+    <hkparam name="variableBindingSet">null</hkparam>
+    <hkparam name="listeners" numelements="0"></hkparam>
+    <hkparam name="enterNotifyEvents">null</hkparam>
+    <hkparam name="exitNotifyEvents">null</hkparam>
+    <hkparam name="transitions">null</hkparam>
+    <hkparam name="generator">#rdf$19</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_A_Main_S2_RDF_Dodge_Right</hkparam>
+    <hkparam name="stateId">2</hkparam>
+    <hkparam name="probability">1.000000</hkparam>
+    <hkparam name="enable">true</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$23" class="hkbVariableBindingSet" signature="0x338ad4ff">
+    <hkparam name="bindings" numelements="1"><hkobject><hkparam name="memberPath">playbackSpeed</hkparam><hkparam name="variableIndex">$variableID[RDF_DodgeSpeed]$</hkparam><hkparam name="bitIndex">-1</hkparam><hkparam name="bindingType">BINDING_TYPE_VARIABLE</hkparam></hkobject></hkparam><hkparam name="indexOfBindingToEnable">-1</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$22" class="hkbClipGenerator" signature="0x333b85b9">
+    <hkparam name="variableBindingSet">#rdf$23</hkparam>
+    <hkparam name="userData">0</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_A_Main_RDF_Dodge_BackwardRight</hkparam>
+    <hkparam name="animationName">Animations\RDF\RDF_Dodge_BackwardRight.hkx</hkparam>
+    <hkparam name="triggers">null</hkparam>
+    <hkparam name="cropStartAmountLocalTime">0.000000</hkparam>
+    <hkparam name="cropEndAmountLocalTime">0.000000</hkparam>
+    <hkparam name="startTime">0.000000</hkparam>
+    <hkparam name="playbackSpeed">1.000000</hkparam>
+    <hkparam name="enforcedDuration">0.000000</hkparam>
+    <hkparam name="userControlledTimeFraction">0.000000</hkparam>
+    <hkparam name="animationBindingIndex">-1</hkparam>
+    <hkparam name="mode">MODE_SINGLE_PLAY</hkparam>
+    <hkparam name="flags">0</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$24" class="hkbStateMachineStateInfo" signature="0xed7f9d0">
+    <hkparam name="variableBindingSet">null</hkparam>
+    <hkparam name="listeners" numelements="0"></hkparam>
+    <hkparam name="enterNotifyEvents">null</hkparam>
+    <hkparam name="exitNotifyEvents">null</hkparam>
+    <hkparam name="transitions">null</hkparam>
+    <hkparam name="generator">#rdf$22</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_A_Main_S3_RDF_Dodge_BackwardRight</hkparam>
+    <hkparam name="stateId">3</hkparam>
+    <hkparam name="probability">1.000000</hkparam>
+    <hkparam name="enable">true</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$26" class="hkbVariableBindingSet" signature="0x338ad4ff">
+    <hkparam name="bindings" numelements="1"><hkobject><hkparam name="memberPath">playbackSpeed</hkparam><hkparam name="variableIndex">$variableID[RDF_DodgeSpeed]$</hkparam><hkparam name="bitIndex">-1</hkparam><hkparam name="bindingType">BINDING_TYPE_VARIABLE</hkparam></hkobject></hkparam><hkparam name="indexOfBindingToEnable">-1</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$25" class="hkbClipGenerator" signature="0x333b85b9">
+    <hkparam name="variableBindingSet">#rdf$26</hkparam>
+    <hkparam name="userData">0</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_A_Main_RDF_Dodge_Backward</hkparam>
+    <hkparam name="animationName">Animations\RDF\RDF_Dodge_Backward.hkx</hkparam>
+    <hkparam name="triggers">null</hkparam>
+    <hkparam name="cropStartAmountLocalTime">0.000000</hkparam>
+    <hkparam name="cropEndAmountLocalTime">0.000000</hkparam>
+    <hkparam name="startTime">0.000000</hkparam>
+    <hkparam name="playbackSpeed">1.000000</hkparam>
+    <hkparam name="enforcedDuration">0.000000</hkparam>
+    <hkparam name="userControlledTimeFraction">0.000000</hkparam>
+    <hkparam name="animationBindingIndex">-1</hkparam>
+    <hkparam name="mode">MODE_SINGLE_PLAY</hkparam>
+    <hkparam name="flags">0</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$27" class="hkbStateMachineStateInfo" signature="0xed7f9d0">
+    <hkparam name="variableBindingSet">null</hkparam>
+    <hkparam name="listeners" numelements="0"></hkparam>
+    <hkparam name="enterNotifyEvents">null</hkparam>
+    <hkparam name="exitNotifyEvents">null</hkparam>
+    <hkparam name="transitions">null</hkparam>
+    <hkparam name="generator">#rdf$25</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_A_Main_S4_RDF_Dodge_Backward</hkparam>
+    <hkparam name="stateId">4</hkparam>
+    <hkparam name="probability">1.000000</hkparam>
+    <hkparam name="enable">true</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$29" class="hkbVariableBindingSet" signature="0x338ad4ff">
+    <hkparam name="bindings" numelements="1"><hkobject><hkparam name="memberPath">playbackSpeed</hkparam><hkparam name="variableIndex">$variableID[RDF_DodgeSpeed]$</hkparam><hkparam name="bitIndex">-1</hkparam><hkparam name="bindingType">BINDING_TYPE_VARIABLE</hkparam></hkobject></hkparam><hkparam name="indexOfBindingToEnable">-1</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$28" class="hkbClipGenerator" signature="0x333b85b9">
+    <hkparam name="variableBindingSet">#rdf$29</hkparam>
+    <hkparam name="userData">0</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_A_Main_RDF_Dodge_BackwardLeft</hkparam>
+    <hkparam name="animationName">Animations\RDF\RDF_Dodge_BackwardLeft.hkx</hkparam>
+    <hkparam name="triggers">null</hkparam>
+    <hkparam name="cropStartAmountLocalTime">0.000000</hkparam>
+    <hkparam name="cropEndAmountLocalTime">0.000000</hkparam>
+    <hkparam name="startTime">0.000000</hkparam>
+    <hkparam name="playbackSpeed">1.000000</hkparam>
+    <hkparam name="enforcedDuration">0.000000</hkparam>
+    <hkparam name="userControlledTimeFraction">0.000000</hkparam>
+    <hkparam name="animationBindingIndex">-1</hkparam>
+    <hkparam name="mode">MODE_SINGLE_PLAY</hkparam>
+    <hkparam name="flags">0</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$30" class="hkbStateMachineStateInfo" signature="0xed7f9d0">
+    <hkparam name="variableBindingSet">null</hkparam>
+    <hkparam name="listeners" numelements="0"></hkparam>
+    <hkparam name="enterNotifyEvents">null</hkparam>
+    <hkparam name="exitNotifyEvents">null</hkparam>
+    <hkparam name="transitions">null</hkparam>
+    <hkparam name="generator">#rdf$28</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_A_Main_S5_RDF_Dodge_BackwardLeft</hkparam>
+    <hkparam name="stateId">5</hkparam>
+    <hkparam name="probability">1.000000</hkparam>
+    <hkparam name="enable">true</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$32" class="hkbVariableBindingSet" signature="0x338ad4ff">
+    <hkparam name="bindings" numelements="1"><hkobject><hkparam name="memberPath">playbackSpeed</hkparam><hkparam name="variableIndex">$variableID[RDF_DodgeSpeed]$</hkparam><hkparam name="bitIndex">-1</hkparam><hkparam name="bindingType">BINDING_TYPE_VARIABLE</hkparam></hkobject></hkparam><hkparam name="indexOfBindingToEnable">-1</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$31" class="hkbClipGenerator" signature="0x333b85b9">
+    <hkparam name="variableBindingSet">#rdf$32</hkparam>
+    <hkparam name="userData">0</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_A_Main_RDF_Dodge_Left</hkparam>
+    <hkparam name="animationName">Animations\RDF\RDF_Dodge_Left.hkx</hkparam>
+    <hkparam name="triggers">null</hkparam>
+    <hkparam name="cropStartAmountLocalTime">0.000000</hkparam>
+    <hkparam name="cropEndAmountLocalTime">0.000000</hkparam>
+    <hkparam name="startTime">0.000000</hkparam>
+    <hkparam name="playbackSpeed">1.000000</hkparam>
+    <hkparam name="enforcedDuration">0.000000</hkparam>
+    <hkparam name="userControlledTimeFraction">0.000000</hkparam>
+    <hkparam name="animationBindingIndex">-1</hkparam>
+    <hkparam name="mode">MODE_SINGLE_PLAY</hkparam>
+    <hkparam name="flags">0</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$33" class="hkbStateMachineStateInfo" signature="0xed7f9d0">
+    <hkparam name="variableBindingSet">null</hkparam>
+    <hkparam name="listeners" numelements="0"></hkparam>
+    <hkparam name="enterNotifyEvents">null</hkparam>
+    <hkparam name="exitNotifyEvents">null</hkparam>
+    <hkparam name="transitions">null</hkparam>
+    <hkparam name="generator">#rdf$31</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_A_Main_S6_RDF_Dodge_Left</hkparam>
+    <hkparam name="stateId">6</hkparam>
+    <hkparam name="probability">1.000000</hkparam>
+    <hkparam name="enable">true</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$35" class="hkbVariableBindingSet" signature="0x338ad4ff">
+    <hkparam name="bindings" numelements="1"><hkobject><hkparam name="memberPath">playbackSpeed</hkparam><hkparam name="variableIndex">$variableID[RDF_DodgeSpeed]$</hkparam><hkparam name="bitIndex">-1</hkparam><hkparam name="bindingType">BINDING_TYPE_VARIABLE</hkparam></hkobject></hkparam><hkparam name="indexOfBindingToEnable">-1</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$34" class="hkbClipGenerator" signature="0x333b85b9">
+    <hkparam name="variableBindingSet">#rdf$35</hkparam>
+    <hkparam name="userData">0</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_A_Main_RDF_Dodge_ForwardLeft</hkparam>
+    <hkparam name="animationName">Animations\RDF\RDF_Dodge_ForwardLeft.hkx</hkparam>
+    <hkparam name="triggers">null</hkparam>
+    <hkparam name="cropStartAmountLocalTime">0.000000</hkparam>
+    <hkparam name="cropEndAmountLocalTime">0.000000</hkparam>
+    <hkparam name="startTime">0.000000</hkparam>
+    <hkparam name="playbackSpeed">1.000000</hkparam>
+    <hkparam name="enforcedDuration">0.000000</hkparam>
+    <hkparam name="userControlledTimeFraction">0.000000</hkparam>
+    <hkparam name="animationBindingIndex">-1</hkparam>
+    <hkparam name="mode">MODE_SINGLE_PLAY</hkparam>
+    <hkparam name="flags">0</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$36" class="hkbStateMachineStateInfo" signature="0xed7f9d0">
+    <hkparam name="variableBindingSet">null</hkparam>
+    <hkparam name="listeners" numelements="0"></hkparam>
+    <hkparam name="enterNotifyEvents">null</hkparam>
+    <hkparam name="exitNotifyEvents">null</hkparam>
+    <hkparam name="transitions">null</hkparam>
+    <hkparam name="generator">#rdf$34</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_A_Main_S7_RDF_Dodge_ForwardLeft</hkparam>
+    <hkparam name="stateId">7</hkparam>
+    <hkparam name="probability">1.000000</hkparam>
+    <hkparam name="enable">true</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$38" class="hkbVariableBindingSet" signature="0x338ad4ff">
+    <hkparam name="bindings" numelements="1"><hkobject><hkparam name="memberPath">playbackSpeed</hkparam><hkparam name="variableIndex">$variableID[RDF_DodgeSpeed]$</hkparam><hkparam name="bitIndex">-1</hkparam><hkparam name="bindingType">BINDING_TYPE_VARIABLE</hkparam></hkobject></hkparam><hkparam name="indexOfBindingToEnable">-1</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$37" class="hkbClipGenerator" signature="0x333b85b9">
+    <hkparam name="variableBindingSet">#rdf$38</hkparam>
+    <hkparam name="userData">0</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_A_Main_RDF_Dodge_Neutral</hkparam>
+    <hkparam name="animationName">Animations\RDF\RDF_Dodge_Neutral.hkx</hkparam>
+    <hkparam name="triggers">null</hkparam>
+    <hkparam name="cropStartAmountLocalTime">0.000000</hkparam>
+    <hkparam name="cropEndAmountLocalTime">0.000000</hkparam>
+    <hkparam name="startTime">0.000000</hkparam>
+    <hkparam name="playbackSpeed">1.000000</hkparam>
+    <hkparam name="enforcedDuration">0.000000</hkparam>
+    <hkparam name="userControlledTimeFraction">0.000000</hkparam>
+    <hkparam name="animationBindingIndex">-1</hkparam>
+    <hkparam name="mode">MODE_SINGLE_PLAY</hkparam>
+    <hkparam name="flags">0</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$39" class="hkbStateMachineStateInfo" signature="0xed7f9d0">
+    <hkparam name="variableBindingSet">null</hkparam>
+    <hkparam name="listeners" numelements="0"></hkparam>
+    <hkparam name="enterNotifyEvents">null</hkparam>
+    <hkparam name="exitNotifyEvents">null</hkparam>
+    <hkparam name="transitions">null</hkparam>
+    <hkparam name="generator">#rdf$37</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_A_Main_S8_RDF_Dodge_Neutral</hkparam>
+    <hkparam name="stateId">8</hkparam>
+    <hkparam name="probability">1.000000</hkparam>
+    <hkparam name="enable">true</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$12" class="hkbVariableBindingSet" signature="0x338ad4ff">
+    <hkparam name="bindings" numelements="1"><hkobject><hkparam name="memberPath">startStateId</hkparam><hkparam name="variableIndex">$variableID[RDF_DodgeClip]$</hkparam><hkparam name="bitIndex">-1</hkparam><hkparam name="bindingType">BINDING_TYPE_VARIABLE</hkparam></hkobject></hkparam><hkparam name="indexOfBindingToEnable">-1</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$11" class="hkbStateMachine" signature="0x816c1dcb">
+    <hkparam name="variableBindingSet">#rdf$12</hkparam>
+    <hkparam name="userData">0</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_A_Main_ClipSM</hkparam>
+    <hkparam name="eventToSendWhenStateOrTransitionChanges"><hkobject><hkparam name="id">-1</hkparam><hkparam name="payload">null</hkparam></hkobject></hkparam>
+    <hkparam name="startStateChooser">null</hkparam>
+    <hkparam name="startStateId">0</hkparam>
+    <hkparam name="returnToPreviousStateEventId">-1</hkparam>
+    <hkparam name="randomTransitionEventId">-1</hkparam>
+    <hkparam name="transitionToNextHigherStateEventId">-1</hkparam>
+    <hkparam name="transitionToNextLowerStateEventId">-1</hkparam>
+    <hkparam name="syncVariableIndex">-1</hkparam>
+    <hkparam name="wrapAroundStateId">false</hkparam>
+    <hkparam name="maxSimultaneousTransitions">32</hkparam>
+    <hkparam name="startStateMode">START_STATE_MODE_DEFAULT</hkparam>
+    <hkparam name="selfTransitionMode">SELF_TRANSITION_MODE_NO_TRANSITION</hkparam>
+    <hkparam name="states" numelements="9">#rdf$15 #rdf$18 #rdf$21 #rdf$24 #rdf$27 #rdf$30 #rdf$33 #rdf$36 #rdf$39</hkparam>
+    <hkparam name="wildcardTransitions">null</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$40" class="BSBoneSwitchGenerator" signature="0xf33d3eea">
+    <hkparam name="variableBindingSet">null</hkparam>
+    <hkparam name="userData">1</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_A_CastArmsSwitch</hkparam>
+    <hkparam name="pDefaultGenerator">#rdf$11</hkparam>
+    <hkparam name="ChildrenA" numelements="1">#0786</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$10" class="hkbVariableBindingSet" signature="0x338ad4ff">
+    <hkparam name="bindings" numelements="2"><hkobject><hkparam name="memberPath">bIsActive0</hkparam><hkparam name="variableIndex">$variableID[bAnimationDriven]$</hkparam><hkparam name="bitIndex">-1</hkparam><hkparam name="bindingType">BINDING_TYPE_VARIABLE</hkparam></hkobject><hkobject><hkparam name="memberPath">bIsActive1</hkparam><hkparam name="variableIndex">$variableID[RDF_IsDodging]$</hkparam><hkparam name="bitIndex">-1</hkparam><hkparam name="bindingType">BINDING_TYPE_VARIABLE</hkparam></hkobject></hkparam><hkparam name="indexOfBindingToEnable">-1</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$9" class="BSIsActiveModifier" signature="0xb0fde45a">
+    <hkparam name="variableBindingSet">#rdf$10</hkparam>
+    <hkparam name="userData">2</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_A_IsActiveMod</hkparam>
+    <hkparam name="enable">true</hkparam>
+    <hkparam name="bIsActive0">false</hkparam><hkparam name="bInvertActive0">false</hkparam><hkparam name="bIsActive1">false</hkparam><hkparam name="bInvertActive1">false</hkparam><hkparam name="bIsActive2">false</hkparam><hkparam name="bInvertActive2">false</hkparam><hkparam name="bIsActive3">false</hkparam><hkparam name="bInvertActive3">false</hkparam><hkparam name="bIsActive4">false</hkparam><hkparam name="bInvertActive4">false</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$8" class="hkbModifierGenerator" signature="0x1f81fae6">
+    <hkparam name="variableBindingSet">null</hkparam>
+    <hkparam name="userData">1</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_A_MG</hkparam>
+    <hkparam name="modifier">#rdf$9</hkparam>
+    <hkparam name="generator">#rdf$40</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$4" class="hkbStateMachineStateInfo" signature="0xed7f9d0">
+    <hkparam name="variableBindingSet">null</hkparam>
+    <hkparam name="listeners" numelements="0"></hkparam>
+    <hkparam name="enterNotifyEvents">#rdf$5</hkparam>
+    <hkparam name="exitNotifyEvents">#rdf$6</hkparam>
+    <hkparam name="transitions">#rdf$7</hkparam>
+    <hkparam name="generator">#rdf$8</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_A</hkparam>
+    <hkparam name="stateId">9721</hkparam>
+    <hkparam name="probability">1.000000</hkparam>
+    <hkparam name="enable">true</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$42" class="hkbStateMachineEventPropertyArray" signature="0xb07b4388">
+    <hkparam name="events" numelements="1"><hkobject><hkparam name="id">$eventID[RDF_DodgeEntered]$</hkparam><hkparam name="payload">null</hkparam></hkobject></hkparam>
+    </hkobject>
+    <hkobject name="#rdf$43" class="hkbStateMachineEventPropertyArray" signature="0xb07b4388">
+    <hkparam name="events" numelements="1"><hkobject><hkparam name="id">$eventID[RDF_DodgeLeft]$</hkparam><hkparam name="payload">null</hkparam></hkobject></hkparam>
+    </hkobject>
+    <hkobject name="#rdf$44" class="hkbStateMachineTransitionInfoArray" signature="0xe397b11e">
+    <hkparam name="transitions" numelements="3"><hkobject><hkparam name="triggerInterval"><hkobject><hkparam name="enterEventId">-1</hkparam><hkparam name="exitEventId">-1</hkparam><hkparam name="enterTime">0.000000</hkparam><hkparam name="exitTime">0.000000</hkparam></hkobject></hkparam><hkparam name="initiateInterval"><hkobject><hkparam name="enterEventId">-1</hkparam><hkparam name="exitEventId">-1</hkparam><hkparam name="enterTime">0.000000</hkparam><hkparam name="exitTime">0.000000</hkparam></hkobject></hkparam><hkparam name="transition">#rdf$0</hkparam><hkparam name="condition">null</hkparam><hkparam name="eventId">$eventID[RDF_DodgeStartMagic]$</hkparam><hkparam name="toStateId">9721</hkparam><hkparam name="fromNestedStateId">0</hkparam><hkparam name="toNestedStateId">0</hkparam><hkparam name="priority">0</hkparam><hkparam name="flags">FLAG_DISABLE_CONDITION</hkparam></hkobject><hkobject><hkparam name="triggerInterval"><hkobject><hkparam name="enterEventId">-1</hkparam><hkparam name="exitEventId">-1</hkparam><hkparam name="enterTime">0.000000</hkparam><hkparam name="exitTime">0.000000</hkparam></hkobject></hkparam><hkparam name="initiateInterval"><hkobject><hkparam name="enterEventId">-1</hkparam><hkparam name="exitEventId">-1</hkparam><hkparam name="enterTime">0.000000</hkparam><hkparam name="exitTime">0.000000</hkparam></hkobject></hkparam><hkparam name="transition">#rdf$1</hkparam><hkparam name="condition">#rdf$2</hkparam><hkparam name="eventId">$eventID[RDF_DodgeExitMagic]$</hkparam><hkparam name="toStateId">1</hkparam><hkparam name="fromNestedStateId">0</hkparam><hkparam name="toNestedStateId">0</hkparam><hkparam name="priority">0</hkparam><hkparam name="flags">0</hkparam></hkobject><hkobject><hkparam name="triggerInterval"><hkobject><hkparam name="enterEventId">-1</hkparam><hkparam name="exitEventId">-1</hkparam><hkparam name="enterTime">0.000000</hkparam><hkparam name="exitTime">0.000000</hkparam></hkobject></hkparam><hkparam name="initiateInterval"><hkobject><hkparam name="enterEventId">-1</hkparam><hkparam name="exitEventId">-1</hkparam><hkparam name="enterTime">0.000000</hkparam><hkparam name="exitTime">0.000000</hkparam></hkobject></hkparam><hkparam name="transition">#rdf$1</hkparam><hkparam name="condition">#rdf$3</hkparam><hkparam name="eventId">$eventID[RDF_DodgeExitMagic]$</hkparam><hkparam name="toStateId">0</hkparam><hkparam name="fromNestedStateId">0</hkparam><hkparam name="toNestedStateId">0</hkparam><hkparam name="priority">0</hkparam><hkparam name="flags">0</hkparam></hkobject></hkparam>
+    </hkobject>
+    <hkobject name="#rdf$51" class="hkbVariableBindingSet" signature="0x338ad4ff">
+    <hkparam name="bindings" numelements="1"><hkobject><hkparam name="memberPath">playbackSpeed</hkparam><hkparam name="variableIndex">$variableID[RDF_DodgeSpeed]$</hkparam><hkparam name="bitIndex">-1</hkparam><hkparam name="bindingType">BINDING_TYPE_VARIABLE</hkparam></hkobject></hkparam><hkparam name="indexOfBindingToEnable">-1</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$50" class="hkbClipGenerator" signature="0x333b85b9">
+    <hkparam name="variableBindingSet">#rdf$51</hkparam>
+    <hkparam name="userData">0</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_B_Main_RDF_Dodge_Forward</hkparam>
+    <hkparam name="animationName">Animations\RDF\RDF_Dodge_Forward.hkx</hkparam>
+    <hkparam name="triggers">null</hkparam>
+    <hkparam name="cropStartAmountLocalTime">0.000000</hkparam>
+    <hkparam name="cropEndAmountLocalTime">0.000000</hkparam>
+    <hkparam name="startTime">0.000000</hkparam>
+    <hkparam name="playbackSpeed">1.000000</hkparam>
+    <hkparam name="enforcedDuration">0.000000</hkparam>
+    <hkparam name="userControlledTimeFraction">0.000000</hkparam>
+    <hkparam name="animationBindingIndex">-1</hkparam>
+    <hkparam name="mode">MODE_SINGLE_PLAY</hkparam>
+    <hkparam name="flags">0</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$52" class="hkbStateMachineStateInfo" signature="0xed7f9d0">
+    <hkparam name="variableBindingSet">null</hkparam>
+    <hkparam name="listeners" numelements="0"></hkparam>
+    <hkparam name="enterNotifyEvents">null</hkparam>
+    <hkparam name="exitNotifyEvents">null</hkparam>
+    <hkparam name="transitions">null</hkparam>
+    <hkparam name="generator">#rdf$50</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_B_Main_S0_RDF_Dodge_Forward</hkparam>
+    <hkparam name="stateId">0</hkparam>
+    <hkparam name="probability">1.000000</hkparam>
+    <hkparam name="enable">true</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$54" class="hkbVariableBindingSet" signature="0x338ad4ff">
+    <hkparam name="bindings" numelements="1"><hkobject><hkparam name="memberPath">playbackSpeed</hkparam><hkparam name="variableIndex">$variableID[RDF_DodgeSpeed]$</hkparam><hkparam name="bitIndex">-1</hkparam><hkparam name="bindingType">BINDING_TYPE_VARIABLE</hkparam></hkobject></hkparam><hkparam name="indexOfBindingToEnable">-1</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$53" class="hkbClipGenerator" signature="0x333b85b9">
+    <hkparam name="variableBindingSet">#rdf$54</hkparam>
+    <hkparam name="userData">0</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_B_Main_RDF_Dodge_ForwardRight</hkparam>
+    <hkparam name="animationName">Animations\RDF\RDF_Dodge_ForwardRight.hkx</hkparam>
+    <hkparam name="triggers">null</hkparam>
+    <hkparam name="cropStartAmountLocalTime">0.000000</hkparam>
+    <hkparam name="cropEndAmountLocalTime">0.000000</hkparam>
+    <hkparam name="startTime">0.000000</hkparam>
+    <hkparam name="playbackSpeed">1.000000</hkparam>
+    <hkparam name="enforcedDuration">0.000000</hkparam>
+    <hkparam name="userControlledTimeFraction">0.000000</hkparam>
+    <hkparam name="animationBindingIndex">-1</hkparam>
+    <hkparam name="mode">MODE_SINGLE_PLAY</hkparam>
+    <hkparam name="flags">0</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$55" class="hkbStateMachineStateInfo" signature="0xed7f9d0">
+    <hkparam name="variableBindingSet">null</hkparam>
+    <hkparam name="listeners" numelements="0"></hkparam>
+    <hkparam name="enterNotifyEvents">null</hkparam>
+    <hkparam name="exitNotifyEvents">null</hkparam>
+    <hkparam name="transitions">null</hkparam>
+    <hkparam name="generator">#rdf$53</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_B_Main_S1_RDF_Dodge_ForwardRight</hkparam>
+    <hkparam name="stateId">1</hkparam>
+    <hkparam name="probability">1.000000</hkparam>
+    <hkparam name="enable">true</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$57" class="hkbVariableBindingSet" signature="0x338ad4ff">
+    <hkparam name="bindings" numelements="1"><hkobject><hkparam name="memberPath">playbackSpeed</hkparam><hkparam name="variableIndex">$variableID[RDF_DodgeSpeed]$</hkparam><hkparam name="bitIndex">-1</hkparam><hkparam name="bindingType">BINDING_TYPE_VARIABLE</hkparam></hkobject></hkparam><hkparam name="indexOfBindingToEnable">-1</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$56" class="hkbClipGenerator" signature="0x333b85b9">
+    <hkparam name="variableBindingSet">#rdf$57</hkparam>
+    <hkparam name="userData">0</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_B_Main_RDF_Dodge_Right</hkparam>
+    <hkparam name="animationName">Animations\RDF\RDF_Dodge_Right.hkx</hkparam>
+    <hkparam name="triggers">null</hkparam>
+    <hkparam name="cropStartAmountLocalTime">0.000000</hkparam>
+    <hkparam name="cropEndAmountLocalTime">0.000000</hkparam>
+    <hkparam name="startTime">0.000000</hkparam>
+    <hkparam name="playbackSpeed">1.000000</hkparam>
+    <hkparam name="enforcedDuration">0.000000</hkparam>
+    <hkparam name="userControlledTimeFraction">0.000000</hkparam>
+    <hkparam name="animationBindingIndex">-1</hkparam>
+    <hkparam name="mode">MODE_SINGLE_PLAY</hkparam>
+    <hkparam name="flags">0</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$58" class="hkbStateMachineStateInfo" signature="0xed7f9d0">
+    <hkparam name="variableBindingSet">null</hkparam>
+    <hkparam name="listeners" numelements="0"></hkparam>
+    <hkparam name="enterNotifyEvents">null</hkparam>
+    <hkparam name="exitNotifyEvents">null</hkparam>
+    <hkparam name="transitions">null</hkparam>
+    <hkparam name="generator">#rdf$56</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_B_Main_S2_RDF_Dodge_Right</hkparam>
+    <hkparam name="stateId">2</hkparam>
+    <hkparam name="probability">1.000000</hkparam>
+    <hkparam name="enable">true</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$60" class="hkbVariableBindingSet" signature="0x338ad4ff">
+    <hkparam name="bindings" numelements="1"><hkobject><hkparam name="memberPath">playbackSpeed</hkparam><hkparam name="variableIndex">$variableID[RDF_DodgeSpeed]$</hkparam><hkparam name="bitIndex">-1</hkparam><hkparam name="bindingType">BINDING_TYPE_VARIABLE</hkparam></hkobject></hkparam><hkparam name="indexOfBindingToEnable">-1</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$59" class="hkbClipGenerator" signature="0x333b85b9">
+    <hkparam name="variableBindingSet">#rdf$60</hkparam>
+    <hkparam name="userData">0</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_B_Main_RDF_Dodge_BackwardRight</hkparam>
+    <hkparam name="animationName">Animations\RDF\RDF_Dodge_BackwardRight.hkx</hkparam>
+    <hkparam name="triggers">null</hkparam>
+    <hkparam name="cropStartAmountLocalTime">0.000000</hkparam>
+    <hkparam name="cropEndAmountLocalTime">0.000000</hkparam>
+    <hkparam name="startTime">0.000000</hkparam>
+    <hkparam name="playbackSpeed">1.000000</hkparam>
+    <hkparam name="enforcedDuration">0.000000</hkparam>
+    <hkparam name="userControlledTimeFraction">0.000000</hkparam>
+    <hkparam name="animationBindingIndex">-1</hkparam>
+    <hkparam name="mode">MODE_SINGLE_PLAY</hkparam>
+    <hkparam name="flags">0</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$61" class="hkbStateMachineStateInfo" signature="0xed7f9d0">
+    <hkparam name="variableBindingSet">null</hkparam>
+    <hkparam name="listeners" numelements="0"></hkparam>
+    <hkparam name="enterNotifyEvents">null</hkparam>
+    <hkparam name="exitNotifyEvents">null</hkparam>
+    <hkparam name="transitions">null</hkparam>
+    <hkparam name="generator">#rdf$59</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_B_Main_S3_RDF_Dodge_BackwardRight</hkparam>
+    <hkparam name="stateId">3</hkparam>
+    <hkparam name="probability">1.000000</hkparam>
+    <hkparam name="enable">true</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$63" class="hkbVariableBindingSet" signature="0x338ad4ff">
+    <hkparam name="bindings" numelements="1"><hkobject><hkparam name="memberPath">playbackSpeed</hkparam><hkparam name="variableIndex">$variableID[RDF_DodgeSpeed]$</hkparam><hkparam name="bitIndex">-1</hkparam><hkparam name="bindingType">BINDING_TYPE_VARIABLE</hkparam></hkobject></hkparam><hkparam name="indexOfBindingToEnable">-1</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$62" class="hkbClipGenerator" signature="0x333b85b9">
+    <hkparam name="variableBindingSet">#rdf$63</hkparam>
+    <hkparam name="userData">0</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_B_Main_RDF_Dodge_Backward</hkparam>
+    <hkparam name="animationName">Animations\RDF\RDF_Dodge_Backward.hkx</hkparam>
+    <hkparam name="triggers">null</hkparam>
+    <hkparam name="cropStartAmountLocalTime">0.000000</hkparam>
+    <hkparam name="cropEndAmountLocalTime">0.000000</hkparam>
+    <hkparam name="startTime">0.000000</hkparam>
+    <hkparam name="playbackSpeed">1.000000</hkparam>
+    <hkparam name="enforcedDuration">0.000000</hkparam>
+    <hkparam name="userControlledTimeFraction">0.000000</hkparam>
+    <hkparam name="animationBindingIndex">-1</hkparam>
+    <hkparam name="mode">MODE_SINGLE_PLAY</hkparam>
+    <hkparam name="flags">0</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$64" class="hkbStateMachineStateInfo" signature="0xed7f9d0">
+    <hkparam name="variableBindingSet">null</hkparam>
+    <hkparam name="listeners" numelements="0"></hkparam>
+    <hkparam name="enterNotifyEvents">null</hkparam>
+    <hkparam name="exitNotifyEvents">null</hkparam>
+    <hkparam name="transitions">null</hkparam>
+    <hkparam name="generator">#rdf$62</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_B_Main_S4_RDF_Dodge_Backward</hkparam>
+    <hkparam name="stateId">4</hkparam>
+    <hkparam name="probability">1.000000</hkparam>
+    <hkparam name="enable">true</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$66" class="hkbVariableBindingSet" signature="0x338ad4ff">
+    <hkparam name="bindings" numelements="1"><hkobject><hkparam name="memberPath">playbackSpeed</hkparam><hkparam name="variableIndex">$variableID[RDF_DodgeSpeed]$</hkparam><hkparam name="bitIndex">-1</hkparam><hkparam name="bindingType">BINDING_TYPE_VARIABLE</hkparam></hkobject></hkparam><hkparam name="indexOfBindingToEnable">-1</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$65" class="hkbClipGenerator" signature="0x333b85b9">
+    <hkparam name="variableBindingSet">#rdf$66</hkparam>
+    <hkparam name="userData">0</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_B_Main_RDF_Dodge_BackwardLeft</hkparam>
+    <hkparam name="animationName">Animations\RDF\RDF_Dodge_BackwardLeft.hkx</hkparam>
+    <hkparam name="triggers">null</hkparam>
+    <hkparam name="cropStartAmountLocalTime">0.000000</hkparam>
+    <hkparam name="cropEndAmountLocalTime">0.000000</hkparam>
+    <hkparam name="startTime">0.000000</hkparam>
+    <hkparam name="playbackSpeed">1.000000</hkparam>
+    <hkparam name="enforcedDuration">0.000000</hkparam>
+    <hkparam name="userControlledTimeFraction">0.000000</hkparam>
+    <hkparam name="animationBindingIndex">-1</hkparam>
+    <hkparam name="mode">MODE_SINGLE_PLAY</hkparam>
+    <hkparam name="flags">0</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$67" class="hkbStateMachineStateInfo" signature="0xed7f9d0">
+    <hkparam name="variableBindingSet">null</hkparam>
+    <hkparam name="listeners" numelements="0"></hkparam>
+    <hkparam name="enterNotifyEvents">null</hkparam>
+    <hkparam name="exitNotifyEvents">null</hkparam>
+    <hkparam name="transitions">null</hkparam>
+    <hkparam name="generator">#rdf$65</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_B_Main_S5_RDF_Dodge_BackwardLeft</hkparam>
+    <hkparam name="stateId">5</hkparam>
+    <hkparam name="probability">1.000000</hkparam>
+    <hkparam name="enable">true</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$69" class="hkbVariableBindingSet" signature="0x338ad4ff">
+    <hkparam name="bindings" numelements="1"><hkobject><hkparam name="memberPath">playbackSpeed</hkparam><hkparam name="variableIndex">$variableID[RDF_DodgeSpeed]$</hkparam><hkparam name="bitIndex">-1</hkparam><hkparam name="bindingType">BINDING_TYPE_VARIABLE</hkparam></hkobject></hkparam><hkparam name="indexOfBindingToEnable">-1</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$68" class="hkbClipGenerator" signature="0x333b85b9">
+    <hkparam name="variableBindingSet">#rdf$69</hkparam>
+    <hkparam name="userData">0</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_B_Main_RDF_Dodge_Left</hkparam>
+    <hkparam name="animationName">Animations\RDF\RDF_Dodge_Left.hkx</hkparam>
+    <hkparam name="triggers">null</hkparam>
+    <hkparam name="cropStartAmountLocalTime">0.000000</hkparam>
+    <hkparam name="cropEndAmountLocalTime">0.000000</hkparam>
+    <hkparam name="startTime">0.000000</hkparam>
+    <hkparam name="playbackSpeed">1.000000</hkparam>
+    <hkparam name="enforcedDuration">0.000000</hkparam>
+    <hkparam name="userControlledTimeFraction">0.000000</hkparam>
+    <hkparam name="animationBindingIndex">-1</hkparam>
+    <hkparam name="mode">MODE_SINGLE_PLAY</hkparam>
+    <hkparam name="flags">0</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$70" class="hkbStateMachineStateInfo" signature="0xed7f9d0">
+    <hkparam name="variableBindingSet">null</hkparam>
+    <hkparam name="listeners" numelements="0"></hkparam>
+    <hkparam name="enterNotifyEvents">null</hkparam>
+    <hkparam name="exitNotifyEvents">null</hkparam>
+    <hkparam name="transitions">null</hkparam>
+    <hkparam name="generator">#rdf$68</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_B_Main_S6_RDF_Dodge_Left</hkparam>
+    <hkparam name="stateId">6</hkparam>
+    <hkparam name="probability">1.000000</hkparam>
+    <hkparam name="enable">true</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$72" class="hkbVariableBindingSet" signature="0x338ad4ff">
+    <hkparam name="bindings" numelements="1"><hkobject><hkparam name="memberPath">playbackSpeed</hkparam><hkparam name="variableIndex">$variableID[RDF_DodgeSpeed]$</hkparam><hkparam name="bitIndex">-1</hkparam><hkparam name="bindingType">BINDING_TYPE_VARIABLE</hkparam></hkobject></hkparam><hkparam name="indexOfBindingToEnable">-1</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$71" class="hkbClipGenerator" signature="0x333b85b9">
+    <hkparam name="variableBindingSet">#rdf$72</hkparam>
+    <hkparam name="userData">0</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_B_Main_RDF_Dodge_ForwardLeft</hkparam>
+    <hkparam name="animationName">Animations\RDF\RDF_Dodge_ForwardLeft.hkx</hkparam>
+    <hkparam name="triggers">null</hkparam>
+    <hkparam name="cropStartAmountLocalTime">0.000000</hkparam>
+    <hkparam name="cropEndAmountLocalTime">0.000000</hkparam>
+    <hkparam name="startTime">0.000000</hkparam>
+    <hkparam name="playbackSpeed">1.000000</hkparam>
+    <hkparam name="enforcedDuration">0.000000</hkparam>
+    <hkparam name="userControlledTimeFraction">0.000000</hkparam>
+    <hkparam name="animationBindingIndex">-1</hkparam>
+    <hkparam name="mode">MODE_SINGLE_PLAY</hkparam>
+    <hkparam name="flags">0</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$73" class="hkbStateMachineStateInfo" signature="0xed7f9d0">
+    <hkparam name="variableBindingSet">null</hkparam>
+    <hkparam name="listeners" numelements="0"></hkparam>
+    <hkparam name="enterNotifyEvents">null</hkparam>
+    <hkparam name="exitNotifyEvents">null</hkparam>
+    <hkparam name="transitions">null</hkparam>
+    <hkparam name="generator">#rdf$71</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_B_Main_S7_RDF_Dodge_ForwardLeft</hkparam>
+    <hkparam name="stateId">7</hkparam>
+    <hkparam name="probability">1.000000</hkparam>
+    <hkparam name="enable">true</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$75" class="hkbVariableBindingSet" signature="0x338ad4ff">
+    <hkparam name="bindings" numelements="1"><hkobject><hkparam name="memberPath">playbackSpeed</hkparam><hkparam name="variableIndex">$variableID[RDF_DodgeSpeed]$</hkparam><hkparam name="bitIndex">-1</hkparam><hkparam name="bindingType">BINDING_TYPE_VARIABLE</hkparam></hkobject></hkparam><hkparam name="indexOfBindingToEnable">-1</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$74" class="hkbClipGenerator" signature="0x333b85b9">
+    <hkparam name="variableBindingSet">#rdf$75</hkparam>
+    <hkparam name="userData">0</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_B_Main_RDF_Dodge_Neutral</hkparam>
+    <hkparam name="animationName">Animations\RDF\RDF_Dodge_Neutral.hkx</hkparam>
+    <hkparam name="triggers">null</hkparam>
+    <hkparam name="cropStartAmountLocalTime">0.000000</hkparam>
+    <hkparam name="cropEndAmountLocalTime">0.000000</hkparam>
+    <hkparam name="startTime">0.000000</hkparam>
+    <hkparam name="playbackSpeed">1.000000</hkparam>
+    <hkparam name="enforcedDuration">0.000000</hkparam>
+    <hkparam name="userControlledTimeFraction">0.000000</hkparam>
+    <hkparam name="animationBindingIndex">-1</hkparam>
+    <hkparam name="mode">MODE_SINGLE_PLAY</hkparam>
+    <hkparam name="flags">0</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$76" class="hkbStateMachineStateInfo" signature="0xed7f9d0">
+    <hkparam name="variableBindingSet">null</hkparam>
+    <hkparam name="listeners" numelements="0"></hkparam>
+    <hkparam name="enterNotifyEvents">null</hkparam>
+    <hkparam name="exitNotifyEvents">null</hkparam>
+    <hkparam name="transitions">null</hkparam>
+    <hkparam name="generator">#rdf$74</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_B_Main_S8_RDF_Dodge_Neutral</hkparam>
+    <hkparam name="stateId">8</hkparam>
+    <hkparam name="probability">1.000000</hkparam>
+    <hkparam name="enable">true</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$49" class="hkbVariableBindingSet" signature="0x338ad4ff">
+    <hkparam name="bindings" numelements="1"><hkobject><hkparam name="memberPath">startStateId</hkparam><hkparam name="variableIndex">$variableID[RDF_DodgeClip]$</hkparam><hkparam name="bitIndex">-1</hkparam><hkparam name="bindingType">BINDING_TYPE_VARIABLE</hkparam></hkobject></hkparam><hkparam name="indexOfBindingToEnable">-1</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$48" class="hkbStateMachine" signature="0x816c1dcb">
+    <hkparam name="variableBindingSet">#rdf$49</hkparam>
+    <hkparam name="userData">0</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_B_Main_ClipSM</hkparam>
+    <hkparam name="eventToSendWhenStateOrTransitionChanges"><hkobject><hkparam name="id">-1</hkparam><hkparam name="payload">null</hkparam></hkobject></hkparam>
+    <hkparam name="startStateChooser">null</hkparam>
+    <hkparam name="startStateId">0</hkparam>
+    <hkparam name="returnToPreviousStateEventId">-1</hkparam>
+    <hkparam name="randomTransitionEventId">-1</hkparam>
+    <hkparam name="transitionToNextHigherStateEventId">-1</hkparam>
+    <hkparam name="transitionToNextLowerStateEventId">-1</hkparam>
+    <hkparam name="syncVariableIndex">-1</hkparam>
+    <hkparam name="wrapAroundStateId">false</hkparam>
+    <hkparam name="maxSimultaneousTransitions">32</hkparam>
+    <hkparam name="startStateMode">START_STATE_MODE_DEFAULT</hkparam>
+    <hkparam name="selfTransitionMode">SELF_TRANSITION_MODE_NO_TRANSITION</hkparam>
+    <hkparam name="states" numelements="9">#rdf$52 #rdf$55 #rdf$58 #rdf$61 #rdf$64 #rdf$67 #rdf$70 #rdf$73 #rdf$76</hkparam>
+    <hkparam name="wildcardTransitions">null</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$77" class="BSBoneSwitchGenerator" signature="0xf33d3eea">
+    <hkparam name="variableBindingSet">null</hkparam>
+    <hkparam name="userData">1</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_B_CastArmsSwitch</hkparam>
+    <hkparam name="pDefaultGenerator">#rdf$48</hkparam>
+    <hkparam name="ChildrenA" numelements="1">#0786</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$47" class="hkbVariableBindingSet" signature="0x338ad4ff">
+    <hkparam name="bindings" numelements="2"><hkobject><hkparam name="memberPath">bIsActive0</hkparam><hkparam name="variableIndex">$variableID[bAnimationDriven]$</hkparam><hkparam name="bitIndex">-1</hkparam><hkparam name="bindingType">BINDING_TYPE_VARIABLE</hkparam></hkobject><hkobject><hkparam name="memberPath">bIsActive1</hkparam><hkparam name="variableIndex">$variableID[RDF_IsDodging]$</hkparam><hkparam name="bitIndex">-1</hkparam><hkparam name="bindingType">BINDING_TYPE_VARIABLE</hkparam></hkobject></hkparam><hkparam name="indexOfBindingToEnable">-1</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$46" class="BSIsActiveModifier" signature="0xb0fde45a">
+    <hkparam name="variableBindingSet">#rdf$47</hkparam>
+    <hkparam name="userData">2</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_B_IsActiveMod</hkparam>
+    <hkparam name="enable">true</hkparam>
+    <hkparam name="bIsActive0">false</hkparam><hkparam name="bInvertActive0">false</hkparam><hkparam name="bIsActive1">false</hkparam><hkparam name="bInvertActive1">false</hkparam><hkparam name="bIsActive2">false</hkparam><hkparam name="bInvertActive2">false</hkparam><hkparam name="bIsActive3">false</hkparam><hkparam name="bInvertActive3">false</hkparam><hkparam name="bIsActive4">false</hkparam><hkparam name="bInvertActive4">false</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$45" class="hkbModifierGenerator" signature="0x1f81fae6">
+    <hkparam name="variableBindingSet">null</hkparam>
+    <hkparam name="userData">1</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_B_MG</hkparam>
+    <hkparam name="modifier">#rdf$46</hkparam>
+    <hkparam name="generator">#rdf$77</hkparam>
+    </hkobject>
+    <hkobject name="#rdf$41" class="hkbStateMachineStateInfo" signature="0xed7f9d0">
+    <hkparam name="variableBindingSet">null</hkparam>
+    <hkparam name="listeners" numelements="0"></hkparam>
+    <hkparam name="enterNotifyEvents">#rdf$42</hkparam>
+    <hkparam name="exitNotifyEvents">#rdf$43</hkparam>
+    <hkparam name="transitions">#rdf$44</hkparam>
+    <hkparam name="generator">#rdf$45</hkparam>
+    <hkparam name="name">RDF_Magic_Dodge_B</hkparam>
+    <hkparam name="stateId">9722</hkparam>
+    <hkparam name="probability">1.000000</hkparam>
+    <hkparam name="enable">true</hkparam>
+    </hkobject>
+  </insert>
+  <append path="#1007/states">#rdf$4</append>
+  <append path="#1007/states">#rdf$41</append>
+  <append path="#1003/transitions"><hkobject><hkparam name="triggerInterval"><hkobject><hkparam name="enterEventId">-1</hkparam><hkparam name="exitEventId">-1</hkparam><hkparam name="enterTime">0.000000</hkparam><hkparam name="exitTime">0.000000</hkparam></hkobject></hkparam><hkparam name="initiateInterval"><hkobject><hkparam name="enterEventId">-1</hkparam><hkparam name="exitEventId">-1</hkparam><hkparam name="enterTime">0.000000</hkparam><hkparam name="exitTime">0.000000</hkparam></hkobject></hkparam><hkparam name="transition">#rdf$0</hkparam><hkparam name="condition">null</hkparam><hkparam name="eventId">$eventID[RDF_DodgeStartMagic]$</hkparam><hkparam name="toStateId">9721</hkparam><hkparam name="fromNestedStateId">0</hkparam><hkparam name="toNestedStateId">0</hkparam><hkparam name="priority">0</hkparam><hkparam name="flags">FLAG_DISABLE_CONDITION</hkparam></hkobject></append>
+  <append path="#1003/transitions"><hkobject><hkparam name="triggerInterval"><hkobject><hkparam name="enterEventId">-1</hkparam><hkparam name="exitEventId">-1</hkparam><hkparam name="enterTime">0.000000</hkparam><hkparam name="exitTime">0.000000</hkparam></hkobject></hkparam><hkparam name="initiateInterval"><hkobject><hkparam name="enterEventId">-1</hkparam><hkparam name="exitEventId">-1</hkparam><hkparam name="enterTime">0.000000</hkparam><hkparam name="exitTime">0.000000</hkparam></hkobject></hkparam><hkparam name="transition">#rdf$0</hkparam><hkparam name="condition">null</hkparam><hkparam name="eventId">$eventID[RDF_DodgeStartMagicB]$</hkparam><hkparam name="toStateId">9722</hkparam><hkparam name="fromNestedStateId">0</hkparam><hkparam name="toNestedStateId">0</hkparam><hkparam name="priority">0</hkparam><hkparam name="flags">FLAG_DISABLE_CONDITION</hkparam></hkobject></append>
+  <append path="#0924/transitions"><hkobject><hkparam name="triggerInterval"><hkobject><hkparam name="enterEventId">-1</hkparam><hkparam name="exitEventId">-1</hkparam><hkparam name="enterTime">0.000000</hkparam><hkparam name="exitTime">0.000000</hkparam></hkobject></hkparam><hkparam name="initiateInterval"><hkobject><hkparam name="enterEventId">-1</hkparam><hkparam name="exitEventId">-1</hkparam><hkparam name="enterTime">0.000000</hkparam><hkparam name="exitTime">0.000000</hkparam></hkobject></hkparam><hkparam name="transition">#rdf$0</hkparam><hkparam name="condition">null</hkparam><hkparam name="eventId">$eventID[RDF_DodgeStartMagic]$</hkparam><hkparam name="toStateId">9721</hkparam><hkparam name="fromNestedStateId">0</hkparam><hkparam name="toNestedStateId">0</hkparam><hkparam name="priority">0</hkparam><hkparam name="flags">FLAG_DISABLE_CONDITION</hkparam></hkobject></append>
+  <append path="#0924/transitions"><hkobject><hkparam name="triggerInterval"><hkobject><hkparam name="enterEventId">-1</hkparam><hkparam name="exitEventId">-1</hkparam><hkparam name="enterTime">0.000000</hkparam><hkparam name="exitTime">0.000000</hkparam></hkobject></hkparam><hkparam name="initiateInterval"><hkobject><hkparam name="enterEventId">-1</hkparam><hkparam name="exitEventId">-1</hkparam><hkparam name="enterTime">0.000000</hkparam><hkparam name="exitTime">0.000000</hkparam></hkobject></hkparam><hkparam name="transition">#rdf$0</hkparam><hkparam name="condition">null</hkparam><hkparam name="eventId">$eventID[RDF_DodgeStartMagicB]$</hkparam><hkparam name="toStateId">9722</hkparam><hkparam name="fromNestedStateId">0</hkparam><hkparam name="toNestedStateId">0</hkparam><hkparam name="priority">0</hkparam><hkparam name="flags">FLAG_DISABLE_CONDITION</hkparam></hkobject></append>
+</patch>

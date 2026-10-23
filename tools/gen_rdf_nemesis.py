@@ -34,6 +34,7 @@ FILES = {
     "defaultfemale_character.xml": "defaultfemale",
     "1hm_behavior.xml": "1hm_behavior",
     "firstperson~1hm_behavior.xml": os.path.join("_1stperson", "1hm_behavior"),
+    "magicbehavior.xml": "magicbehavior",
 }
 # besides the MO2 mods: Nemesis mods kept for reference (the attack frameworks edit 1hm_behavior)
 EXTRA_MOD_ROOTS = [r"S:\AI Agent Skyrim\Attack Frameworks"]
@@ -88,6 +89,7 @@ VANILLA = {
     os.path.join("_1stperson", "0_master"): os.path.join(ROOT, "_work", "fp_nem_xml", "0_master_nem.xml"),
     "1hm_behavior": os.path.join(ROOT, "_work", "vanilla_nemesis_xml", "1hm_behavior_nem.xml"),
     os.path.join("_1stperson", "1hm_behavior"): os.path.join(ROOT, "_work", "fp_nem_xml", "1hm_behavior_nem.xml"),
+    "magicbehavior": os.path.join(ROOT, "_work", "vanilla_nemesis_xml", "magicbehavior_nem.xml"),
 }
 
 
@@ -127,9 +129,15 @@ def original(folder, node_id):
     """The node as Nemesis holds it: the vanilla dump in Nemesis' layout, confirmed by an installed Nemesis mod
     that edits the same node (counts aside: mods often update numelements, Nemesis recounts anyway)."""
     text = vanilla_node(folder, node_id)
-    agree = [code for code, t in find_originals(folder, node_id + ".txt") if without_counts(t) == without_counts(text)]
+    found = find_originals(folder, node_id + ".txt")
+    if not found:
+        # No mod edits this node: nothing to compare with. nemesis_layout() is confirmed on the other nodes of the same
+        # classes (state machines, transition arrays) that mods do edit, so the vanilla dump stands.
+        print("  %s/%s: no Nemesis mod edits it; vanilla dump in Nemesis' layout, unconfirmed" % (folder, node_id))
+        return text, ["(vanilla)"]
+    agree = [code for code, t in found if without_counts(t) == without_counts(text)]
     if not agree:
-        sys.exit("%s/%s: no installed Nemesis mod confirms the original text; check nemesis_layout()" % (folder, node_id))
+        sys.exit("%s/%s: the installed Nemesis mods' original text differs from ours; check nemesis_layout()" % (folder, node_id))
     return text, agree
 
 

@@ -22,6 +22,11 @@ namespace rdf::game::capture
 	// Replays the latest held-back attempt of that kind (a power attack falls back to any). False if there is none or
 	// the game refused it again. A replayed idle is queued: its outcome shows a few frames later.
 	bool Replay(RE::Actor* actor, bool power);
+	// [Casting] While on, the actor's release actions (Right / Left / Dual Release: an arrow loosed, a spell let go) are
+	// held back: one under a dodge that keeps the draw / the cast would end the bow / casting state the dodge plays in.
+	// ReplayReleases makes them once that dodge is over (each action once, in order); returns how many were accepted.
+	void SetHoldingReleases(std::uint32_t formID, bool on);
+	int  ReplayReleases(RE::Actor* actor);
 	void Forget(std::uint32_t formID);
 	void Clear();  // load / new game
 }

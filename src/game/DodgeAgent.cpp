@@ -9,6 +9,7 @@
 #include "MotionHook.h"
 #include "Settings.h"
 
+#include <algorithm>
 #include <array>
 #include <format>
 
@@ -87,15 +88,17 @@ namespace rdf::game
 		measuredSpeed_ = 0.0f;
 		last3D_ = nullptr;
 		charged_ = 0.0f;
+		releasesHeld_ = false;
 	}
 
 	void DodgeAgent::Release(RE::Actor* actor)
 	{
 		if (actor && (core_->DodgeRunning() || awaitingEnter_)) {
-			graph::SendExit(actor);
+			graph::SendExit(actor, layer_);
 		}
 		if (actor) {
 			graph::SetChainIndex(actor, 0);
+			graph::SetLayer(actor, graph::Layer::Root);
 			ClearAttackFromDodge(actor);
 			effects::SetInvulnerable(actor, false);
 			graph::UnregisterSink(actor);
@@ -151,7 +154,12 @@ namespace rdf::game
 		view.dodgeWindowOpen = graph::DodgeWindowOpen(actor);
 		ReadAttack(actor, state.attackState, view);
 		// The keyword walk only while a dodge press waits on it.
-		view.dodgeForbidden = core_->Buffer().Peek(CommandKind::Dodge, core_->Now()) && attack::DodgeForbidden(actor);
+		const bool dodgeWaits = core_->Buffer().Peek(CommandKind::Dodge, core_->Now()) != nullptr;
+		view.dodgeForbidden = dodgeWaits && attack::DodgeForbidden(actor);
+		// [Casting] a bow being drawn may be dodged out of at any moment when the dodge keeps the draw going.
+		if (dodgeWaits && !ownDodge && !view.cancelAnyTime && CastingLayer(actor, state.attackState, in.firstPerson) == graph::Layer::Bow) {
+			view.cancelAnyTime = true;
+		}
 		view.staminaOk = !settings.costResource || state.resource >= settings.minimum;
 		const Decision decision = core_->Evaluate(view);
 		if (decision.reject == RejectReason::StaminaLow) {
@@ -160,6 +168,7 @@ namespace rdf::game
 		Execute(actor, decision, in);
 
 		StepAndPublish(actor, dt, in);
+		HoldReleases(actor);
 		// Attack attempts are held back while the dodge can still be cancelled into one; once it is cancelled or hands
 		// over they pass (a combo continuing from the attack the dodge became).
 		capture::SetCapturing(formID_, awaitingEnter_ || (core_->DodgeRunning() && !core_->Exiting() && !core_->CancelledIntoAction()));
@@ -211,6 +220,7 @@ namespace rdf::game
 		}
 		last3D_ = current;
 		oneHandBroken_ = false;
+		layerBroken_ = false;
 		graph::RegisterSink(actor);
 		if (core_->DodgeRunning() || awaitingEnter_) {
 			AbandonGraph(actor, "3D reloaded");
@@ -331,11 +341,15 @@ namespace rdf::game
 		awaitingEnter_ = false;
 		exitSent_ = true;
 		core_->Apply(Decision{ DecisionKind::Interrupt }, true);
-		if (oneHand_) {
+		if (layer_ == graph::Layer::OneHand) {
 			// A graph took the 1hm start but the active one never entered: a behavior output without the 1hm part in this
 			// view (first person after an older Pandora run). Root dodges only, until the 3D reloads.
 			oneHandBroken_ = true;
 			logger::warn("{:08X}: the 1hm dodge did not enter; using the root dodge until the 3D reloads (re-run Pandora / Nemesis?)", formID_);
+		} else if (layer_ != graph::Layer::Root) {
+			layerBroken_ = true;
+			logger::warn("{:08X}: the {} dodge did not enter; no bow / magic dodges until the 3D reloads (re-run Pandora / Nemesis?)", formID_,
+				graph::ToString(layer_));
 		}
 	}
 
@@ -351,7 +365,7 @@ namespace rdf::game
 	// exit) that we no longer drive. Send the exit so every graph goes back to locomotion.
 	void DodgeAgent::AbandonGraph(RE::Actor* actor, const char* why)
 	{
-		graph::SendExit(actor);
+		graph::SendAllExits(actor);
 		if (awaitingEnter_) {
 			effects::RefundCost(actor, charged_);
 			charged_ = 0.0f;
@@ -376,8 +390,8 @@ namespace rdf::game
 		}
 		orphanTime_ += dt;
 		if (orphanTime_ >= 0.6f) {
-			logger::info("{:08X}: graph stuck in a dodge state we do not own; sending {}", formID_, Settings::Get().graph.exit);
-			graph::SendExit(actor);
+			logger::info("{:08X}: graph stuck in a dodge state we do not own; sending every layer's exit", formID_);
+			graph::SendAllExits(actor);
 			graph::SetChainIndex(actor, 0);
 			orphanTime_ = 0.0f;  // retry after another grace period if it did not take
 		}
@@ -480,7 +494,7 @@ namespace rdf::game
 			CancelInto(actor, d);
 			break;
 		case DecisionKind::LocomotionExit:
-			graph::SendExit(actor);
+			graph::SendExit(actor, layer_);
 			exitSent_ = true;
 			core_->Apply(d, true);
 			break;
@@ -511,27 +525,43 @@ namespace rdf::game
 		// RDF_ChainIndex: 0 for a fresh dodge, the running dodge's index + 1 for a chain (ChainCount is 1-based).
 		const int   chainIndex = chain ? core_->ChainCount() : 0;
 		const float playback = settings.core.timing.PlaybackSpeed(clipLength, settings.animSpeed);
-		// The 1hm dodge first (a weapon out: 1hm_behavior runs, third or first person), else the root one. A chain stays in the
-		// layer of the dodge it continues; in 1hm it is the start of the other state.
-		auto       sent = entry;
-		bool       oneHand = false;
-		bool       accepted = false;
-		const bool chaining = entry == graph::DodgeEntry::Chain;
-		if (settings.graph.oneHand && !oneHandBroken_ && (!chaining || oneHand_)) {
+		// [Casting] the bow / magic layer first (the keyword, a draw / a cast running, third person), then the 1hm dodge (a
+		// weapon out: 1hm_behavior runs, third or first person), else the root one. A chain stays in the layer of the dodge it
+		// continues; outside the root it is the start of the other state.
+		auto        sent = entry;
+		auto        layer = graph::Layer::Root;
+		bool        accepted = false;
+		const bool  chaining = entry == graph::DodgeEntry::Chain;
+		const auto  tryLayer = [&](graph::Layer l) {
 			sent = chaining ? (inStateB_ ? graph::DodgeEntry::StartA : graph::DodgeEntry::StartB) : entry;
-			accepted = oneHand = graph::SendStart(actor, sent, clip, playback, armStance, chainIndex, true);
+			if (!graph::SendStart(actor, sent, clip, playback, armStance, chainIndex, l)) {
+				return false;
+			}
+			layer = l;
+			return true;
+		};
+		if (chaining && layer_ != graph::Layer::Root) {
+			accepted = tryLayer(layer_);
+		} else if (!chaining) {
+			const auto casting = CastingLayer(actor, static_cast<std::uint8_t>(actor->AsActorState()->GetAttackState()), in.firstPerson);
+			accepted = casting != graph::Layer::Root && tryLayer(casting);
+			if (!accepted && settings.graph.oneHand && !oneHandBroken_) {
+				accepted = tryLayer(graph::Layer::OneHand);
+			}
 		}
-		if (!accepted && !(chaining && oneHand_)) {
-			sent = entry;
-			accepted = graph::SendStart(actor, entry, clip, playback, armStance, chainIndex, false);
+		if (!accepted && (!chaining || layer_ == graph::Layer::Root)) {
+			sent = entry;   // the root has its own chain event
+			accepted = graph::SendStart(actor, entry, clip, playback, armStance, chainIndex, graph::Layer::Root);
+			layer = graph::Layer::Root;
 		}
 		if (!accepted) {
 			DevLog("{:08X}: graph refused {} (clip {}); press stays buffered", formID_, chain ? "chain" : "start", clip);
 			graph::SetChainIndex(actor, core_->DodgeRunning() ? core_->ChainCount() - 1 : 0);  // the dodge that keeps playing
+			graph::SetLayer(actor, core_->DodgeRunning() ? layer_ : graph::Layer::Root);
 			core_->Apply(d, false);
 			return;
 		}
-		oneHand_ = oneHand;
+		layer_ = layer;
 		inStateB_ = sent == graph::DodgeEntry::Chain ? !inStateB_ : sent == graph::DodgeEntry::StartB;
 		perfectFired_ = false;
 		lastClip_ = clip;
@@ -559,7 +589,7 @@ namespace rdf::game
 			driver_->OnDodgeStarted(actor, core_->OwnsYaw());
 		}
 		DevLog("{:08X}: dodge {} #{} ({}) angle={:.1f} clip={} keepFacing={} holdFacing={} ownsYaw={} freeRotation={} ({})", formID_,
-			chain ? "chain" : "start", chainIndex, oneHand_ ? "1hm" : "root", angle, clip, core_->KeepsFacing(), core_->HoldsFacing(), core_->OwnsYaw(), in.freeRotation, in.modeName);
+			chain ? "chain" : "start", chainIndex, graph::ToString(layer_), angle, clip, core_->KeepsFacing(), core_->HoldsFacing(), core_->OwnsYaw(), in.freeRotation, in.modeName);
 	}
 
 	// Attack and block live in a nested behavior under the default state, so leaving the dodge and
@@ -568,11 +598,11 @@ namespace rdf::game
 	void DodgeAgent::CancelInto(RE::Actor* actor, const Decision& d)
 	{
 		// A 1hm dodge is left by the action itself (1HM_Ready_State's transitions): no exit first, nothing to wait for.
-		if (oneHand_ && !exitSent_ && graph::Depth(actor) > 0 && CancelInPlace(actor, d)) {
+		if (layer_ == graph::Layer::OneHand && !exitSent_ && graph::Depth(actor) > 0 && CancelInPlace(actor, d)) {
 			return;
 		}
 		if (!exitSent_) {
-			graph::SendExit(actor);
+			graph::SendExit(actor, layer_);
 			exitSent_ = true;
 		}
 		if (d.kind != DecisionKind::Block) {
@@ -646,7 +676,7 @@ namespace rdf::game
 	void DodgeAgent::GateGraphEvents(RE::Actor* actor)
 	{
 		const bool dodging = core_->DodgeRunning() || awaitingEnter_;
-		const bool mayLeave = oneHand_ ? (!dodging || core_->BlockWindowOpen()) : (!dodging && graph::Depth(actor) == 0);
+		const bool mayLeave = layer_ == graph::Layer::OneHand ? (!dodging || core_->BlockWindowOpen()) : (!dodging && graph::Depth(actor) == 0);
 		if (!mayLeave) {
 			gate::SetLocked(formID_, true);
 			return;
@@ -656,6 +686,47 @@ namespace rdf::game
 			DevLog("{:08X}: held graph event '{}' sent: {}", formID_, event.c_str(), taken ? "taken" : "refused");
 		}
 		gate::SetLocked(formID_, false);
+	}
+
+	// [Casting] Which layer keeps what the actor's arms are doing: a bow being drawn (or held drawn) and the draw keyword,
+	// else a cast running (the vanilla IsCasting* graph variables) and the cast keyword. Third person only: the first-person
+	// graph has no such layers.
+	graph::Layer DodgeAgent::CastingLayer(RE::Actor* actor, std::uint8_t attackState, bool firstPerson) const
+	{
+		if (firstPerson || layerBroken_) {
+			return graph::Layer::Root;
+		}
+		const bool drawing = attackState == attack_state::kBowDraw || attackState == attack_state::kBowAttached ||
+		                     attackState == attack_state::kBowDrawn;
+		if (drawing && attack::DrawDuringDodge(actor)) {
+			return graph::Layer::Bow;
+		}
+		const auto& names = Settings::Get().casting.castingVariables;
+		const bool  casting = std::any_of(names.begin(), names.end(), [&](const std::string& name) {
+			bool value = false;
+			return actor->GetGraphVariableBool(name, value) && value;
+		});
+		if (casting && attack::CastDuringDodge(actor)) {
+			return graph::Layer::Magic;
+		}
+		return graph::Layer::Root;
+	}
+
+	// [Casting] A bow / magic dodge plays inside the draw / the cast; a release (an arrow loosed, a spell let go) would end
+	// that state and the dodge with it, so releases wait until the graph has left the dodge, then go out as they were made.
+	void DodgeAgent::HoldReleases(RE::Actor* actor)
+	{
+		const bool layered = layer_ == graph::Layer::Bow || layer_ == graph::Layer::Magic;
+		const bool hold = layered && (awaitingEnter_ || (core_->DodgeRunning() && graph::Depth(actor) > 0));
+		if (hold == releasesHeld_) {
+			return;
+		}
+		releasesHeld_ = hold;
+		capture::SetHoldingReleases(formID_, hold);
+		if (!hold) {
+			const int replayed = capture::ReplayReleases(actor);
+			DevLog("{:08X}: the {} dodge is over: {} held release(s) replayed", formID_, graph::ToString(layer_), replayed);
+		}
 	}
 
 	void DodgeAgent::VerifyAttack(RE::Actor* actor, float dt, std::uint8_t attackState)
@@ -774,7 +845,7 @@ namespace rdf::game
 		effects::SetInvulnerable(actor, settings.iFrames && core_->Invulnerable(settings.iFrameStart, settings.iFrameEnd));
 
 		if (step.completed && !exitSent_) {
-			graph::SendExit(actor);
+			graph::SendExit(actor, layer_);
 			exitSent_ = true;
 		}
 		const bool running = core_->DodgeRunning();
@@ -792,6 +863,7 @@ namespace rdf::game
 		}
 		tailFrames_ = 30;  // follow the hand-over into locomotion in the dev trace
 		graph::SetChainIndex(actor, 0);  // the chain is over, whatever ended it
+		graph::SetLayer(actor, graph::Layer::Root);
 		effects::SetInvulnerable(actor, false);
 		awaitingEnter_ = false;
 		charged_ = 0.0f;

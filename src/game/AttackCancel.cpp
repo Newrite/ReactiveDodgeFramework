@@ -119,4 +119,16 @@ namespace rdf::game::attack
 		ForEffectsWith(actor, forms::Get<RE::BGSKeyword>(Settings::Get().stagger.escapeCostKeyword), [&](float magnitude) { sum += magnitude; });
 		return sum;
 	}
+
+	bool DrawDuringDodge(RE::Actor* actor)
+	{
+		auto* keyword = forms::Get<RE::BGSKeyword>(Settings::Get().casting.drawKeyword);
+		return keyword && actor && HasKeyword(actor, keyword);
+	}
+
+	bool CastDuringDodge(RE::Actor* actor)
+	{
+		auto* keyword = forms::Get<RE::BGSKeyword>(Settings::Get().casting.castKeyword);
+		return keyword && actor && HasKeyword(actor, keyword);
+	}
 }

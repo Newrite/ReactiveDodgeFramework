@@ -54,18 +54,32 @@ namespace rdf::game::graph
 		StartB,  // root wildcard into dodge state B
 		Chain,   // from the dodge state the graph is in to the other one
 	};
-	// Sets RDF_DodgeClip / RDF_DodgeSpeed / RDF_ArmBlend / RDF_ChainIndex, then sends the entry event. False = the
-	// graph refused it. armStance: share (0..1) of the current weapon stance on the arms, over the dodge clip.
-	// chainIndex: which dodge of the chain this is (0 = the first).
-	// oneHand: the 1hm_behavior dodge states (BEHAVIOR_INTEGRATION.md 7), refused while 1hm does not run.
-	bool SendStart(RE::Actor* actor, DodgeEntry entry, int clip, float animSpeed, float armStance, int chainIndex, bool oneHand);
+	// Where a dodge plays (the value of RDF_DodgeLayer).
+	enum class Layer
+	{
+		Root,     // the root behavior's dodge states
+		OneHand,  // 1hm_behavior's (BEHAVIOR_INTEGRATION.md 7), refused while 1hm does not run
+		Bow,      // under a bow draw: Bow_Attack_LowerBodyBehavior (section 8), refused unless the bow is being drawn
+		Magic,    // under a cast: DefaultMagicCastingBehavior (section 8), refused while magicbehavior does not run
+	};
+	const char* ToString(Layer layer);
+	// Sets RDF_DodgeClip / RDF_DodgeSpeed / RDF_ArmBlend / RDF_ChainIndex / RDF_DodgeLayer, then sends the entry event.
+	// False = the graph refused it. armStance: share (0..1) of the current weapon stance on the arms, over the dodge clip.
+	// chainIndex: which dodge of the chain this is (0 = the first). Outside the root a chain is the start of the other
+	// state (the caller passes StartA / StartB).
+	bool SendStart(RE::Actor* actor, DodgeEntry entry, int clip, float animSpeed, float armStance, int chainIndex, Layer layer);
 	// RDF_ChainIndex alone: restored after a refused chain, 0 once no dodge runs.
 	void SetChainIndex(RE::Actor* actor, int chainIndex);
 	// RDF_AttackFromDodge (0 none, 1 attack, 2 power attack) and RDF_AttackFromDodgeClip.
 	void SetAttackFromDodge(RE::Actor* actor, int kind, int clip);
 	// The graph value of RDF_ArmBlend that gives `stanceShare` of the stance on the arms.
 	float ArmBlendWeight(float stanceShare);
-	void SendExit(RE::Actor* actor);
+	// The layer's exit event (the root and 1hm share one).
+	void SendExit(RE::Actor* actor, Layer layer);
+	// Every layer's exit: for a dodge state nobody owns (orphaned, abandoned).
+	void SendAllExits(RE::Actor* actor);
+	// RDF_DodgeLayer alone: restored after a refused start, Root once no dodge runs.
+	void SetLayer(RE::Actor* actor, Layer layer);
 	// RDF_IsDodging is set by the graph itself; read-only truth for "graph is in a dodge state".
 	bool GraphIsDodging(RE::Actor* actor);
 }

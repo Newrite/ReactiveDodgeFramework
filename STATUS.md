@@ -52,6 +52,10 @@
   once through 1HM_Ready_State's transitions, other mods' direct blockStart is held until the block window. Staged
   Pandora validated on STB and VanillaLike; needs a Pandora re-run; not yet run in game.
 
+* Bow and magic layers ([Casting] keywords, BEHAVIOR_INTEGRATION.md 8): a dodge that keeps a bow draw / a cast going,
+  third person; releases during it go out after it. Staged Pandora validated on STB and VanillaLike; needs a Pandora
+  re-run and a keyword; not yet run in game.
+
 ## Known limitations
 * A one-frame upper-body pop at dodge start, visible only in slow motion (parked; findings in JOURNAL.md).
 * Fixture animations are TUDM's clips (local only, not redistributable); visual quality is bounded by them, e.g. they

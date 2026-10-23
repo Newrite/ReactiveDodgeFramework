@@ -596,6 +596,7 @@
 				<hkcstring>RDF_ChainIndex</hkcstring>
 				<hkcstring>RDF_AttackFromDodge</hkcstring>
 				<hkcstring>RDF_AttackFromDodgeClip</hkcstring>
+				<hkcstring>RDF_DodgeLayer</hkcstring>
 <!-- CLOSE -->
 			</hkparam>
 			<hkparam name="characterPropertyNames" numelements="9">

@@ -18,6 +18,7 @@ namespace rdf::game::graph
 		struct Names
 		{
 			RE::BSFixedString start, startB, start1H, startB1H, chain, exit, entered, left, clip, speed, armBlend, isDodging, chainIndex, attackFromDodge, attackFromDodgeClip;
+			RE::BSFixedString startBow, startBowB, exitBow, startMagic, startMagicB, exitMagic, layer;
 			std::vector<RE::BSFixedString> windowOpen, windowClose;
 			// [AttackCancel]
 			std::vector<RE::BSFixedString> recovery, recoveryEnd, attackStart;
@@ -161,6 +162,13 @@ namespace rdf::game::graph
 		g_names.startB = g.startB;
 		g_names.start1H = g.start1H;
 		g_names.startB1H = g.startB1H;
+		g_names.startBow = g.startBow;
+		g_names.startBowB = g.startBowB;
+		g_names.exitBow = g.exitBow;
+		g_names.startMagic = g.startMagic;
+		g_names.startMagicB = g.startMagicB;
+		g_names.exitMagic = g.exitMagic;
+		g_names.layer = g.layer;
 		g_names.chain = g.chain;
 		g_names.exit = g.exit;
 		g_names.entered = g.entered;
@@ -350,14 +358,29 @@ namespace rdf::game::graph
 		return std::clamp(stanceShare, 0.0f, 1.0f);
 	}
 
-	bool SendStart(RE::Actor* actor, DodgeEntry entry, int clip, float animSpeed, float armStance, int chainIndex, bool oneHand)
+	const char* ToString(Layer layer)
+	{
+		switch (layer) {
+		case Layer::OneHand: return "1hm";
+		case Layer::Bow: return "bow";
+		case Layer::Magic: return "magic";
+		default: return "root";
+		}
+	}
+
+	bool SendStart(RE::Actor* actor, DodgeEntry entry, int clip, float animSpeed, float armStance, int chainIndex, Layer layer)
 	{
 		actor->SetGraphVariableInt(g_names.clip, clip);
 		actor->SetGraphVariableInt(g_names.chainIndex, chainIndex);
 		actor->SetGraphVariableFloat(g_names.speed, animSpeed);
 		actor->SetGraphVariableFloat(g_names.armBlend, ArmBlendWeight(armStance));
-		if (oneHand) {   // 1hm: a chain is the start of the other state (the caller passes StartA / StartB)
-			return gate::Send(actor, entry == DodgeEntry::StartB ? g_names.startB1H : g_names.start1H);
+		actor->SetGraphVariableInt(g_names.layer, static_cast<std::int32_t>(layer));
+		const bool b = entry == DodgeEntry::StartB;
+		switch (layer) {   // outside the root a chain is the start of the other state (the caller passes StartA / StartB)
+		case Layer::OneHand: return gate::Send(actor, b ? g_names.startB1H : g_names.start1H);
+		case Layer::Bow: return gate::Send(actor, b ? g_names.startBowB : g_names.startBow);
+		case Layer::Magic: return gate::Send(actor, b ? g_names.startMagicB : g_names.startMagic);
+		default: break;
 		}
 		switch (entry) {
 		case DodgeEntry::Chain: return actor->NotifyAnimationGraph(g_names.chain);
@@ -377,9 +400,25 @@ namespace rdf::game::graph
 		actor->SetGraphVariableInt(g_names.attackFromDodgeClip, clip);
 	}
 
-	void SendExit(RE::Actor* actor)
+	void SendExit(RE::Actor* actor, Layer layer)
+	{
+		switch (layer) {
+		case Layer::Bow: actor->NotifyAnimationGraph(g_names.exitBow); break;
+		case Layer::Magic: actor->NotifyAnimationGraph(g_names.exitMagic); break;
+		default: actor->NotifyAnimationGraph(g_names.exit); break;
+		}
+	}
+
+	void SendAllExits(RE::Actor* actor)
 	{
 		actor->NotifyAnimationGraph(g_names.exit);
+		actor->NotifyAnimationGraph(g_names.exitBow);
+		actor->NotifyAnimationGraph(g_names.exitMagic);
+	}
+
+	void SetLayer(RE::Actor* actor, Layer layer)
+	{
+		actor->SetGraphVariableInt(g_names.layer, static_cast<std::int32_t>(layer));
 	}
 
 	bool GraphIsDodging(RE::Actor* actor)

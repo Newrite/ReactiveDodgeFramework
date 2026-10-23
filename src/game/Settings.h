@@ -22,6 +22,15 @@ namespace rdf::game
 		bool        oneHand{ true };
 		std::string start1H{ "RDF_DodgeStart1H" };
 		std::string startB1H{ "RDF_DodgeStartB1H" };
+		// the layers that keep a bow draw / a cast going under the dodge ([Casting], BEHAVIOR_INTEGRATION.md 8): each its
+		// own start A / start B / exit, sent to the nested machine they live in
+		std::string startBow{ "RDF_DodgeStartBow" };
+		std::string startBowB{ "RDF_DodgeStartBowB" };
+		std::string exitBow{ "RDF_DodgeExitBow" };
+		std::string startMagic{ "RDF_DodgeStartMagic" };
+		std::string startMagicB{ "RDF_DodgeStartMagicB" };
+		std::string exitMagic{ "RDF_DodgeExitMagic" };
+		std::string layer{ "RDF_DodgeLayer" };  // where the dodge plays: 0 root, 1 1hm, 2 bow, 3 magic (for OAR conditions)
 		// graph events other mods send directly, held back while the dodge may not be left: "event" or "event|cancelEvent"
 		std::vector<std::string> holdEvents{ "blockStart|blockStop" };
 		// events reported by the graph
@@ -105,6 +114,16 @@ namespace rdf::game
 			float       escapeCost{ 0.0f };
 			std::string escapeCostKeyword;
 		} stagger;
+
+		// [Casting] an actor with these keywords (actor, race, worn items, active effects) dodges without dropping a bow
+		// draw / a spell it charges: the dodge plays on the body and the arms go on (third person). The release made
+		// during the dodge is held and replayed once it is over. Empty = never (the dodge interrupts them).
+		struct CastingSettings
+		{
+			std::string drawKeyword;
+			std::string castKeyword;
+			std::vector<std::string> castingVariables{ "IsCastingRight", "IsCastingLeft", "IsCastingDual" };  // bool: a cast runs
+		} casting;
 
 		// [IFrames]
 		bool  iFrames{ true };

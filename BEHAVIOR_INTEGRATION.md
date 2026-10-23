@@ -302,3 +302,43 @@ What the plugin does with it ([Graph] bOneHandDodge, sEventStart1H / sEventStart
 Still open: first person and the Nemesis variant have only the root dodge in 1P; `1HM_Behavior`'s wildcards (recoil,
 Precision's `Collision_Recoil`, combat idles, BFCO / MCO sprint-attack wildcards) apply to a 1hm dodge too; nothing of
 this has run in game yet.
+
+## 8. Bow and magic layers (`[Casting]`, third person; built 2026-10-23, not run in game)
+
+A dodge that keeps the arms' work going: the body dodges, a bow being drawn stays drawn and a spell being charged or cast
+goes on. Only for an actor with the keyword (`[Casting] sDrawDuringDodgeKeyword` / `sCastDuringDodgeKeyword`, the same
+sources as the other keywords), so authors keep clips that do not fit away from it; without the keyword nothing changes
+(the dodge interrupts the draw / the cast, InterruptCast on enter).
+
+The dodge cannot play in the root or in 1HM_Behavior there: the draw lives in `Bow_AttackState`, the cast in
+magicbehavior's `DefaultMagicCasting`, and leaving them ends the draw / the cast. So each gets two dodge states inside its
+own locomotion machine, under the arms' generator:
+- bow: `Bow_Attack_LowerBodyBehavior` (#2691, 1hm_behavior; standing 0 / moving 1, shared with QuickShot and the 1P branch),
+  states `RDF_Bow_Dodge_A/B` 9711 / 9712. `BowZoomBlend` keeps the draw on the upper body over them;
+- magic: `DefaultMagicCastingBehavior` (#1007, magicbehavior; standing 0 / moving 1), states `RDF_Magic_Dodge_A/B`
+  9721 / 9722, the dodge clip chooser wrapped in a `BSBoneSwitchGenerator` whose ChildrenA is the moving state's
+  cast-arms child (#0786). magicbehavior gains `bAnimationDriven` (it had none) and our events / variables.
+
+Each state: BSIsActiveModifier (bAnimationDriven, RDF_IsDodging) over the dodge clip chooser (same clips, RDF_DodgeClip /
+RDF_DodgeSpeed), enter `RDF_DodgeEntered` (no InterruptCast), exit `RDF_DodgeLeft`; chains on the other state's start
+event; leaves on the layer's exit event to moving (`Speed > 20`) or standing (`Speed <= 20`). Both starts are appended to
+the standing and the moving state's transitions (#2741 / #2694, #1003 / #0924). Events: `RDF_DodgeStartBow` / `...BowB` /
+`RDF_DodgeExitBow`, `RDF_DodgeStartMagic` / `...MagicB` / `RDF_DodgeExitMagic`. `RDF_DodgeLayer` (int, every file) tells
+OAR where the dodge plays: 0 root, 1 1hm, 2 bow, 3 magic.
+
+The plugin (`graph::Layer`, `DodgeAgent::CastingLayer`):
+- order: bow (keyword + attack state BowDraw / BowAttached / BowDrawn), magic (keyword + IsCastingRight / Left / Dual,
+  `[Casting] sCastingVariables`), 1hm, root; third person only. A chain stays in its layer. A layer start that never enters
+  disables the layers until the 3D reloads (like the 1hm one);
+- with the bow keyword a draw may be dodged out of at any moment (the vanilla attack-state mask has no draw states);
+- releases wait: an arrow loosed or a spell let go would leave the draw / cast state and the dodge with it, so Right /
+  Left / Dual Release actions are held by the PerformAction hook (`capture::SetHoldingReleases`) while the layer's dodge
+  runs and replayed (`TESActionData`, each action once) once the graph has left it;
+- cancels into an attack / block take the root way (the layer's exit, then the action); orphaned / abandoned states get
+  every layer's exit.
+
+Validation: `validate_rdf.py` 248/248 (STB), `validate_onehand.py --ref noonehand --label rdf` 128/128 on STB and
+VanillaLike (the reference: `gen_rdf_patch.py _work/noonehand/rdf --no-onehand`), Nemesis `check_rdf_nemesis.py` 82/82.
+The Nemesis originals of #2741 / #2694 / #1007 / #1003 / #0924 are vanilla dumps no installed Nemesis mod edits (unconfirmed;
+the same classes are confirmed elsewhere). Open: first person has no layers; whether a held release replayed after the
+dodge fires as expected (a fire-and-forget spell, a concentration spell, an arrow) is the first thing to check in game.

@@ -1,0 +1,9 @@
+		<hkobject name="#rdfm$77" class="BSBoneSwitchGenerator" signature="0xf33d3eea">
+			<hkparam name="variableBindingSet">null</hkparam>
+			<hkparam name="userData">1</hkparam>
+			<hkparam name="name">RDF_Magic_Dodge_B_CastArmsSwitch</hkparam>
+			<hkparam name="pDefaultGenerator">#rdfm$48</hkparam>
+			<hkparam name="ChildrenA" numelements="1">
+				#0786
+			</hkparam>
+		</hkobject>

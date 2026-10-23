@@ -54,6 +54,24 @@ ONEHAND_STATES = [("RDF_1H_Dodge_A", 9701), ("RDF_1H_Dodge_B", 9702)]
 ONEHAND_START_EVENTS = ["RDF_DodgeStart1H", "RDF_DodgeStartB1H"]
 ONEHAND_READY_ID = 0
 ONEHAND_EXIT_EXPR = "RDF_IsDodging == 1"
+# ---------------------------------------------- the bow and magic layers ([Casting] keywords; BEHAVIOR_INTEGRATION.md 8)
+# A dodge under a drawn bow or a cast keeps the draw / the cast: the dodge plays on the body inside the locomotion machine
+# the bow draw / the cast is laid over. Bow: Bow_Attack_LowerBodyBehavior (1hm_behavior; the bow's upper body is
+# BowZoomBlend, blended over it by bone masks; QuickShot and the 1P branch share the machine). Magic:
+# DefaultMagicCastingBehavior (magicbehavior), the dodge under a BSBoneSwitch with the moving state's cast-arms child.
+# Started through the vanilla states' own transition arrays (standing 0 / moving 1), left back to moving or standing.
+V_BOW = dict(SM="#2691", STATE_TRANSITIONS=["#2741", "#2694"])   # in 1hm_behavior (its tables: V_1HM)
+BOW_STATES = [("RDF_Bow_Dodge_A", 9711), ("RDF_Bow_Dodge_B", 9712)]
+BOW_EVENTS = ["RDF_DodgeStartBow", "RDF_DodgeStartBowB", "RDF_DodgeExitBow"]
+V_MAGIC = dict(STRING="#0077", VALUES="#0078", DATA="#0079", SM="#1007", STATE_TRANSITIONS=["#1003", "#0924"],
+               CAST_ARMS="#0786")
+MAGIC_STATES = [("RDF_Magic_Dodge_A", 9721), ("RDF_Magic_Dodge_B", 9722)]
+MAGIC_EVENTS = ["RDF_DodgeStartMagic", "RDF_DodgeStartMagicB", "RDF_DodgeExitMagic"]
+MAGIC_EXTRA_VARIABLES = [("bAnimationDriven", "VARIABLE_TYPE_BOOL", 0)]   # 0_master's, not in vanilla magicbehavior
+MAGIC_PATCH_NAME = "magicbehavior.xml"
+LAYER_MOVING_EXPR = "Speed > 20"     # leaving a layer dodge: to the moving state, else the standing one
+LAYER_STANDING_EXPR = "Speed <= 20"
+
 # first-person 1hm_behavior (Nemesis ids of the vanilla 1P file): the same layout, its own state machine / Ready ids
 V_1HM_FP = dict(STRING="#0085", VALUES="#0086", DATA="#0087", SM="#4420", WILDCARD="#0088",
                 READY_STATE="#4418", READY_TRANSITIONS="#4416")
@@ -67,7 +85,8 @@ VARIABLES = [("RDF_DodgeClip", "VARIABLE_TYPE_INT32", 0),
              ("RDF_ArmBlend", "VARIABLE_TYPE_REAL", 0.0),    # 0 = arms follow the dodge clip, 1 = arms hold the weapon stance
              ("RDF_ChainIndex", "VARIABLE_TYPE_INT32", 0),   # which dodge of a chain: 0 first, 1 second, ...; 0 again after it
              ("RDF_AttackFromDodge", "VARIABLE_TYPE_INT32", 0),      # the attack playing came out of a dodge: 1 attack, 2 power attack
-             ("RDF_AttackFromDodgeClip", "VARIABLE_TYPE_INT32", 0)]  # ... and that dodge's RDF_DodgeClip (valid while the above > 0)
+             ("RDF_AttackFromDodgeClip", "VARIABLE_TYPE_INT32", 0),  # ... and that dodge's RDF_DodgeClip (valid while the above > 0)
+             ("RDF_DodgeLayer", "VARIABLE_TYPE_INT32", 0)]   # where the dodge plays: 0 root, 1 1hm, 2 under a bow draw, 3 under a cast
 # variables that are only bound if they already exist in the CURRENT output 0_master (checked by the caller)
 OPTIONAL_BIND_VARS = ["DF_IsDodging"]          # TDM; not present in this modlist -> not created, not bound
 EXISTING_VARS = {"bAnimationDriven"}           # must already exist in vanilla 0_master (index 81)
@@ -602,7 +621,8 @@ def gen_master(existing_vars, fp=False):
 
 
 def expression_condition(name, expr):
-    return node(name, "hkbExpressionCondition", "0x1c3c1045", p("expression", expr))
+    text = expr.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")   # XML text
+    return node(name, "hkbExpressionCondition", "0x1c3c1045", p("expression", text))
 
 
 def gen_onehand(fp=False):
@@ -612,7 +632,7 @@ def gen_onehand(fp=False):
     N = Names()
     v = V_1HM_FP if fp else V_1HM
     x = ["<patch>"]
-    for e in EVENTS + ONEHAND_START_EVENTS + CANCEL_EVENTS:
+    for e in EVENTS + ONEHAND_START_EVENTS + CANCEL_EVENTS + ([] if fp else BOW_EVENTS):
         x.append('  <append path="%s/eventNames"><hkcstring>%s</hkcstring></append>' % (v["STRING"], e))
         x.append('  <append path="%s/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>' % v["DATA"])
     for name, typ, init in VARIABLES:
@@ -641,11 +661,19 @@ def gen_onehand(fp=False):
         new_nodes += nodes
     exit_cond = N.new()
     new_nodes.append(expression_condition(exit_cond, ONEHAND_EXIT_EXPR))
+    bow_states, bow_starts = ([], [])
+    if not fp:   # the bow layer: the dodge on the body under a drawn bow (Bow_Attack_LowerBodyBehavior, 3P and its 1P branch)
+        bow_states, bow_starts = layer_states(N, new_nodes, BOW_STATES, BOW_EVENTS, fx, v)
     x.append('  <insert path="">')
     x += ["    " + n.replace("\n", "\n    ") for n in new_nodes]
     x.append("  </insert>")
     for st in states:
         x.append('  <append path="%s/states">%s</append>' % (v["SM"], st))
+    for st in bow_states:
+        x.append('  <append path="%s/states">%s</append>' % (V_BOW["SM"], st))
+    for arr in (V_BOW["STATE_TRANSITIONS"] if bow_states else []):
+        for t in bow_starts:
+            x.append('  <append path="%s/transitions">%s</append>' % (arr, t))
     for event, sid in zip(ONEHAND_START_EVENTS, (id_a, id_b)):
         x.append('  <append path="%s/transitions">%s</append>'
                  % (v["WILDCARD"], transition(fx["in"], event, sid, "FLAG_IS_LOCAL_WILDCARD|FLAG_DISABLE_CONDITION")))
@@ -653,6 +681,83 @@ def gen_onehand(fp=False):
              % (v["WILDCARD"], transition(fx["out"], "RDF_DodgeExit", ONEHAND_READY_ID, "FLAG_IS_LOCAL_WILDCARD", exit_cond)))
     x.append("</patch>")
     return "\n".join(x) + "\n", len(new_nodes)   # nodes written (some reserved names stay unused)
+
+
+def layer_states(N, out, states, events, fx, v, arms=None):
+    """The two dodge states of a bow / magic layer, for a locomotion machine with a standing (0) and a moving (1) state.
+    Each plays the dodge clip chooser under BSIsActiveModifier (bAnimationDriven, RDF_IsDodging); the rest of the body
+    is the layer's own (a bow draw's upper body blended over the machine, or `arms`: a BSBoneSwitch child list laid over
+    the dodge, the cast's arms). Leaves to moving / standing on the layer's exit event (by Speed), chains to the other
+    state on its start event. Returns (state pointers, the start transitions for the vanilla states' arrays)."""
+    (nm_a, id_a), (nm_b, id_b) = states
+    start_a, start_b, exit_event = events
+    cond_move, cond_stand = N.new(), N.new()
+    out.append(expression_condition(cond_move, LAYER_MOVING_EXPR))
+    out.append(expression_condition(cond_stand, LAYER_STANDING_EXPR))
+    ptrs = []
+    for nm, sid, other_start, other_id in ((nm_a, id_a, start_b, id_b), (nm_b, id_b, start_a, id_a)):
+        st, enter, exit_, trans, modgen, isact, isact_bs = (N.new() for _ in range(7))
+        out.append(event_array(enter, "RDF_DodgeEntered"))   # no InterruptCast: the cast / draw goes on
+        out.append(event_array(exit_, "RDF_DodgeLeft"))
+        ts = [transition(fx["in"], other_start, other_id),
+              transition(fx["out"], exit_event, 1, "0", cond_move),
+              transition(fx["out"], exit_event, 0, "0", cond_stand)]
+        out.append(node(trans, "hkbStateMachineTransitionInfoArray", "0xe397b11e",
+                        '<hkparam name="transitions" numelements="%d">%s</hkparam>' % (len(ts), "".join(ts))))
+        gen = dodge_selector(N, out, nm + "_Main")
+        if arms:
+            sw = N.new()
+            out.append(node(sw, "BSBoneSwitchGenerator", "0xf33d3eea", "\n".join([
+                p("variableBindingSet", "null"), p("userData", "1"), p("name", nm + "_CastArmsSwitch"), p("pDefaultGenerator", gen),
+                '<hkparam name="ChildrenA" numelements="%d">%s</hkparam>' % (len(arms), " ".join(arms))])))
+            gen = sw
+        out.append(binding_set(isact_bs, [("bIsActive0", "bAnimationDriven"), ("bIsActive1", "RDF_IsDodging")]))
+        flags = "".join(p("bIsActive%d" % i, "false") + p("bInvertActive%d" % i, "false") for i in range(5))
+        out.append(node(isact, "BSIsActiveModifier", "0xb0fde45a", "\n".join([
+            p("variableBindingSet", isact_bs), p("userData", "2"), p("name", nm + "_IsActiveMod"), p("enable", "true"), flags])))
+        out.append(node(modgen, "hkbModifierGenerator", "0x1f81fae6", "\n".join([
+            p("variableBindingSet", "null"), p("userData", "1"), p("name", nm + "_MG"), p("modifier", isact), p("generator", gen)])))
+        out.append(node(st, "hkbStateMachineStateInfo", "0xed7f9d0", "\n".join([
+            p("variableBindingSet", "null"), '<hkparam name="listeners" numelements="0"></hkparam>',
+            p("enterNotifyEvents", enter), p("exitNotifyEvents", exit_), p("transitions", trans), p("generator", modgen),
+            p("name", nm), p("stateId", sid), p("probability", "1.000000"), p("enable", "true")])))
+        ptrs.append(st)
+    starts = [transition(fx["in"], start_a, id_a), transition(fx["in"], start_b, id_b)]
+    return ptrs, starts
+
+
+def gen_magic():
+    """magicbehavior patch: the magic layer, the dodge on the body while the arms go on casting
+    (DefaultMagicCastingBehavior, its moving state's cast-arms bone switch child reused)."""
+    N = Names()
+    v = V_MAGIC
+    x = ["<patch>"]
+    for e in EVENTS + CANCEL_EVENTS + MAGIC_EVENTS:
+        x.append('  <append path="%s/eventNames"><hkcstring>%s</hkcstring></append>' % (v["STRING"], e))
+        x.append('  <append path="%s/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>' % v["DATA"])
+    for name, typ, init in VARIABLES + MAGIC_EXTRA_VARIABLES:
+        val = f2i(init) if typ == "VARIABLE_TYPE_REAL" else int(init)
+        x.append('  <append path="%s/variableNames"><hkcstring>%s</hkcstring></append>' % (v["STRING"], name))
+        x.append('  <append path="%s/wordVariableValues"><hkobject><hkparam name="value">%d</hkparam></hkobject></append>'
+                 % (v["VALUES"], val))
+        x.append('  <append path="%s/variableInfos"><hkobject><hkparam name="role"><hkobject>'
+                 '<hkparam name="role">ROLE_DEFAULT</hkparam><hkparam name="flags">0</hkparam></hkobject></hkparam>'
+                 '<hkparam name="type">%s</hkparam></hkobject></append>' % (v["DATA"], typ))
+    fx, new_nodes = {}, []
+    for key, spec in (("in", FX_IN), ("out", FX_OUT)):
+        fx[key] = N.new()
+        new_nodes.append(effect_node(fx[key], spec))
+    states, starts = layer_states(N, new_nodes, MAGIC_STATES, MAGIC_EVENTS, fx, v, arms=[v["CAST_ARMS"]])
+    x.append('  <insert path="">')
+    x += ["    " + n.replace("\n", "\n    ") for n in new_nodes]
+    x.append("  </insert>")
+    for st in states:
+        x.append('  <append path="%s/states">%s</append>' % (v["SM"], st))
+    for arr in v["STATE_TRANSITIONS"]:
+        for t in starts:
+            x.append('  <append path="%s/transitions">%s</append>' % (arr, t))
+    x.append("</patch>")
+    return "\n".join(x) + "\n", len(new_nodes)
 
 
 def gen_events(V_, events):
@@ -808,6 +913,13 @@ def main():
         print("first person 1hm_behavior: %d new nodes" % n_fp_1h)
     else:
         write(os.path.join(out, "patches", FP_1HM_PATCH_NAME), gen_events(V_1HM, CANCEL_EVENTS))
+    magic_path = os.path.join(out, "patches", MAGIC_PATCH_NAME)
+    if "--no-onehand" not in sys.argv:   # the magic layer goes with the 1hm part (BEHAVIOR_INTEGRATION.md 8)
+        magic, n_magic = gen_magic()
+        write(magic_path, magic)
+        print("magicbehavior: %d new nodes (the dodge under a cast)" % n_magic)
+    elif os.path.exists(magic_path):
+        os.remove(magic_path)
     ch = gen_character()
     write(os.path.join(out, "patches", "defaultmale_character.xml"), ch)
     write(os.path.join(out, "patches", "defaultfemale_character.xml"), ch)

@@ -80,6 +80,8 @@ namespace rdf::game
 		void              CancelInto(RE::Actor* actor, const Decision& d);
 		bool              CancelInPlace(RE::Actor* actor, const Decision& d);
 		void              GateGraphEvents(RE::Actor* actor);
+		void              HoldReleases(RE::Actor* actor);
+		graph::Layer      CastingLayer(RE::Actor* actor, std::uint8_t attackState, bool firstPerson) const;
 		bool              StaggerEscape(RE::Actor* actor);
 		void              RetryDeferred(RE::Actor* actor);
 		void              VerifyAttack(RE::Actor* actor, float dt, std::uint8_t attackState);
@@ -142,8 +144,10 @@ namespace rdf::game
 		std::string     lastAttackLog_;           // dev log: the attack-cancel inputs last printed
 		int             tailFrames_{ 0 };         // dev trace keeps running this many ticks after a dodge
 		bool            inStateB_{ true };        // dodge state used last; the first dodge goes to A
-		bool            oneHand_{ false };        // the current / last dodge plays in 1hm_behavior, not in the root
+		graph::Layer    layer_{ graph::Layer::Root };  // where the current / last dodge plays
 		bool            oneHandBroken_{ false };  // a 1hm start never entered: root dodges until the 3D reloads
+		bool            layerBroken_{ false };    // ... a bow / magic start never entered: no layer dodges until then
+		bool            releasesHeld_{ false };   // [Casting] release actions wait for this dodge's end
 		bool            moveHeld_{ false };
 		bool            intoAttack_{ false };     // the current dodge was cancelled into an attack (runs on when moving)
 		float           carry_{ 0.0f };           // post-dodge speed floor for the controls-driven engine, u/s

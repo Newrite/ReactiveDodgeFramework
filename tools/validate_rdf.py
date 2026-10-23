@@ -474,7 +474,7 @@ def check_fp(rdf_x, base_x):
 
 def check_onehand_file(rdf_x, base_x, stem):
     h, hb = H.Graph(os.path.join(rdf_x, stem + ".xml")), H.Graph(os.path.join(base_x, stem + ".xml"))
-    ev1 = G.EVENTS + G.ONEHAND_START_EVENTS + G.CANCEL_EVENTS
+    ev1 = G.EVENTS + G.ONEHAND_START_EVENTS + G.CANCEL_EVENTS + ([] if stem.startswith("fp_") else G.BOW_EVENTS)
     check("C  %s: %d events and %d variables present once, tables consistent" % (stem, len(ev1), len(G.VARIABLES)),
           all(len(h.ev_index.get(e, [])) == 1 and e not in hb.ev_index for e in ev1)
           and len(h.event_names) == len(hb.event_names) + len(ev1) and h.n_event_infos == len(h.event_names)
@@ -484,6 +484,45 @@ def check_onehand_file(rdf_x, base_x, stem):
     check("C  %s: RDF_1H_Dodge_A/B present and leave by 1HM_Ready_State's transition array" % stem,
           all(sid in st1 and st1[sid].text("name") == nm and st1[sid].text("transitions") == st1[G.ONEHAND_READY_ID].text("transitions")
               for nm, sid in G.ONEHAND_STATES))
+    if not stem.startswith("fp_"):
+        check_layer(h, stem, "Bow_Attack_LowerBodyBehavior", G.BOW_STATES, G.BOW_EVENTS)
+
+
+def check_layer(h, stem, sm_name, states, events, check=check):
+    """A bow / magic layer: its two states in the locomotion machine, chaining to each other and leaving to 0 / 1 on the
+    exit event; both starts in the standing and the moving state's transitions. `check`: the caller's reporter."""
+    sms = [x for x in H.state_machines(h) if x.text("name") == sm_name]
+    check("C  %s: one %s machine" % (stem, sm_name), len(sms) == 1, str(len(sms)))
+    if len(sms) != 1:
+        return
+    st = {h.objs[x].intval("stateId"): h.objs[x] for x in H.sm_states(h, sms[0])}
+    ev = {i: n for n, ids in h.ev_index.items() for i in ids}
+    def trans(state):
+        ref = state.text("transitions")
+        if ref in (None, "null"):
+            return []
+        return [(ev.get(int(t.findtext("hkparam[@name='eventId']")), "?"), int(t.findtext("hkparam[@name='toStateId']")))
+                for t in h.objs[ref].params["transitions"].findall("hkobject")]
+    (nm_a, id_a), (nm_b, id_b) = states
+    start_a, start_b, exit_ev = events
+    check("C  %s: %s / %s in %s" % (stem, nm_a, nm_b, sm_name),
+          st.get(id_a) is not None and st[id_a].text("name") == nm_a and st.get(id_b) is not None and st[id_b].text("name") == nm_b)
+    ok = all(sorted(trans(st[sid])) == sorted([(other, oid), (exit_ev, 0), (exit_ev, 1)])
+             for sid, other, oid in ((id_a, start_b, id_b), (id_b, start_a, id_a)) if sid in st)
+    check("C  %s: %s states chain on the other start, leave to 0 / 1 on %s" % (stem, sm_name, exit_ev), ok)
+    ok = all(sid in st and (start_a, id_a) in trans(st[sid]) and (start_b, id_b) in trans(st[sid]) for sid in (0, 1))
+    check("C  %s: %s standing / moving states start both dodge states" % (stem, sm_name), ok)
+
+
+def check_magic_file(rdf_x, base_x):
+    h, hb = H.Graph(os.path.join(rdf_x, "magicbehavior.xml")), H.Graph(os.path.join(base_x, "magicbehavior.xml"))
+    ev = G.EVENTS + G.CANCEL_EVENTS + G.MAGIC_EVENTS
+    var = G.VARIABLES + G.MAGIC_EXTRA_VARIABLES
+    check("C  magicbehavior: %d events and %d variables present once, tables consistent" % (len(ev), len(var)),
+          all(len(h.ev_index.get(e, [])) == 1 and e not in hb.ev_index for e in ev)
+          and len(h.event_names) == len(hb.event_names) + len(ev) and h.n_event_infos == len(h.event_names)
+          and all(len(h.var_index.get(v, [])) == 1 for v, _t, _i in var) and h.n_var_infos == len(h.variable_names))
+    check_layer(h, "magicbehavior", "DefaultMagicCastingBehavior", G.MAGIC_STATES, G.MAGIC_EVENTS)
 
 
 def main():
@@ -502,11 +541,13 @@ def main():
         a, b = os.path.join(OUT, "baseline", CHAR, sub, f), os.path.join(OUT, "rdf", CHAR, sub, f)
         if md5(a) != md5(b):
             diffs.append(xstem(sub, f))
-    check("B  hkx changed only in 0_Master/DefaultMale/DefaultFemale/1hm_behavior and first-person 0_Master/1hm_behavior",
-          sorted(diffs) == ["0_Master", "1hm_behavior", "DefaultFemale", "DefaultMale", "fp_0_Master", "fp_1hm_behavior"], str(diffs))
+    check("B  hkx changed only in 0_Master/DefaultMale/DefaultFemale/1hm_behavior/magicbehavior and first-person 0_Master/1hm_behavior",
+          sorted(diffs) == ["0_Master", "1hm_behavior", "DefaultFemale", "DefaultMale", "fp_0_Master", "fp_1hm_behavior", "magicbehavior"],
+          str(diffs))
     # 1hm_behavior (3P and 1P) gets the 1hm dodge states: checked in detail by tools/validate_onehand.py
     for stem1 in ("1hm_behavior", "fp_1hm_behavior"):
         check_onehand_file(rdf_x, base_x, stem1)
+    check_magic_file(rdf_x, base_x)
 
     g = H.Graph(os.path.join(rdf_x, "0_Master.xml"))
     gb = H.Graph(os.path.join(base_x, "0_Master.xml"))

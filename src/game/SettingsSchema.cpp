@@ -172,6 +172,8 @@ namespace rdf::game::schema
 				Named(Form(Page::Rules, "Stagger", "sAnyTimeKeyword", RDF_S(stagger.anyTimeKeyword), RE::FormType::Keyword), "Stagger_sAnyTimeKeyword"),
 				Form(Page::Rules, "Stagger", "sDelayKeyword", RDF_S(stagger.delayKeyword), RE::FormType::Keyword),
 				Form(Page::Rules, "Stagger", "sEscapeCostKeyword", RDF_S(stagger.escapeCostKeyword), RE::FormType::Keyword),
+				Form(Page::Rules, "Casting", "sDrawDuringDodgeKeyword", RDF_S(casting.drawKeyword), RE::FormType::Keyword),
+				Form(Page::Rules, "Casting", "sCastDuringDodgeKeyword", RDF_S(casting.castKeyword), RE::FormType::Keyword),
 				// --- debug
 				Bool(Page::Debug, "Dev", "bDevLog", RDF_B(devLog)),
 			};
