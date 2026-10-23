@@ -31,7 +31,15 @@ namespace rdf::game::attack
 			const RE::BGSKeyword* keyword_;
 		};
 
-		bool HasKeyword(RE::Actor* actor, RE::BGSKeyword* keyword)
+		// An effect that counts: active and not dispelled (kInactive: its spell's conditions switched it off), unless
+		// `inactive` asks for every effect as the engine's own condition functions see them.
+		bool Counts(RE::ActiveEffect* effect, bool inactive)
+		{
+			return effect && effect->GetBaseObject() &&
+			       (inactive || !effect->flags.any(RE::ActiveEffect::Flag::kInactive, RE::ActiveEffect::Flag::kDispelled));
+		}
+
+		bool HasKeyword(RE::Actor* actor, RE::BGSKeyword* keyword, bool inactive = false)
 		{
 			if (actor->HasKeyword(keyword)) {
 				return true;
@@ -50,8 +58,7 @@ namespace rdf::game::attack
 			bool found = false;
 			if (auto* target = actor->AsMagicTarget()) {
 				target->VisitActiveEffects([&](RE::ActiveEffect* effect) {
-					const auto* base = effect ? effect->GetBaseObject() : nullptr;
-					if (base && !effect->flags.any(RE::ActiveEffect::Flag::kInactive, RE::ActiveEffect::Flag::kDispelled) && base->HasKeyword(keyword)) {
+					if (Counts(effect, inactive) && effect->GetBaseObject()->HasKeyword(keyword)) {
 						found = true;
 						return RE::BSContainer::ForEachResult::kStop;
 					}
@@ -61,33 +68,50 @@ namespace rdf::game::attack
 			return found;
 		}
 
-		// Active, not dispelled magic effects of the actor whose base effect carries the keyword.
-		template <class F>
-		void ForEffectsWith(RE::Actor* actor, RE::BGSKeyword* keyword, F&& f)
+		// The actor's magic effects that count (Counts) and match: a base effect with the keyword, or that base effect.
+		template <class Match, class F>
+		void ForEffects(RE::Actor* actor, bool inactive, Match&& match, F&& f)
 		{
 			auto* target = actor ? actor->AsMagicTarget() : nullptr;
-			if (!keyword || !target) {
+			if (!target) {
 				return;
 			}
 			target->VisitActiveEffects([&](RE::ActiveEffect* effect) {
-				const auto* base = effect ? effect->GetBaseObject() : nullptr;
-				if (base && !effect->flags.any(RE::ActiveEffect::Flag::kInactive, RE::ActiveEffect::Flag::kDispelled) && base->HasKeyword(keyword)) {
+				if (Counts(effect, inactive) && match(effect->GetBaseObject())) {
 					f(effect->GetMagnitude());
 				}
 				return RE::BSContainer::ForEachResult::kContinue;
 			});
 		}
+
+		template <class F>
+		void ForEffectsWith(RE::Actor* actor, RE::BGSKeyword* keyword, F&& f, bool inactive = false)
+		{
+			if (keyword) {
+				ForEffects(actor, inactive, [&](const RE::EffectSetting* base) { return base->HasKeyword(keyword); }, f);
+			}
+		}
 	}
 
-	bool ActorHasKeyword(RE::Actor* actor, RE::BGSKeyword* keyword)
+	bool ActorHasKeyword(RE::Actor* actor, RE::BGSKeyword* keyword, bool inactiveEffects)
 	{
-		return actor && keyword && HasKeyword(actor, keyword);
+		return actor && keyword && HasKeyword(actor, keyword, inactiveEffects);
 	}
 
-	std::optional<float> EffectMagnitudes(RE::Actor* actor, RE::BGSKeyword* keyword)
+	std::optional<float> EffectMagnitudes(RE::Actor* actor, RE::BGSKeyword* keyword, bool inactiveEffects)
 	{
 		std::optional<float> sum;
-		ForEffectsWith(actor, keyword, [&](float magnitude) { sum = sum.value_or(0.0f) + magnitude; });
+		ForEffectsWith(actor, keyword, [&](float magnitude) { sum = sum.value_or(0.0f) + magnitude; }, inactiveEffects);
+		return sum;
+	}
+
+	std::optional<float> EffectMagnitudes(RE::Actor* actor, const RE::EffectSetting* effect, bool inactiveEffects)
+	{
+		std::optional<float> sum;
+		if (effect) {
+			ForEffects(actor, inactiveEffects, [&](const RE::EffectSetting* base) { return base == effect; },
+				[&](float magnitude) { sum = sum.value_or(0.0f) + magnitude; });
+		}
 		return sum;
 	}
 

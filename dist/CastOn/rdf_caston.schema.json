@@ -125,6 +125,10 @@
             "object"
          ],
          "properties": {
+            "args": {
+               "$ref": "#/$defs/std::vector<std::string>",
+               "description": "Vanilla: the function's parameters as text: a form (\"Plugin.esp|0xID\" or an EditorID), a number, an actor value name, or Dodger / Attacker / CombatTarget for a reference."
+            },
             "children": {
                "$ref": "#/$defs/std::vector<rdf::caston::Condition>"
             },
@@ -147,6 +151,10 @@
             "hand": {
                "$ref": "#/$defs/rdf::caston::Hand"
             },
+            "inactiveEffects": {
+               "$ref": "#/$defs/bool",
+               "description": "Also count magic effects switched off by their spell's conditions, or dispelled (the engine's own functions do)."
+            },
             "kind": {
                "$ref": "#/$defs/rdf::caston::ConditionKind",
                "description": "What is checked. And / Or group 'children'; Preset names a list from 'presets' in 'text'."
@@ -164,7 +172,7 @@
             },
             "text": {
                "$ref": "#/$defs/std::string",
-               "description": "Equipped type, actor value name, Layer, Direction or the Preset name."
+               "description": "Equipped type, actor value name, Layer, Direction, the Preset name, or the Vanilla condition function (GetActorValue...)."
             },
             "value": {
                "$ref": "#/$defs/float"
@@ -272,6 +280,14 @@
             {
                "title": "Preset",
                "const": "Preset"
+            },
+            {
+               "title": "HasMagicEffect",
+               "const": "HasMagicEffect"
+            },
+            {
+               "title": "Vanilla",
+               "const": "Vanilla"
             }
          ]
       },
@@ -600,6 +616,14 @@
          ],
          "items": {
             "$ref": "#/$defs/rdf::caston::Rule"
+         }
+      },
+      "std::vector<std::string>": {
+         "type": [
+            "array"
+         ],
+         "items": {
+            "$ref": "#/$defs/std::string"
          }
       }
    },

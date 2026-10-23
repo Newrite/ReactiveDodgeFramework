@@ -10,7 +10,9 @@
    // file's presets (a modpack can keep its shared ones in one file).
    "presets": {
       "HoldsASpell": [ { "kind": "Equipped", "text": "Spell", "hand": "Either" } ],
-      "AttackerAlive": [ { "kind": "ActorValue", "subject": "Attacker", "text": "Health", "mode": "Percent", "compare": "Gt", "value": 0 } ]
+      "AttackerAlive": [ { "kind": "ActorValue", "subject": "Attacker", "text": "Health", "mode": "Percent", "compare": "Gt", "value": 0 } ],
+      // Any condition function of the game (the CK's list), here GetLevel; "args" holds its parameters, if it has any.
+      "Seasoned": [ { "kind": "Vanilla", "text": "GetLevel", "compare": "Ge", "value": 10, "comment": "level 10 or more" } ]
    },
 
    // Rule templates of this file. A rule with "extends" starts from one: its own keys replace the template's, cost /

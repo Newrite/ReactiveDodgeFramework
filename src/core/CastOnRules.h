@@ -107,6 +107,11 @@ namespace rdf::caston
 		FromStagger,  // the dodge cut a stagger short
 		Random,       // value: chance in percent
 		Preset,       // text: a named condition list ("presets" of any rule file), as if written here (an AND of it)
+		HasMagicEffect,  // form: an active effect of this base effect; with a comparison: the summed magnitudes
+		// text: a condition function of the game (the CK's list: GetActorValue, GetIsID, ...), args: its parameters, compared
+		// with compare / value (None: the result is not 0). Run on the participant; a reference parameter left empty, as
+		// the engine does, is the other one (the dodger's: the attacker, else the combat target; anyone else's: the dodger).
+		Vanilla,
 	};
 
 	struct Condition
@@ -121,6 +126,10 @@ namespace rdf::caston
 		Compare                compare{ Compare::None };
 		float                  value{ 0.0f };
 		std::vector<Condition> children;  // And / Or
+		std::vector<std::string> args;    // Vanilla: the function's parameters as text (a form, a number, an actor value...)
+		// Effects (HasKeyword's effect part, HasEffectKeyword, HasMagicEffect, Vanilla HasMagicEffect[Keyword]): also count
+		// effects switched off by their spell's conditions or dispelled. The engine's own functions do; by default we do not.
+		bool                   inactiveEffects{ false };
 		bool                   disabled{ false };  // switched off for now: as if not written (OAR's way)
 		std::string            comment;            // the author's note, shown on the editor's node
 	};
@@ -225,6 +234,7 @@ namespace rdf::caston
 		bool             mode{ false };
 		bool             compare{ false };   // takes compare / value
 		bool             group{ false };
+		bool             effects{ false };   // reads inactiveEffects
 	};
 	const KindInfo& Info(ConditionKind kind);
 

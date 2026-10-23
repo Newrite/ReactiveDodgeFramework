@@ -66,7 +66,7 @@ struct glz::meta<rdf::caston::ConditionKind>
 	using enum rdf::caston::ConditionKind;
 	static constexpr auto value = glz::enumerate(And, Or, HasKeyword, HasEffectKeyword, HasPerk, IsRace, InFaction, Equipped,
 		ActorValue, InCombat, Sneaking, Sprinting, Blocking, Attacking, PowerAttacking, Casting, IsPlayer, FirstPerson, Layer,
-		Direction, ChainIndex, FromStagger, Random, Preset);
+		Direction, ChainIndex, FromStagger, Random, Preset, HasMagicEffect, Vanilla);
 };
 
 namespace rdf::caston::detail
@@ -98,8 +98,10 @@ struct glz::json_schema<rdf::caston::Condition>
 	schema negated{ .description = "The opposite. A condition on a participant that is absent fails, negated or not." };
 	schema subject{ .description = "Whose: Dodger, Attacker (PerfectDodge only), CombatTarget." };
 	schema form{ .description = "Keyword / perk / race / faction: \"Plugin.esp|0xID\" or an EditorID." };
-	schema text{ .description = "Equipped type, actor value name, Layer, Direction or the Preset name." };
+	schema text{ .description = "Equipped type, actor value name, Layer, Direction, the Preset name, or the Vanilla condition function (GetActorValue...)." };
 	schema compare{ .description = "None, Eq, Ne, Lt, Le, Gt, Ge (against 'value')." };
+	schema args{ .description = "Vanilla: the function's parameters as text: a form (\"Plugin.esp|0xID\" or an EditorID), a number, an actor value name, or Dodger / Attacker / CombatTarget for a reference." };
+	schema inactiveEffects{ .description = "Also count magic effects switched off by their spell's conditions, or dispelled (the engine's own functions do)." };
 	schema disabled{ .description = "Switched off: the condition (a group with all inside) is as if not written." };
 	schema comment{ .description = "A note for people; the editor shows it on the condition." };
 };
@@ -126,12 +128,12 @@ namespace rdf::caston
 		constexpr glz::opts kRead{ .comments = true, .error_on_unknown_keys = true };
 		constexpr glz::opts kWrite{ .prettify = true };
 
-		// name, form, text, hand, mode, compare, group: by ConditionKind order
+		// name, form, text, hand, mode, compare, group, effects: by ConditionKind order
 		constexpr KindInfo kKinds[]{
 			{ "And", false, false, false, false, false, true },
 			{ "Or", false, false, false, false, false, true },
-			{ "HasKeyword", true },
-			{ "HasEffectKeyword", true, false, false, false, true },
+			{ "HasKeyword", true, false, false, false, false, false, true },
+			{ "HasEffectKeyword", true, false, false, false, true, false, true },
 			{ "HasPerk", true },
 			{ "IsRace", true },
 			{ "InFaction", true, false, false, false, true },
@@ -152,8 +154,10 @@ namespace rdf::caston
 			{ "FromStagger" },
 			{ "Random", false, false, false, false, false },
 			{ "Preset", false, true },
+			{ "HasMagicEffect", true, false, false, false, true, false, true },
+			{ "Vanilla", false, true, false, false, true, false, true },
 		};
-		static_assert(std::size(kKinds) == static_cast<std::size_t>(ConditionKind::Preset) + 1);
+		static_assert(std::size(kKinds) == static_cast<std::size_t>(ConditionKind::Vanilla) + 1);
 
 		template <std::size_t N>
 		bool OneOf(const std::string& text, const std::string_view (&list)[N])
@@ -228,6 +232,14 @@ namespace rdf::caston
 			case ConditionKind::Preset:
 				if (c.text.empty()) {
 					fail("needs the preset's name in text");
+				}
+				break;
+			case ConditionKind::Vanilla:
+				if (c.text.empty()) {
+					fail("needs the condition function's name in text");
+				}
+				if (c.args.size() > 2) {
+					fail("a condition function takes at most 2 args");
 				}
 				break;
 			default:

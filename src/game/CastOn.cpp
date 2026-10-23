@@ -4,9 +4,14 @@
 #include "Diagnostics.h"
 #include "Forms.h"
 #include "Settings.h"
+#include "VanillaConditions.h"
 
 #include <algorithm>
 #include <atomic>
+#include <bit>
+#include <cctype>
+#include <charconv>
+#include <cstring>
 #include <chrono>
 #include <filesystem>
 #include <format>
@@ -72,6 +77,11 @@ namespace rdf::game::caston
 			Compare        compare{ Compare::None };
 			float          value{ 0.0f };
 			Hand           hand{ Hand::Either };
+			bool           inactiveEffects{ false };
+			// Vanilla: the function, its stored parameters, and the parameters that name a participant (filled in per check)
+			const vanilla::Function* function{ nullptr };
+			void*                    params[2]{ nullptr, nullptr };
+			std::int8_t              participant[2]{ -1, -1 };  // a Subject, or kOther
 			std::uint32_t  first{ 0 };  // children: nodes[first .. first + count)
 			std::uint32_t  count{ 0 };
 			int            cost{ 0 };   // for ordering the children of an AND: cheap first
@@ -236,6 +246,7 @@ namespace rdf::game::caston
 			switch (kind) {
 			case ConditionKind::HasKeyword:
 			case ConditionKind::HasEffectKeyword: return RE::FormType::Keyword;
+			case ConditionKind::HasMagicEffect: return RE::FormType::MagicEffect;
 			case ConditionKind::HasPerk: return RE::FormType::Perk;
 			case ConditionKind::IsRace: return RE::FormType::Race;
 			case ConditionKind::InFaction: return RE::FormType::Faction;
@@ -255,10 +266,131 @@ namespace rdf::game::caston
 			case ConditionKind::Random: return 0;
 			case ConditionKind::HasPerk:
 			case ConditionKind::InFaction:
-			case ConditionKind::ActorValue: return 2;
+			case ConditionKind::ActorValue:
+			case ConditionKind::Vanilla: return 2;
 			case ConditionKind::HasKeyword:
-			case ConditionKind::HasEffectKeyword: return 3;  // the walk over worn items and effects
+			case ConditionKind::HasEffectKeyword:
+			case ConditionKind::HasMagicEffect: return 3;  // the walk over worn items and effects
 			default: return 1;
+			}
+		}
+
+		constexpr std::int8_t kOther = 3;  // a Vanilla reference parameter left empty: the other participant
+
+		std::string_view Trim(std::string_view s)
+		{
+			while (!s.empty() && (s.front() == ' ' || s.front() == '\t')) {
+				s.remove_prefix(1);
+			}
+			while (!s.empty() && (s.back() == ' ' || s.back() == '\t')) {
+				s.remove_suffix(1);
+			}
+			return s;
+		}
+
+		void* AsParam(std::int32_t v) { return reinterpret_cast<void*>(static_cast<std::uintptr_t>(static_cast<std::uint32_t>(v))); }
+
+		// One of `names` (case-insensitive) or a number; its index or the number.
+		std::optional<std::int32_t> NamedOrNumber(const std::string& text, std::initializer_list<std::string_view> names)
+		{
+			std::int32_t i = 0;
+			for (const auto n : names) {
+				if (n.size() == text.size() && _strnicmp(n.data(), text.c_str(), n.size()) == 0) {
+					return i;
+				}
+				++i;
+			}
+			std::int32_t v = 0;
+			const auto [end, ec] = std::from_chars(text.data(), text.data() + text.size(), v);
+			if (ec != std::errc() || end != text.data() + text.size()) {
+				return std::nullopt;
+			}
+			return v;
+		}
+
+		// A Vanilla parameter from its text: the void* slot the function reads, or a participant to fill in per check.
+		bool ParseArg(const vanilla::Param& p, const std::string& text, void*& slot, std::int8_t& participant, std::string& why)
+		{
+			using A = vanilla::Arg;
+			switch (p.arg) {
+			case A::Form:
+				{
+					const auto r = forms::Resolve(text, p.formType);
+					if (!r.form) {
+						why = r.detail;
+						return false;
+					}
+					slot = r.form;
+					return true;
+				}
+			case A::Reference:
+				{
+					if (const auto who = NamedOrNumber(text, { "Dodger", "Attacker", "CombatTarget" }); who && *who >= 0 && *who <= 2 &&
+						!std::isdigit(static_cast<unsigned char>(text.front()))) {
+						participant = static_cast<std::int8_t>(*who);
+						return true;
+					}
+					const auto r = forms::Resolve(text, RE::FormType::None);
+					auto*      ref = r.form ? r.form->As<RE::TESObjectREFR>() : nullptr;
+					if (!ref) {
+						why = r.form ? std::format("{} is not a placed reference (or write Dodger, Attacker, CombatTarget)", r.detail) : r.detail;
+						return false;
+					}
+					slot = ref;
+					return true;
+				}
+			case A::ActorValue:
+				{
+					const auto av = RE::ActorValueList::LookupActorValueByName(text.c_str());
+					if (av == RE::ActorValue::kNone) {
+						why = std::format("no actor value '{}'", text);
+						return false;
+					}
+					slot = AsParam(static_cast<std::int32_t>(av));
+					return true;
+				}
+			case A::Integer:
+				if (const auto v = NamedOrNumber(text, {})) {
+					slot = AsParam(*v);
+					return true;
+				}
+				why = std::format("'{}' is not a whole number", text);
+				return false;
+			case A::Float:
+				{
+					float      v = 0.0f;
+					const auto [end, ec] = std::from_chars(text.data(), text.data() + text.size(), v);
+					if (ec != std::errc() || end != text.data() + text.size()) {
+						why = std::format("'{}' is not a number", text);
+						return false;
+					}
+					slot = AsParam(std::bit_cast<std::int32_t>(v));
+					return true;
+				}
+			case A::Axis:
+				if (text.size() == 1 && std::strchr("XYZxyz", text[0])) {
+					slot = AsParam(std::toupper(static_cast<unsigned char>(text[0])));
+					return true;
+				}
+				why = "X, Y or Z";
+				return false;
+			case A::Sex:
+				if (const auto v = NamedOrNumber(text, { "Male", "Female" })) {
+					slot = AsParam(*v);
+					return true;
+				}
+				why = "Male or Female";
+				return false;
+			case A::CastingSource:
+				if (const auto v = NamedOrNumber(text, { "Left", "Right", "Voice", "Instant" })) {
+					slot = AsParam(*v);
+					return true;
+				}
+				why = "Left, Right, Voice or Instant";
+				return false;
+			default:
+				why = "a parameter of this kind cannot be written";
+				return false;
 			}
 		}
 
@@ -301,6 +433,7 @@ namespace rdf::game::caston
 				out.compare = c.compare;
 				out.value = c.value;
 				out.hand = c.hand;
+				out.inactiveEffects = c.inactiveEffects;
 				out.cost = CostOf(c.kind);
 				if (Info(c.kind).group) {
 					// children contiguous: reserve the block, then compile each into it (grandchildren go after)
@@ -343,7 +476,45 @@ namespace rdf::game::caston
 						return false;
 					}
 					break;
+				case ConditionKind::Vanilla: return CompileVanilla(c, out, path, error);
 				default: break;
+				}
+				return true;
+			}
+
+			bool CompileVanilla(const Condition& c, Node& out, const std::string& path, std::string& error)
+			{
+				const auto* f = vanilla::Find(c.text);
+				if (!f) {
+					error = std::format("{}: no condition function '{}'", path, c.text);
+					return false;
+				}
+				if (!f->supported) {
+					error = std::format("{}: {} takes a parameter CastOn cannot write (an alias, package data...)", path, f->name);
+					return false;
+				}
+				if (c.args.size() > f->params.size()) {
+					error = std::format("{}: {} takes {} parameter(s), not {}", path, f->name, f->params.size(), c.args.size());
+					return false;
+				}
+				out.function = f;
+				for (std::size_t k = 0; k < f->params.size(); ++k) {
+					const auto& p = f->params[k];
+					const auto  text = k < c.args.size() ? std::string(Trim(c.args[k])) : std::string();
+					if (text.empty()) {
+						if (k == 0 && p.arg == vanilla::Arg::Reference) {
+							out.participant[k] = kOther;  // the engine's way: an empty first reference is the target
+						} else if (!p.optional) {
+							error = std::format("{}: {} needs '{}'", path, f->name, p.name);
+							return false;
+						}
+						continue;
+					}
+					std::string why;
+					if (!ParseArg(p, text, out.params[k], out.participant[k], why)) {
+						error = std::format("{}: {} '{}': {}", path, f->name, p.name, why);
+						return false;
+					}
 				}
 				return true;
 			}
@@ -416,19 +587,20 @@ namespace rdf::game::caston
 			{
 				const RE::Actor*      actor;
 				const RE::BGSKeyword* keyword;
+				bool                  inactive;
 				bool                  has;
 			};
 			std::vector<Entry> entries;
 
-			bool Has(RE::Actor* actor, RE::BGSKeyword* keyword)
+			bool Has(RE::Actor* actor, RE::BGSKeyword* keyword, bool inactive)
 			{
 				for (const auto& e : entries) {
-					if (e.actor == actor && e.keyword == keyword) {
+					if (e.actor == actor && e.keyword == keyword && e.inactive == inactive) {
 						return e.has;
 					}
 				}
-				const bool has = attack::ActorHasKeyword(actor, keyword);
-				entries.push_back({ actor, keyword, has });
+				const bool has = attack::ActorHasKeyword(actor, keyword, inactive);
+				entries.push_back({ actor, keyword, inactive, has });
 				return has;
 			}
 		};
@@ -483,14 +655,70 @@ namespace rdf::game::caston
 			return actor->GetGraphVariableBool(name, value) && value;
 		}
 
+		// The participant a check does not run on: the dodger's is the attacker, else the combat target; anyone else's the
+		// dodger (what TESConditionItem calls the target).
+		RE::Actor* OtherOf(RE::Actor* actor, const Context& ctx)
+		{
+			return actor == ctx.dodger ? (ctx.attacker ? ctx.attacker : ctx.combatTarget) : ctx.dodger;
+		}
+
+		// A Vanilla condition's function result. False when the function refuses (or a named participant is absent).
+		bool VanillaResult(const Node& n, RE::Actor* actor, const Context& ctx, double& result)
+		{
+			void* params[2]{ n.params[0], n.params[1] };
+			for (int k = 0; k < 2; ++k) {
+				if (n.participant[k] < 0) {
+					continue;
+				}
+				RE::Actor* who = n.participant[k] == kOther ? OtherOf(actor, ctx) : SubjectOf(static_cast<Subject>(n.participant[k]), ctx);
+				if (!who && n.participant[k] != kOther) {
+					return false;
+				}
+				params[k] = static_cast<RE::TESObjectREFR*>(who);
+			}
+			const auto formOf = [&](int k) { return params[k] ? static_cast<RE::TESForm*>(params[k]) : nullptr; };
+			switch (n.function->index) {
+			case vanilla::kHasMagicEffect:
+				{
+					const auto* effect = formOf(0) ? formOf(0)->As<RE::EffectSetting>() : nullptr;
+					result = effect && attack::EffectMagnitudes(actor, effect, n.inactiveEffects) ? 1.0 : 0.0;
+					return true;
+				}
+			case vanilla::kHasMagicEffectKeyword:
+				{
+					auto* keyword = formOf(0) ? formOf(0)->As<RE::BGSKeyword>() : nullptr;
+					result = keyword && attack::EffectMagnitudes(actor, keyword, n.inactiveEffects) ? 1.0 : 0.0;
+					return true;
+				}
+			default:
+				if (n.function->reference && !actor) {
+					return false;
+				}
+				return n.function->function(actor, params[0], params[1], result);
+			}
+		}
+
 		bool Leaf(const RuleSet& set, const Node& n, RE::Actor* actor, const Context& ctx, Memo& memo)
 		{
 			switch (n.kind) {
-			case ConditionKind::HasKeyword: return memo.Has(actor, n.form->As<RE::BGSKeyword>());
+			case ConditionKind::HasKeyword: return memo.Has(actor, n.form->As<RE::BGSKeyword>(), n.inactiveEffects);
 			case ConditionKind::HasEffectKeyword:
 				{
-					const auto sum = attack::EffectMagnitudes(actor, n.form->As<RE::BGSKeyword>());
+					const auto sum = attack::EffectMagnitudes(actor, n.form->As<RE::BGSKeyword>(), n.inactiveEffects);
 					return sum && Holds(n.compare, *sum, n.value);
+				}
+			case ConditionKind::HasMagicEffect:
+				{
+					const auto sum = attack::EffectMagnitudes(actor, n.form->As<RE::EffectSetting>(), n.inactiveEffects);
+					return sum && Holds(n.compare, *sum, n.value);
+				}
+			case ConditionKind::Vanilla:
+				{
+					double result = 0.0;
+					if (!VanillaResult(n, actor, ctx, result)) {
+						return false;
+					}
+					return n.compare == Compare::None ? result != 0.0 : Holds(n.compare, static_cast<float>(result), n.value);
 				}
 			case ConditionKind::HasPerk: return actor->HasPerk(n.form->As<RE::BGSPerk>());
 			case ConditionKind::IsRace: return actor->GetRace() == n.form;

@@ -302,3 +302,23 @@ TEST(caston_disabled_conditions_drop_and_skip_validation)
 	const auto again = ParseRules(WriteRules(r.rules));
 	CHECK(again.rules.size() == 1 && again.rules[0].conditions[1].disabled && again.rules[0].conditions[0].comment == "kept");
 }
+
+TEST(caston_vanilla_and_magic_effect_conditions)
+{
+	const auto r = ParseRules(R"({ "rules": [ { "name": "v", "casts": [ { "spell": "X" } ], "conditions": [
+		{ "kind": "Vanilla", "text": "GetActorValue", "args": [ "Health" ], "compare": "Ge", "value": 50 },
+		{ "kind": "HasMagicEffect", "form": "Skyrim.esm|0x1EA6E", "inactiveEffects": true } ] } ] })");
+	CHECK(r.errors.empty());
+	CHECK(r.rules.size() == 1);
+	const auto& c = r.rules[0].conditions;
+	CHECK(c[0].kind == ConditionKind::Vanilla && c[0].args.size() == 1 && c[0].args[0] == "Health");
+	CHECK(c[1].kind == ConditionKind::HasMagicEffect && c[1].inactiveEffects);
+	CHECK(Info(ConditionKind::HasMagicEffect).effects && Info(ConditionKind::Vanilla).effects && !Info(ConditionKind::IsRace).effects);
+	const auto again = ParseRules(WriteRules(r.rules));
+	CHECK(again.rules.size() == 1 && again.rules[0].conditions[0].args == c[0].args && again.rules[0].conditions[1].inactiveEffects);
+
+	const auto bad = ParseRules(R"({ "rules": [ { "name": "b", "casts": [ { "spell": "X" } ], "conditions": [
+		{ "kind": "Vanilla" }, { "kind": "Vanilla", "text": "GetDistance", "args": [ "a", "b", "c" ] }, { "kind": "HasMagicEffect" } ] } ] })");
+	CHECK(bad.rules.empty());
+	CHECK(bad.errors.size() == 3);  // no function, three args, no form
+}

@@ -3,6 +3,7 @@
 #include "CastOn.h"
 #include "Forms.h"
 #include "MenuWidgets.h"
+#include "VanillaConditions.h"
 
 #ifndef NOMINMAX
 #	define NOMINMAX
@@ -51,7 +52,7 @@ namespace rdf::game::caston_editor
 		{
 			static const std::vector<const char*> names = [] {
 				std::vector<const char*> out;
-				for (int k = 0; k <= static_cast<int>(ConditionKind::Preset); ++k) {
+				for (int k = 0; k <= static_cast<int>(ConditionKind::Vanilla); ++k) {
 					out.push_back(Info(static_cast<ConditionKind>(k)).name.data());  // literals: null-terminated
 				}
 				return out;
@@ -74,6 +75,7 @@ namespace rdf::game::caston_editor
 			switch (kind) {
 			case ConditionKind::HasKeyword:
 			case ConditionKind::HasEffectKeyword: return RE::FormType::Keyword;
+			case ConditionKind::HasMagicEffect: return RE::FormType::MagicEffect;
 			case ConditionKind::HasPerk: return RE::FormType::Perk;
 			case ConditionKind::IsRace: return RE::FormType::Race;
 			case ConditionKind::InFaction: return RE::FormType::Faction;
@@ -123,6 +125,8 @@ namespace rdf::game::caston_editor
 			case ConditionKind::FromStagger: return "$RDF_CK_FromStagger"_T;
 			case ConditionKind::Random: return "$RDF_CK_Random"_T;
 			case ConditionKind::Preset: return "$RDF_CK_Preset"_T;
+			case ConditionKind::HasMagicEffect: return "$RDF_CK_HasMagicEffect"_T;
+			case ConditionKind::Vanilla: return "$RDF_CK_Vanilla"_T;
 			default: return "";
 			}
 		}
@@ -870,6 +874,9 @@ namespace rdf::game::caston_editor
 						FUCK::SetTooltip("$RDF_CO_AvHint"_T);
 					}
 					break;
+				case ConditionKind::Vanilla:
+					DrawVanilla(c);
+					break;
 				case ConditionKind::Preset:
 					{
 						const auto               presets = AllPresets();
@@ -902,12 +909,118 @@ namespace rdf::game::caston_editor
 				if (c.kind == ConditionKind::Random) {
 					changed_ |= FUCK::DragFloat("$RDF_CO_ChanceValue"_T, &c.value, 0.5f, 0.0f, 100.0f, "%.0f");
 				}
+				if (info.effects) {
+					changed_ |= FUCK::Checkbox("$RDF_CO_InactiveEffects"_T, &c.inactiveEffects);
+					Tip("$RDF_CO_InactiveEffects_Tip"_T);
+				}
+			}
+
+			// The game's condition functions (only those whose parameters CastOn can write), for the filtered list.
+			static const std::vector<const char*>& FunctionNames()
+			{
+				static const std::vector<const char*> names = [] {
+					std::vector<const char*> out;
+					for (const auto& f : vanilla::List()) {
+						if (f.supported) {
+							out.push_back(f.name.c_str());  // List() lives as long as the plugin
+						}
+					}
+					return out;
+				}();
+				return names;
+			}
+
+			void DrawVanilla(Condition& c)
+			{
+				const auto& names = FunctionNames();
+				int         at = -1;
+				for (int n = 0; n < static_cast<int>(names.size()); ++n) {
+					if (_stricmp(names[n], c.text.c_str()) == 0) {
+						at = n;
+					}
+				}
+				if (FUCK::ComboWithFilter("$RDF_CO_Function"_T, &at, names.data(), static_cast<int>(names.size()), 16) && at >= 0) {
+					c.text = names[at];
+					c.args.clear();
+					changed_ = true;
+				}
+				const auto* f = vanilla::Find(c.text);
+				if (!f) {
+					if (!c.text.empty()) {
+						FUCK::TextColored(ImVec4(1.0f, 0.55f, 0.35f, 1.0f), "%s %s", "$RDF_CO_NoFunction"_T, c.text.c_str());
+					}
+					return;
+				}
+				if (!f->help.empty()) {
+					Tip(f->help);
+				}
+				if (c.args.size() < f->params.size()) {
+					c.args.resize(f->params.size());  // a box per parameter; the empty tail is not written back
+				}
+				for (std::size_t k = 0; k < f->params.size(); ++k) {
+					const auto& p = f->params[k];
+					FUCK::PushID(static_cast<int>(k));
+					const auto label = std::format("{}{}", p.name, p.optional ? "$RDF_CO_Optional"_T : "");
+					using A = vanilla::Arg;
+					switch (p.arg) {
+					case A::Form:
+						if (p.formType != RE::FormType::None) {
+							changed_ |= menu::FormInput(label.c_str(), c.args[k], p.formType);
+						} else {
+							changed_ |= Text(label.c_str(), c.args[k], -1.0f);
+							Tip(std::string("$RDF_CO_ArgAnyForm"_T) + PeekText(c.args[k]));
+						}
+						break;
+					case A::Reference:
+						changed_ |= Text(label.c_str(), c.args[k], -1.0f);
+						Tip(std::string(k == 0 ? "$RDF_CO_ArgRefFirst"_T : "$RDF_CO_ArgRef"_T) + PeekText(c.args[k]));
+						break;
+					case A::ActorValue:
+						changed_ |= Text(label.c_str(), c.args[k], -1.0f);
+						Tip("$RDF_CO_AvHint"_T);
+						break;
+					case A::Sex:
+						{
+							static const std::vector<const char*> list{ "Male", "Female" };
+							changed_ |= TextCombo(label.c_str(), c.args[k], list, -1.0f);
+							break;
+						}
+					case A::CastingSource:
+						{
+							static const std::vector<const char*> list{ "Left", "Right", "Voice", "Instant" };
+							changed_ |= TextCombo(label.c_str(), c.args[k], list, -1.0f);
+							break;
+						}
+					case A::Axis:
+						{
+							static const std::vector<const char*> list{ "X", "Y", "Z" };
+							changed_ |= TextCombo(label.c_str(), c.args[k], list, -1.0f);
+							break;
+						}
+					default:
+						changed_ |= Text(label.c_str(), c.args[k], -1.0f);
+						Tip("$RDF_CO_ArgNumber"_T);
+						break;
+					}
+					FUCK::PopID();
+				}
+			}
+
+			// What the resolver says about a typed form, for a tooltip (resolved on the main thread; may still be pending).
+			static std::string PeekText(const std::string& text)
+			{
+				if (text.empty()) {
+					return {};
+				}
+				const auto r = forms::Peek(text, RE::FormType::None);
+				return "\n" + (r.status == forms::Status::Found ? r.detail : r.status == forms::Status::Pending ? std::string("...") : r.detail);
 			}
 
 			static const char* FormLabel(ConditionKind kind)
 			{
 				switch (kind) {
 				case ConditionKind::HasPerk: return "$RDF_CO_Perk"_T;
+				case ConditionKind::HasMagicEffect: return "$RDF_CO_MagicEffect"_T;
 				case ConditionKind::IsRace: return "$RDF_CO_Race"_T;
 				case ConditionKind::InFaction: return "$RDF_CO_Faction"_T;
 				default: return "$RDF_CO_Keyword"_T;
@@ -947,7 +1060,17 @@ namespace rdf::game::caston_editor
 					add(kSubjects[static_cast<int>(c.subject)]);
 				}
 				add(c.form);
-				add(c.text);
+				if (c.kind == ConditionKind::Vanilla) {
+					std::string args;
+					for (const auto& a : c.args) {
+						if (!a.empty()) {
+							args += args.empty() ? a : ", " + a;
+						}
+					}
+					add(std::format("{}({})", c.text, args));
+				} else {
+					add(c.text);
+				}
 				if (info.hand) {
 					add(kHands[static_cast<int>(c.hand)]);
 				}
@@ -959,6 +1082,9 @@ namespace rdf::game::caston_editor
 				}
 				if (c.kind == ConditionKind::Random) {
 					add(std::format("{:g} %", c.value));
+				}
+				if (info.effects && c.inactiveEffects) {
+					add("+inactive");
 				}
 				return out;
 			}

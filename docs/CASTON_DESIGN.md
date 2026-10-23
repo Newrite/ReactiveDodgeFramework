@@ -325,3 +325,49 @@ context; whether the conditions hold now is only logged.
   node of the same list moves there: before it going up, after it going down. Moves into or out of a group are not
   supported (copy and paste do that). The section notes moved from a "(?)" on a line of its own to beside the add
   buttons.
+
+## 14. Phase 3: the game's condition functions, and effects that count (2026-10-24, not run in game)
+
+**How OAR does it.** OAR (S:\Programming\BethESPLibs\OpenAnimationReplacer) uses no engine condition item: its ~120
+conditions are its own code. Its HasMagicEffect / HasMagicEffectWithKeyword have an "Active effects only" box that skips
+effects flagged kInactive.
+
+**What the engine does (IDA, SE 1.5.97).**
+- `TESConditionItem::IsTrue` (29090 = 0x1404454C0) picks the subject by `object` (+0x31: 0 self, 1 target with the two
+  swapped, 2 a reference...). It swaps again on flag 0x10, and fills an empty reference first parameter with the target.
+  It calls the command table's condition function for the item's function index (+0x18):
+  `fn(subject, params[0] +0x20, params[1] +0x28, double& result)`. A reference function (+0x20 of the command) is skipped
+  without a subject. The result is compared (`0x140444830`, opcode = flags >> 5) with the float at +0x08, or with the
+  global's value (+0x34 of it) when flag 0x04 is set.
+- The command table: `SCRIPT_FUNCTION` array, 501789 = 0x141DB8910, 0x50 bytes per command, the index = opcode - 0x1000
+  (0 GetWantBlocking, 14 GetActorValue, 214 HasMagicEffect, 699 HasMagicEffectKeyword). Names at +0x00, parameters at
+  +0x28 (0x10 each: name, SCRIPT_PARAM_TYPE +0x08, optional +0x0C), the condition function at +0x40. CommonLib's layout
+  matches.
+- **The effect trap.** HasMagicEffect (0x1402DA780) → `MagicTarget::HasMagicEffect` (0x1405530D0) walks the effect list
+  and compares the base effect only: no flag is read. An effect switched off by its spell's conditions (`ActiveEffect`
+  flags +0x7C, kInactive 0x8000, set by vfunc 5 at 0x14053E636) or dispelled (0x40000) still counts.
+
+**What CastOn does.**
+- **`Vanilla`.** `text` holds the function's name, `args` its parameters as text, and `compare` / `value` the
+  comparison (None: the result is not 0). It is run on `subject`. The list is read from the game's table at runtime
+  (`game/VanillaConditions`); a function whose parameter cannot be written (an alias, package data, a script variable)
+  is not offered.
+  - Parameters by type:
+    - a form, of the parameter's type when the CK takes one type;
+    - a reference: a placed one, or Dodger / Attacker / CombatTarget, filled in per check. An empty first reference is
+      the other participant, as the engine fills in the target: for the dodger, the attacker, else the combat target;
+      for anyone else, the dodger;
+    - an actor value by name;
+    - a whole number or a float;
+    - X / Y / Z; Male / Female; Left / Right / Voice / Instant.
+  - We call the function directly, as IsTrue does, and compare it ourselves.
+  - HasMagicEffect and HasMagicEffectKeyword are answered by CastOn itself, with the active-only rule below.
+- **`HasMagicEffect`** (form: a magic effect): the actor is under it. With a comparison, the summed magnitudes are
+  compared.
+- **`inactiveEffects`** (default false) covers HasKeyword's effect part, HasEffectKeyword, HasMagicEffect and Vanilla
+  HasMagicEffect[Keyword]. It decides whether effects that are kInactive or kDispelled count too. By default they do
+  not, which is OAR's "active effects only".
+- **Editor.** The function comes from a filtered list, and the game's help line, if it has one, is its tooltip. Each
+  parameter gets a box by its kind: a form picker, a list for X / Y / Z or sex, or text with a hint. Effect conditions
+  get an "Inactive effects too" tick.
+- Example: the preset `Seasoned` in RDF_Examples.json (Vanilla GetLevel >= 10).

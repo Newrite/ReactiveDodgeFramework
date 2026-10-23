@@ -584,3 +584,9 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   dropped before and after preset expansion, skipped by Validate, no live result) and "comment" (shown on the node).
   The editor has an on/off tick per node, drag-and-drop reordering within a list, and the section notes beside the add
   buttons. In game since the previous build: the node headers show their text and the casts are visible. 96 tests.
+* CastOn phase 3 (2026-10-24; docs/CASTON_DESIGN.md 14). There is a Vanilla condition for any of the game's condition
+  functions, listed from the command table at runtime, with typed parameters and participants as references. It calls
+  the function directly, as TESConditionItem::IsTrue does (verified in IDA). There is also a native HasMagicEffect. The
+  engine's HasMagicEffect counts effects switched off by their spell's conditions (no flag check, IDA), so CastOn answers
+  HasMagicEffect[Keyword] itself. A new "inactiveEffects" key (default off, OAR's "active only") covers every effect
+  check. The editor has a function picker and a box per parameter. 97 tests; built and deployed; not run in game.

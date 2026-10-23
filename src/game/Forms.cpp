@@ -97,7 +97,7 @@ namespace rdf::game::forms
 					return { nullptr, Status::NotFound, std::format("no EditorID '{}' (forms other than keywords keep theirs only with an EditorID plugin: use Plugin.esp|0xID)", text) };
 				}
 			}
-			if (form->GetFormType() != type) {
+			if (type != RE::FormType::None && form->GetFormType() != type) {  // None: any form
 				return { nullptr, Status::WrongType, std::format("{} is not a {}", Describe(form), RE::FormTypeToString(type)) };
 			}
 			return { form, Status::Found, Describe(form) };
