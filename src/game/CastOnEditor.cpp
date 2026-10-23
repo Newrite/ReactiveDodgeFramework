@@ -1,6 +1,7 @@
 #include "CastOnEditor.h"
 
 #include "CastOn.h"
+#include "Forms.h"
 #include "MenuWidgets.h"
 
 #ifndef NOMINMAX
@@ -93,6 +94,38 @@ namespace rdf::game::caston_editor
 			}
 		}
 
+		// One line per kind for the editor (OAR shows a description per condition).
+		const char* Describe(ConditionKind kind)
+		{
+			switch (kind) {
+			case ConditionKind::And: return "$RDF_CK_And"_T;
+			case ConditionKind::Or: return "$RDF_CK_Or"_T;
+			case ConditionKind::HasKeyword: return "$RDF_CK_HasKeyword"_T;
+			case ConditionKind::HasEffectKeyword: return "$RDF_CK_HasEffectKeyword"_T;
+			case ConditionKind::HasPerk: return "$RDF_CK_HasPerk"_T;
+			case ConditionKind::IsRace: return "$RDF_CK_IsRace"_T;
+			case ConditionKind::InFaction: return "$RDF_CK_InFaction"_T;
+			case ConditionKind::Equipped: return "$RDF_CK_Equipped"_T;
+			case ConditionKind::ActorValue: return "$RDF_CK_ActorValue"_T;
+			case ConditionKind::InCombat: return "$RDF_CK_InCombat"_T;
+			case ConditionKind::Sneaking: return "$RDF_CK_Sneaking"_T;
+			case ConditionKind::Sprinting: return "$RDF_CK_Sprinting"_T;
+			case ConditionKind::Blocking: return "$RDF_CK_Blocking"_T;
+			case ConditionKind::Attacking: return "$RDF_CK_Attacking"_T;
+			case ConditionKind::PowerAttacking: return "$RDF_CK_PowerAttacking"_T;
+			case ConditionKind::Casting: return "$RDF_CK_Casting"_T;
+			case ConditionKind::IsPlayer: return "$RDF_CK_IsPlayer"_T;
+			case ConditionKind::FirstPerson: return "$RDF_CK_FirstPerson"_T;
+			case ConditionKind::Layer: return "$RDF_CK_Layer"_T;
+			case ConditionKind::Direction: return "$RDF_CK_Direction"_T;
+			case ConditionKind::ChainIndex: return "$RDF_CK_ChainIndex"_T;
+			case ConditionKind::FromStagger: return "$RDF_CK_FromStagger"_T;
+			case ConditionKind::Random: return "$RDF_CK_Random"_T;
+			case ConditionKind::Preset: return "$RDF_CK_Preset"_T;
+			default: return "";
+			}
+		}
+
 		template <class E, std::size_t N>
 		bool EnumCombo(const char* id, E& value, const char* const (&names)[N], float width)
 		{
@@ -179,7 +212,7 @@ namespace rdf::game::caston_editor
 				changed_ = false;
 				DrawToolbar();
 				if (FUCK::BeginTable("##layout", 2, FUCK::TableFlags::kResizable | FUCK::TableFlags::kBordersInnerV)) {
-					FUCK::TableSetupColumn("##list", FUCK::TableColumnFlags::kWidthFixed, 300.0f);
+					FUCK::TableSetupColumn("##list", FUCK::TableColumnFlags::kWidthFixed, 380.0f);
 					FUCK::TableSetupColumn("##edit", FUCK::TableColumnFlags::kWidthStretch);
 					FUCK::TableNextRow();
 					FUCK::TableNextColumn();
@@ -203,6 +236,16 @@ namespace rdf::game::caston_editor
 			}
 
 		private:
+			enum class Op  // what a condition node asked for, applied after its list is drawn
+			{
+				None,
+				Up,
+				Down,
+				Duplicate,
+				Delete,
+				PasteBelow,
+			};
+
 			enum class Selected
 			{
 				None,
@@ -537,148 +580,220 @@ namespace rdf::game::caston_editor
 			}
 
 			// ---------------------------------------------------------------------------------------------- conditions
-			// One table for the whole tree, rows in depth-first order (the order of the live results).
+			// OAR's layout (UIMain::DrawCondition): every condition a small bordered block whose header is one line (open
+			// arrow, live result, NOT and the name, a dim summary of its arguments); opened, its type, participant and each
+			// argument on a row of their own; a group draws its children the same way inside. Right click: copy, paste,
+			// duplicate, delete. Live results come in depth-first order over the whole tree, collapsed parts included.
 			void DrawConditionTable(std::vector<Condition>& list)
 			{
 				const auto live = co::LiveResults();
 				int        row = 0;
-				if (FUCK::BeginTable("##conditions", 7, FUCK::TableFlags::kBordersInnerH | FUCK::TableFlags::kRowBg)) {
-					FUCK::TableSetupColumn("##live", FUCK::TableColumnFlags::kWidthFixed, 24.0f);
-					FUCK::TableSetupColumn("$RDF_CO_ColNot"_T, FUCK::TableColumnFlags::kWidthFixed, 48.0f);
-					FUCK::TableSetupColumn("$RDF_CO_ColKind"_T, FUCK::TableColumnFlags::kWidthStretch, 1.3f);
-					FUCK::TableSetupColumn("$RDF_CO_ColWho"_T, FUCK::TableColumnFlags::kWidthFixed, 130.0f);
-					FUCK::TableSetupColumn("$RDF_CO_ColWhat"_T, FUCK::TableColumnFlags::kWidthStretch, 2.4f);
-					FUCK::TableSetupColumn("$RDF_CO_ColHow"_T, FUCK::TableColumnFlags::kWidthStretch, 1.6f);
-					FUCK::TableSetupColumn("##actions", FUCK::TableColumnFlags::kWidthFixed, 100.0f);
-					FUCK::TableHeadersRow();
-					DrawRows(list, 0, row, live.results);
-					FUCK::EndTable();
+				DrawConditionList(list, row, live.results);
+			}
+
+			static int RowsOf(const Condition& c)
+			{
+				int n = 1;
+				for (const auto& child : c.children) {
+					n += RowsOf(child);
 				}
-				AddButtons(list);
+				return n;
 			}
 
 			void AddButtons(std::vector<Condition>& list)
 			{
 				if (FUCK::Button(FUCK::IconText(ICON_FA_PLUS, "$RDF_CO_AddCondition"_T))) {
-					list.push_back(Condition{ .kind = ConditionKind::InCombat });
-					changed_ = true;
+					list.push_back(Condition{ .kind = lastKind_ });
+					OpenNext(list, list.size() - 1);
 				}
 				FUCK::SameLine();
 				if (FUCK::Button(FUCK::IconText(ICON_FA_FOLDER_PLUS, "$RDF_CO_AddGroup"_T))) {
-					list.push_back(Condition{ .kind = ConditionKind::Or, .children = { Condition{ .kind = ConditionKind::InCombat } } });
-					changed_ = true;
+					list.push_back(Condition{ .kind = ConditionKind::Or, .children = { Condition{ .kind = lastKind_ } } });
+					OpenNext(list, list.size() - 1);
 				}
+				FUCK::SameLine();
+				FUCK::BeginDisabled(!clipboard_);
+				if (FUCK::Button(FUCK::IconText(ICON_FA_PASTE, "$RDF_CO_Paste"_T)) && clipboard_) {
+					list.push_back(*clipboard_);
+					OpenNext(list, list.size() - 1);
+				}
+				FUCK::EndDisabled();
 			}
 
-			void DrawRows(std::vector<Condition>& list, int depth, int& row, const std::vector<std::int8_t>& live)
+			void OpenNext(const std::vector<Condition>& list, std::size_t index)
 			{
-				int up = -1, down = -1, remove = -1;
+				openList_ = &list;
+				openIndex_ = index;
+				changed_ = true;
+			}
+
+			void DrawConditionList(std::vector<Condition>& list, int& row, const std::vector<std::int8_t>& live)
+			{
+				Op  op = Op::None;
+				int at = -1;
 				for (int i = 0; i < static_cast<int>(list.size()); ++i) {
-					auto& c = list[i];
+					auto&      c = list[i];
+					const int  myRow = row;
+					const auto result = myRow < static_cast<int>(live.size()) ? live[myRow] : static_cast<std::int8_t>(-2);
 					FUCK::PushID(i);
-					FUCK::TableNextRow();
-					FUCK::TableNextColumn();
-					LiveIcon(row < static_cast<int>(live.size()) ? live[row] : -2);
-					++row;
-					FUCK::TableNextColumn();
-					changed_ |= FUCK::Checkbox("##not", &c.negated, false, false);
-					FUCK::TableNextColumn();
-					if (depth > 0) {
-						FUCK::Indent(14.0f * depth);
-					}
-					int kind = static_cast<int>(c.kind);
-					FUCK::SetNextItemWidth(-1.0f);
-					if (FUCK::Combo("##kind", &kind, KindNames().data(), static_cast<int>(KindNames().size()))) {
-						c.kind = static_cast<ConditionKind>(kind);
-						if (Info(c.kind).group && c.children.empty()) {
-							c.children.push_back(Condition{ .kind = ConditionKind::InCombat });
+					if (FUCK::BeginTable("##node", 1, FUCK::TableFlags::kBordersOuterH | FUCK::TableFlags::kBordersOuterV)) {
+						FUCK::TableNextRow();
+						FUCK::TableNextColumn();
+						if (openList_ == &list && openIndex_ == static_cast<std::size_t>(i)) {
+							FUCK::SetNextItemOpen(true, 1 /* Always */);
+							openList_ = nullptr;
 						}
-						changed_ = true;
-					}
-					if (depth > 0) {
-						FUCK::Unindent(14.0f * depth);
-					}
-					FUCK::TableNextColumn();
-					if (HasSubject(c.kind)) {
-						changed_ |= EnumCombo("##who", c.subject, kSubjects, -1.0f);
-					}
-					FUCK::TableNextColumn();
-					DrawWhat(c);
-					FUCK::TableNextColumn();
-					DrawHow(c);
-					FUCK::TableNextColumn();
-					if (FUCK::Button(ICON_FA_ARROW_UP "##up") && i > 0) {
-						up = i;
-					}
-					FUCK::SameLine();
-					if (FUCK::Button(ICON_FA_ARROW_DOWN "##down") && i + 1 < static_cast<int>(list.size())) {
-						down = i;
-					}
-					FUCK::SameLine();
-					if (FUCK::Button(ICON_FA_TRASH "##del")) {
-						remove = i;
-					}
-					if (Info(c.kind).group) {
-						DrawRows(c.children, depth + 1, row, live);
+						const bool open = FUCK::TreeNode("##open", kNodeFlags);
+						if (FUCK::BeginPopupContextItem("##menu")) {
+							if (FUCK::Selectable(FUCK::IconText(ICON_FA_COPY, "$RDF_CO_Copy"_T))) {
+								clipboard_ = c;
+							}
+							if (FUCK::Selectable(FUCK::IconText(ICON_FA_PASTE, "$RDF_CO_PasteBelow"_T), false, clipboard_ ? 0 : (1 << 3) /* Disabled */)) {
+								op = Op::PasteBelow;
+								at = i;
+							}
+							if (FUCK::Selectable(FUCK::IconText(ICON_FA_CLONE, "$RDF_CO_Duplicate"_T))) {
+								op = Op::Duplicate;
+								at = i;
+							}
+							if (FUCK::Selectable(FUCK::IconText(ICON_FA_TRASH, "$RDF_CO_Delete"_T))) {
+								op = Op::Delete;
+								at = i;
+							}
+							FUCK::EndPopup();
+						}
+						FUCK::SameLine();
+						LiveIcon(result);
+						FUCK::SameLine();
+						const auto title = std::format("{}{}", c.negated ? "NOT " : "", Info(c.kind).name);
+						if (c.kind == ConditionKind::Preset) {
+							FUCK::TextColored(ImVec4(0.55f, 0.75f, 1.0f, 1.0f), "%s", title.c_str());
+						} else if (Info(c.kind).group) {
+							FUCK::TextColored(ImVec4(0.95f, 0.8f, 0.45f, 1.0f), "%s", title.c_str());
+						} else {
+							FUCK::Text("%s", title.c_str());
+						}
+						if (const auto summary = Summary(c); !summary.empty()) {
+							FUCK::SameLine(0.0f, 24.0f);
+							FUCK::TextDisabled("%s", summary.c_str());
+						}
+						++row;
+						if (open) {
+							DrawConditionBody(c, i, static_cast<int>(list.size()), op, at, row, live);
+							FUCK::TreePop();
+						} else {
+							row = myRow + RowsOf(c);  // the closed subtree's rows still count
+						}
+						FUCK::EndTable();
 					}
 					FUCK::PopID();
 				}
-				if (up > 0) {
-					std::swap(list[up], list[up - 1]);
+				switch (op) {
+				case Op::Up:
+					std::swap(list[at], list[at - 1]);
 					changed_ = true;
-				} else if (down >= 0) {
-					std::swap(list[down], list[down + 1]);
+					break;
+				case Op::Down:
+					std::swap(list[at], list[at + 1]);
 					changed_ = true;
-				} else if (remove >= 0) {
-					list.erase(list.begin() + remove);
+					break;
+				case Op::Duplicate:
+					list.insert(list.begin() + at + 1, list[at]);
 					changed_ = true;
+					break;
+				case Op::PasteBelow:
+					if (clipboard_) {
+						list.insert(list.begin() + at + 1, *clipboard_);
+						OpenNext(list, at + 1);
+					}
+					break;
+				case Op::Delete:
+					list.erase(list.begin() + at);
+					changed_ = true;
+					break;
+				default:
+					break;
+				}
+				AddButtons(list);
+			}
+
+			void DrawConditionBody(Condition& c, int i, int count, Op& op, int& at, int& row, const std::vector<std::int8_t>& live)
+			{
+				changed_ |= FUCK::Checkbox("$RDF_CO_Negate"_T, &c.negated);
+				int kind = static_cast<int>(c.kind);
+				if (FUCK::ComboWithFilter("$RDF_CO_ColKind"_T, &kind, KindNames().data(), static_cast<int>(KindNames().size()), 16)) {
+					c.kind = static_cast<ConditionKind>(kind);
+					lastKind_ = Info(c.kind).group ? lastKind_ : c.kind;
+					if (Info(c.kind).group && c.children.empty()) {
+						c.children.push_back(Condition{ .kind = lastKind_ });
+					}
+					changed_ = true;
+				}
+				FUCK::TextDisabledWrapped("%s", Describe(c.kind));
+				if (HasSubject(c.kind)) {
+					changed_ |= EnumCombo("$RDF_CO_ColWho"_T, c.subject, kSubjects, -1.0f);
+				}
+				DrawArguments(c);
+				if (Info(c.kind).group) {
+					FUCK::Spacing();
+					DrawConditionList(c.children, row, live);
+				}
+				FUCK::Spacing();
+				FUCK::BeginDisabled(i == 0);
+				if (FUCK::Button(ICON_FA_ARROW_UP "##up")) {
+					op = Op::Up;
+					at = i;
+				}
+				FUCK::EndDisabled();
+				FUCK::SameLine();
+				FUCK::BeginDisabled(i + 1 >= count);
+				if (FUCK::Button(ICON_FA_ARROW_DOWN "##down")) {
+					op = Op::Down;
+					at = i;
+				}
+				FUCK::EndDisabled();
+				FUCK::SameLine();
+				if (FUCK::Button(FUCK::IconText(ICON_FA_COPY, "$RDF_CO_Copy"_T))) {
+					clipboard_ = c;
+				}
+				FUCK::SameLine();
+				if (FUCK::Button(FUCK::IconText(ICON_FA_TRASH, "$RDF_CO_DeleteCondition"_T))) {
+					op = Op::Delete;
+					at = i;
 				}
 			}
 
-			void DrawWhat(Condition& c)
+			void DrawArguments(Condition& c)
 			{
 				const auto& info = Info(c.kind);
-				if (info.group) {
-					if (FUCK::Button(FUCK::IconText(ICON_FA_PLUS, "$RDF_CO_AddCondition"_T))) {
-						c.children.push_back(Condition{ .kind = ConditionKind::InCombat });
-						changed_ = true;
-					}
-					FUCK::SameLine();
-					if (FUCK::Button(FUCK::IconText(ICON_FA_FOLDER_PLUS, "$RDF_CO_AddGroup"_T))) {
-						c.children.push_back(Condition{ .kind = ConditionKind::And, .children = { Condition{ .kind = ConditionKind::InCombat } } });
-						changed_ = true;
-					}
-					return;
-				}
 				if (info.form) {
-					changed_ |= menu::FormInput("##form", c.form, FormTypeOf(c.kind), true);
-					return;
+					changed_ |= menu::FormInput(FormLabel(c.kind), c.form, FormTypeOf(c.kind));
 				}
 				switch (c.kind) {
 				case ConditionKind::Layer:
 					{
 						static const auto names = Names(kLayers);
-						changed_ |= TextCombo("##text", c.text, names, -1.0f);
-						return;
+						changed_ |= TextCombo("$RDF_CO_Layer"_T, c.text, names, -1.0f);
+						break;
 					}
 				case ConditionKind::Direction:
 					{
 						static const auto names = Names(kDirections);
-						changed_ |= TextCombo("##text", c.text, names, -1.0f);
-						return;
+						changed_ |= TextCombo("$RDF_CO_Direction"_T, c.text, names, -1.0f);
+						break;
 					}
 				case ConditionKind::Equipped:
 					{
 						static const auto names = Names(kEquippedTypes);
-						changed_ |= TextCombo("##text", c.text, names, -1.0f);
-						return;
+						changed_ |= TextCombo("$RDF_CO_EquippedType"_T, c.text, names, -1.0f);
+						break;
 					}
 				case ConditionKind::ActorValue:
-					changed_ |= Text("##text", c.text, -1.0f);
+					changed_ |= Text("$RDF_CO_AvName"_T, c.text, -1.0f);
 					if (FUCK::IsItemHovered()) {
 						FUCK::SetTooltip("$RDF_CO_AvHint"_T);
 					}
-					return;
+					break;
 				case ConditionKind::Preset:
 					{
 						const auto               presets = AllPresets();
@@ -690,91 +805,112 @@ namespace rdf::game::caston_editor
 						for (const auto& n : keep) {
 							names.push_back(n.c_str());
 						}
-						changed_ |= TextCombo("##text", c.text, names, -1.0f);
-						return;
+						changed_ |= TextCombo("$RDF_CO_PresetRef"_T, c.text, names, -1.0f);
+						break;
 					}
 				default:
-					FUCK::TextDisabled("-");
-					return;
+					break;
 				}
-			}
-
-			void DrawHow(Condition& c)
-			{
-				const auto& info = Info(c.kind);
-				bool        first = true;
-				const auto  next = [&]() {
-					if (!first) {
-						FUCK::SameLine();
-					}
-					first = false;
-				};
 				if (info.hand) {
-					next();
-					changed_ |= EnumCombo("##hand", c.hand, kHands, 80.0f);
+					changed_ |= EnumCombo("$RDF_CO_Hand"_T, c.hand, kHands, -1.0f);
 				}
 				if (info.mode) {
-					next();
-					changed_ |= EnumCombo("##mode", c.mode, kModes, 90.0f);
+					changed_ |= EnumCombo("$RDF_CO_AvMode"_T, c.mode, kModes, -1.0f);
 				}
 				if (info.compare) {
-					next();
-					changed_ |= EnumCombo("##cmp", c.compare, kCompares, 56.0f);
+					changed_ |= EnumCombo("$RDF_CO_Compare"_T, c.compare, kCompares, -1.0f);
 					if (c.compare != Compare::None) {
-						FUCK::SameLine();
-						FUCK::SetNextItemWidth(-1.0f);
-						changed_ |= FUCK::DragFloat("##value", &c.value, 0.1f, -1.0e6f, 1.0e6f, "%.2f");
+						changed_ |= FUCK::DragFloat("$RDF_CO_Number"_T, &c.value, 0.1f, -1.0e6f, 1.0e6f, "%.2f");
 					}
 				}
 				if (c.kind == ConditionKind::Random) {
-					next();
-					FUCK::SetNextItemWidth(-1.0f);
-					changed_ |= FUCK::DragFloat("##chance", &c.value, 0.5f, 0.0f, 100.0f, "%.0f");
+					changed_ |= FUCK::DragFloat("$RDF_CO_ChanceValue"_T, &c.value, 0.5f, 0.0f, 100.0f, "%.0f");
 				}
 			}
 
-			// ---------------------------------------------------------------------------------------------- casts, cost
+			static const char* FormLabel(ConditionKind kind)
+			{
+				switch (kind) {
+				case ConditionKind::HasPerk: return "$RDF_CO_Perk"_T;
+				case ConditionKind::IsRace: return "$RDF_CO_Race"_T;
+				case ConditionKind::InFaction: return "$RDF_CO_Faction"_T;
+				default: return "$RDF_CO_Keyword"_T;
+				}
+			}
+
+			// The header's dim summary, as OAR's argument column: the participant, then the arguments.
+			static std::string Summary(const Condition& c)
+			{
+				const auto& info = Info(c.kind);
+				if (info.group) {
+					return std::format("{} {}", c.children.size(), "$RDF_CO_Children"_T);
+				}
+				std::string out;
+				const auto  add = [&](std::string_view part) {
+					if (!part.empty()) {
+						out += out.empty() ? "" : "  ";
+						out += part;
+					}
+				};
+				if (HasSubject(c.kind)) {
+					add(kSubjects[static_cast<int>(c.subject)]);
+				}
+				add(c.form);
+				add(c.text);
+				if (info.hand) {
+					add(kHands[static_cast<int>(c.hand)]);
+				}
+				if (info.mode && c.mode != ValueMode::Current) {
+					add(kModes[static_cast<int>(c.mode)]);
+				}
+				if (info.compare && c.compare != Compare::None) {
+					add(std::format("{} {:g}", kCompares[static_cast<int>(c.compare)], c.value));
+				}
+				if (c.kind == ConditionKind::Random) {
+					add(std::format("{:g} %", c.value));
+				}
+				return out;
+			}
+
+			// ---------------------------------------------------------------------------------------------- casts
 			void DrawCasts(std::vector<Cast>& casts)
 			{
 				int remove = -1;
-				if (FUCK::BeginTable("##casts", 8, FUCK::TableFlags::kBordersInnerH | FUCK::TableFlags::kRowBg)) {
-					FUCK::TableSetupColumn("$RDF_CO_ColSpell"_T, FUCK::TableColumnFlags::kWidthStretch, 2.6f);
-					FUCK::TableSetupColumn("$RDF_CO_ColCaster"_T, FUCK::TableColumnFlags::kWidthFixed, 130.0f);
-					FUCK::TableSetupColumn("$RDF_CO_ColTarget"_T, FUCK::TableColumnFlags::kWidthFixed, 130.0f);
-					FUCK::TableSetupColumn("$RDF_CO_ColEff"_T, FUCK::TableColumnFlags::kWidthFixed, 80.0f);
-					FUCK::TableSetupColumn("$RDF_CO_ColMag"_T, FUCK::TableColumnFlags::kWidthFixed, 80.0f);
-					FUCK::TableSetupColumn("$RDF_CO_ColDur"_T, FUCK::TableColumnFlags::kWidthFixed, 80.0f);
-					FUCK::TableSetupColumn("$RDF_CO_ColNoArt"_T, FUCK::TableColumnFlags::kWidthFixed, 70.0f);
-					FUCK::TableSetupColumn("##del", FUCK::TableColumnFlags::kWidthFixed, 36.0f);
-					FUCK::TableHeadersRow();
-					for (int i = 0; i < static_cast<int>(casts.size()); ++i) {
-						auto& cast = casts[i];
-						FUCK::PushID(i);
+				for (int i = 0; i < static_cast<int>(casts.size()); ++i) {
+					auto& cast = casts[i];
+					FUCK::PushID(i);
+					if (FUCK::BeginTable("##cast", 1, FUCK::TableFlags::kBordersOuterH | FUCK::TableFlags::kBordersOuterV)) {
 						FUCK::TableNextRow();
 						FUCK::TableNextColumn();
-						changed_ |= menu::FormInput("##spell", cast.spell, RE::FormType::Spell, true);
-						FUCK::TableNextColumn();
-						changed_ |= EnumCombo("##caster", cast.caster, kSubjects, -1.0f);
-						FUCK::TableNextColumn();
-						changed_ |= EnumCombo("##target", cast.target, kTargets, -1.0f);
-						FUCK::TableNextColumn();
-						FUCK::SetNextItemWidth(-1.0f);
-						changed_ |= FUCK::DragFloat("##eff", &cast.effectiveness, 0.01f, 0.0f, 100.0f, "%.2f");
-						FUCK::TableNextColumn();
-						FUCK::SetNextItemWidth(-1.0f);
-						changed_ |= FUCK::DragFloat("##mag", &cast.magnitude, 0.5f, 0.0f, 100000.0f, "%.1f");
-						FUCK::TableNextColumn();
-						FUCK::SetNextItemWidth(-1.0f);
-						changed_ |= FUCK::DragFloat("##dur", &cast.duration, 0.05f, 0.05f, 60.0f, "%.2f s");
-						FUCK::TableNextColumn();
-						changed_ |= FUCK::Checkbox("##noart", &cast.noHitEffectArt, false, false);
-						FUCK::TableNextColumn();
-						if (FUCK::Button(ICON_FA_TRASH "##del")) {
-							remove = i;
+						if (openCast_ == i) {
+							FUCK::SetNextItemOpen(true, 1 /* Always */);
+							openCast_ = -1;
 						}
-						FUCK::PopID();
+						const bool open = FUCK::TreeNode("##open", kNodeFlags);
+						FUCK::SameLine();
+						const auto r = forms::Peek(cast.spell, RE::FormType::Spell);
+						const auto name = cast.spell.empty() ? std::string("$RDF_CO_NoSpell"_T) : cast.spell;
+						FUCK::TextColored(r.status == forms::Status::Found ? ImVec4(0.85f, 0.85f, 0.85f, 1.0f) : ImVec4(1.0f, 0.55f, 0.35f, 1.0f), "%s %s",
+							ICON_FA_WAND_MAGIC_SPARKLES, name.c_str());
+						FUCK::SameLine(0.0f, 24.0f);
+						FUCK::TextDisabled("%s > %s%s", kSubjects[static_cast<int>(cast.caster)], kTargets[static_cast<int>(cast.target)],
+							cast.effectiveness != 1.0f ? std::format("  x{:g}", cast.effectiveness).c_str() : "");
+						if (open) {
+							changed_ |= menu::FormInput("$RDF_CO_ColSpell"_T, cast.spell, RE::FormType::Spell);
+							changed_ |= EnumCombo("$RDF_CO_ColCaster"_T, cast.caster, kSubjects, -1.0f);
+							changed_ |= EnumCombo("$RDF_CO_ColTarget"_T, cast.target, kTargets, -1.0f);
+							changed_ |= FUCK::DragFloat("$RDF_CO_Effectiveness"_T, &cast.effectiveness, 0.01f, 0.0f, 100.0f, "%.2f");
+							changed_ |= FUCK::DragFloat("$RDF_CO_Magnitude"_T, &cast.magnitude, 0.5f, 0.0f, 100000.0f, "%.1f");
+							changed_ |= FUCK::DragFloat("$RDF_CO_Duration"_T, &cast.duration, 0.05f, 0.05f, 60.0f, "%.2f s");
+							changed_ |= FUCK::Checkbox("$RDF_CO_NoArt"_T, &cast.noHitEffectArt);
+							if (FUCK::Button(FUCK::IconText(ICON_FA_TRASH, "$RDF_CO_DeleteCast"_T))) {
+								remove = i;
+							}
+							FUCK::TreePop();
+						}
+						FUCK::EndTable();
 					}
-					FUCK::EndTable();
+					FUCK::PopID();
 				}
 				if (remove >= 0) {
 					casts.erase(casts.begin() + remove);
@@ -782,6 +918,7 @@ namespace rdf::game::caston_editor
 				}
 				if (FUCK::Button(FUCK::IconText(ICON_FA_PLUS, "$RDF_CO_AddCast"_T))) {
 					casts.push_back({});
+					openCast_ = static_cast<int>(casts.size()) - 1;
 					changed_ = true;
 				}
 				FUCK::TextDisabledWrapped("%s", "$RDF_CO_CastsNote"_T);
@@ -824,6 +961,12 @@ namespace rdf::game::caston_editor
 			std::string          renameFor_;
 			std::string          newName_;
 			std::string          status_;
+			std::optional<Condition>       clipboard_;
+			ConditionKind                  lastKind_{ ConditionKind::InCombat };  // what "+ Condition" adds (OAR's way)
+			const std::vector<Condition>*  openList_{ nullptr };                  // a node just added opens
+			std::size_t                    openIndex_{ 0 };
+			int                            openCast_{ -1 };
+			static constexpr int           kNodeFlags = (1 << 2) | (1 << 10) | (1 << 11);  // AllowOverlap | FramePadding | SpanAvailWidth
 		};
 
 		Editor& Window()
