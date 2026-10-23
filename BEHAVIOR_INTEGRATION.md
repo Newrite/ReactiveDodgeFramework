@@ -303,7 +303,7 @@ Still open: first person and the Nemesis variant have only the root dodge in 1P;
 Precision's `Collision_Recoil`, combat idles, BFCO / MCO sprint-attack wildcards) apply to a 1hm dodge too; nothing of
 this has run in game yet.
 
-## 8. Bow and magic layers (`[Casting]`, third person; built 2026-10-23, not run in game)
+## 8. Bow and magic layers (`[Casting]`, both views; 3P bow run in game 2026-10-23, the rest not yet)
 
 A dodge that keeps the arms' work going: the body dodges, a bow being drawn stays drawn and a spell being charged or cast
 goes on. Only for an actor with the keyword (`[Casting] sDrawDuringDodgeKeyword` / `sCastDuringDodgeKeyword`, the same
@@ -318,6 +318,12 @@ own locomotion machine, under the arms' generator:
 - magic: `DefaultMagicCastingBehavior` (#1007, magicbehavior; standing 0 / moving 1), states `RDF_Magic_Dodge_A/B`
   9721 / 9722, the dodge clip chooser wrapped in a `BSBoneSwitchGenerator` whose ChildrenA is the moving state's
   cast-arms child (#0786). magicbehavior gains `bAnimationDriven` (it had none) and our events / variables.
+- first person: the same states in the 1P files, under their own ids: `_1stperson/1hm_behavior`'s
+  `Bow_Attack_LowerBodyBehavior` (#2514; transitions #2525 / #2517) and `_1stperson/magicbehavior`'s
+  `DefaultMagicCastingBehavior` (#0901; transitions #0897 / #0889, cast arms #0751), playing the 1P dodge clips
+  (`fp_clip_path`). The 1P bow blend (`Bow_AttackUpperLowerBody1stPBlend`) gives the lower-body machine bone 0 only, so
+  under a drawn bow the 1P dodge leaves the aim and the camera to the bow (the plugin still moves the actor); under a cast
+  the 1P clip moves torso and camera while the cast arms go on, as in 3P.
 
 Each state: BSIsActiveModifier (bAnimationDriven, RDF_IsDodging) over the dodge clip chooser (same clips, RDF_DodgeClip /
 RDF_DodgeSpeed), enter `RDF_DodgeEntered` (no InterruptCast), exit `RDF_DodgeLeft`; chains on the other state's start
@@ -328,7 +334,7 @@ OAR where the dodge plays: 0 root, 1 1hm, 2 bow, 3 magic.
 
 The plugin (`graph::Layer`, `DodgeAgent::CastingLayer`):
 - order: bow (keyword + attack state BowDraw / BowAttached / BowDrawn), magic (keyword + IsCastingRight / Left / Dual,
-  `[Casting] sCastingVariables`), 1hm, root; third person only. A chain stays in its layer. A layer start that never enters
+  `[Casting] sCastingVariables`), 1hm, root; both views. A chain stays in its layer. A layer start that never enters
   disables the layers until the 3D reloads (like the 1hm one);
 - with the bow keyword a draw may be dodged out of at any moment (the vanilla attack-state mask has no draw states);
 - releases wait: an arrow loosed or a spell let go would leave the draw / cast state and the dodge with it, so Right /
@@ -337,8 +343,10 @@ The plugin (`graph::Layer`, `DodgeAgent::CastingLayer`):
 - cancels into an attack / block take the root way (the layer's exit, then the action); orphaned / abandoned states get
   every layer's exit.
 
-Validation: `validate_rdf.py` 248/248 (STB), `validate_onehand.py --ref noonehand --label rdf` 128/128 on STB and
-VanillaLike (the reference: `gen_rdf_patch.py _work/noonehand/rdf --no-onehand`), Nemesis `check_rdf_nemesis.py` 82/82.
-The Nemesis originals of #2741 / #2694 / #1007 / #1003 / #0924 are vanilla dumps no installed Nemesis mod edits (unconfirmed;
-the same classes are confirmed elsewhere). Open: first person has no layers; whether a held release replayed after the
-dodge fires as expected (a fire-and-forget spell, a concentration spell, an arrow) is the first thing to check in game.
+Validation: `gen_rdf_patch.py --verify-ids` (the layer machines, their transition arrays and cast-arms child, 3P and 1P),
+`validate_rdf.py` 257/257 (STB), `validate_onehand.py --ref noonehand --label rdf` 131/131 on STB and VanillaLike (the
+reference: `gen_rdf_patch.py _work/noonehand/rdf --no-onehand`), Nemesis `check_rdf_nemesis.py` 105/105. The Nemesis
+originals of the layer machines and their transition arrays (3P #2691 / #2741 / #2694 / #1007 / #1003 / #0924, 1P #2514 /
+#2525 / #2517 / #0901 / #0897 / #0889) are vanilla dumps no installed Nemesis mod edits (unconfirmed; the same classes are
+confirmed elsewhere). In game (2026-10-23, VanillaLike): the 3P bow layer keeps the draw and fires after the dodge; a
+magic release replayed in the exit frame was refused (now retried for 0.4 s). Not yet run: magic after that fix, 1P.

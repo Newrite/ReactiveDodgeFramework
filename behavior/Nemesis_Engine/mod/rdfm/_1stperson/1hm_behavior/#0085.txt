@@ -483,6 +483,9 @@
 				<hkcstring>RDF_DodgeStartB1H</hkcstring>
 				<hkcstring>RDF_DodgeCancelOpen</hkcstring>
 				<hkcstring>RDF_DodgeCancelClose</hkcstring>
+				<hkcstring>RDF_DodgeStartBow</hkcstring>
+				<hkcstring>RDF_DodgeStartBowB</hkcstring>
+				<hkcstring>RDF_DodgeExitBow</hkcstring>
 <!-- CLOSE -->
 			</hkparam>
 			<hkparam name="attributeNames" numelements="0"></hkparam>

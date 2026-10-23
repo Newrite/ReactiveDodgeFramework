@@ -206,7 +206,7 @@ def main():
         back, vback = roundtrip(stem, txt), roundtrip(stem + "_vanilla", van)
         if back and vback:
             g, gb = H.Graph(back), H.Graph(vback)
-            events = G.EVENTS + G.ONEHAND_START_EVENTS + G.CANCEL_EVENTS + ([] if stem.startswith("fp_") else G.BOW_EVENTS)
+            events = G.EVENTS + G.ONEHAND_START_EVENTS + G.CANCEL_EVENTS + G.BOW_EVENTS
             check("%s: events +%d, eventInfos match" % (folder, len(events)),
                   len(g.event_names) == len(gb.event_names) + len(events) and all(len(g.ev_index.get(e, [])) == 1 for e in events)
                   and g.n_event_infos == len(g.event_names))
@@ -220,29 +220,30 @@ def main():
             wl = {g.event_name(int(d["eventId"])) for d in H.trans_array(g, sm.text("wildcardTransitions"))}
             check("%s: 1HM_Behavior wildcards for %s and RDF_DodgeExit" % (folder, "/".join(G.ONEHAND_START_EVENTS)),
                   set(G.ONEHAND_START_EVENTS) | {"RDF_DodgeExit"} <= wl)
-            if not stem.startswith("fp_"):   # the bow layer (BEHAVIOR_INTEGRATION.md 8)
-                VR.check_layer(g, folder, "Bow_Attack_LowerBodyBehavior", G.BOW_STATES, G.BOW_EVENTS, check)
+            VR.check_layer(g, folder, "Bow_Attack_LowerBodyBehavior", G.BOW_STATES, G.BOW_EVENTS, check)   # BEHAVIOR_INTEGRATION.md 8
             rep, repb = H.Report(), H.Report()
             H.check(g, rep)
             H.check(gb, repb)
             check("%s: hkxcheck no new errors / warnings vs vanilla" % folder,
                   len(rep.errors) == len(repb.errors) and len(rep.warns) == len(repb.warns), "; ".join(rep.errors[:3]))
-    # --- magicbehavior: the magic layer (BEHAVIOR_INTEGRATION.md 8)
-    van, txt = apply("magicbehavior", G.V_MAGIC["STRING"])
-    back, vback = roundtrip("magicbehavior", txt), roundtrip("magicbehavior_vanilla", van)
-    if back and vback:
+    # --- magicbehavior: the magic layer (BEHAVIOR_INTEGRATION.md 8), 3P and 1P
+    for folder, stem in (("magicbehavior", "magicbehavior"), (os.path.join("_1stperson", "magicbehavior"), "fp_magicbehavior")):
+        van, txt = apply(folder, G.V_MAGIC["STRING"])
+        back, vback = roundtrip(stem, txt), roundtrip(stem + "_vanilla", van)
+        if not (back and vback):
+            continue
         g, gb = H.Graph(back), H.Graph(vback)
         events = G.EVENTS + G.CANCEL_EVENTS + G.MAGIC_EVENTS
         variables = G.VARIABLES + G.MAGIC_EXTRA_VARIABLES
-        check("magicbehavior: events +%d, variables +%d, tables consistent" % (len(events), len(variables)),
+        check("%s: events +%d, variables +%d, tables consistent" % (folder, len(events), len(variables)),
               len(g.event_names) == len(gb.event_names) + len(events) and all(len(g.ev_index.get(e, [])) == 1 for e in events)
               and g.n_event_infos == len(g.event_names) and len(g.variable_names) == len(gb.variable_names) + len(variables)
               and g.n_var_infos == len(g.variable_names))
-        VR.check_layer(g, "magicbehavior", "DefaultMagicCastingBehavior", G.MAGIC_STATES, G.MAGIC_EVENTS, check)
+        VR.check_layer(g, folder, "DefaultMagicCastingBehavior", G.MAGIC_STATES, G.MAGIC_EVENTS, check)
         rep, repb = H.Report(), H.Report()
         H.check(g, rep)
         H.check(gb, repb)
-        check("magicbehavior: hkxcheck no new errors / warnings vs vanilla",
+        check("%s: hkxcheck no new errors / warnings vs vanilla" % folder,
               len(rep.errors) == len(repb.errors) and len(rep.warns) == len(repb.warns), "; ".join(rep.errors[:3]))
     # --- characters
     for ch in ("defaultmale", "defaultfemale"):

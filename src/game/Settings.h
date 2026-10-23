@@ -116,7 +116,7 @@ namespace rdf::game
 		} stagger;
 
 		// [Casting] an actor with these keywords (actor, race, worn items, active effects) dodges without dropping a bow
-		// draw / a spell it charges: the dodge plays on the body and the arms go on (third person). The release made
+		// draw / a spell it charges: the dodge plays on the body and the arms go on (both views). The release made
 		// during the dodge is held and replayed once it is over. Empty = never (the dodge interrupts them).
 		struct CastingSettings
 		{

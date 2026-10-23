@@ -158,7 +158,7 @@ namespace rdf::game
 		const bool dodgeWaits = core_->Buffer().Peek(CommandKind::Dodge, core_->Now()) != nullptr;
 		view.dodgeForbidden = dodgeWaits && attack::DodgeForbidden(actor);
 		// [Casting] a bow being drawn may be dodged out of at any moment when the dodge keeps the draw going.
-		if (dodgeWaits && !ownDodge && !view.cancelAnyTime && CastingLayer(actor, state.attackState, in.firstPerson) == graph::Layer::Bow) {
+		if (dodgeWaits && !ownDodge && !view.cancelAnyTime && CastingLayer(actor, state.attackState) == graph::Layer::Bow) {
 			view.cancelAnyTime = true;
 		}
 		view.staminaOk = !settings.costResource || state.resource >= settings.minimum;
@@ -526,7 +526,7 @@ namespace rdf::game
 		// RDF_ChainIndex: 0 for a fresh dodge, the running dodge's index + 1 for a chain (ChainCount is 1-based).
 		const int   chainIndex = chain ? core_->ChainCount() : 0;
 		const float playback = settings.core.timing.PlaybackSpeed(clipLength, settings.animSpeed);
-		// [Casting] the bow / magic layer first (the keyword, a draw / a cast running, third person), then the 1hm dodge (a
+		// [Casting] the bow / magic layer first (the keyword, a draw / a cast running), then the 1hm dodge (a
 		// weapon out: 1hm_behavior runs, third or first person), else the root one. A chain stays in the layer of the dodge it
 		// continues; outside the root it is the start of the other state.
 		auto        sent = entry;
@@ -544,7 +544,7 @@ namespace rdf::game
 		if (chaining && layer_ != graph::Layer::Root) {
 			accepted = tryLayer(layer_);
 		} else if (!chaining) {
-			const auto casting = CastingLayer(actor, static_cast<std::uint8_t>(actor->AsActorState()->GetAttackState()), in.firstPerson);
+			const auto casting = CastingLayer(actor, static_cast<std::uint8_t>(actor->AsActorState()->GetAttackState()));
 			accepted = casting != graph::Layer::Root && tryLayer(casting);
 			if (!accepted && settings.graph.oneHand && !oneHandBroken_) {
 				accepted = tryLayer(graph::Layer::OneHand);
@@ -690,11 +690,11 @@ namespace rdf::game
 	}
 
 	// [Casting] Which layer keeps what the actor's arms are doing: a bow being drawn (or held drawn) and the draw keyword,
-	// else a cast running (the vanilla IsCasting* graph variables) and the cast keyword. Third person only: the first-person
-	// graph has no such layers.
-	graph::Layer DodgeAgent::CastingLayer(RE::Actor* actor, std::uint8_t attackState, bool firstPerson) const
+	// else a cast running (the vanilla IsCasting* graph variables) and the cast keyword. Both views: the first-person files
+	// have the same layers (under a drawn bow the 1P dodge keeps the aim and the camera, BEHAVIOR_INTEGRATION.md 8).
+	graph::Layer DodgeAgent::CastingLayer(RE::Actor* actor, std::uint8_t attackState) const
 	{
-		if (firstPerson || layerBroken_) {
+		if (layerBroken_) {
 			return graph::Layer::Root;
 		}
 		const bool drawing = attackState == attack_state::kBowDraw || attackState == attack_state::kBowAttached ||

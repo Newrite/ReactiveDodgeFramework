@@ -69,6 +69,13 @@ MAGIC_STATES = [("RDF_Magic_Dodge_A", 9721), ("RDF_Magic_Dodge_B", 9722)]
 MAGIC_EVENTS = ["RDF_DodgeStartMagic", "RDF_DodgeStartMagicB", "RDF_DodgeExitMagic"]
 MAGIC_EXTRA_VARIABLES = [("bAnimationDriven", "VARIABLE_TYPE_BOOL", 0)]   # 0_master's, not in vanilla magicbehavior
 MAGIC_PATCH_NAME = "magicbehavior.xml"
+# First person: the same machines under their own ids. The 1P bow blend (Bow_AttackUpperLowerBody1stPBlend) gives the
+# lower-body machine only bone 0: under a drawn bow the 1P dodge keeps the aim and the camera (the plugin moves the actor);
+# the 1P magic machine lays its cast arms (#0751) over the dodge like 3P.
+V_BOW_FP = dict(SM="#2514", STATE_TRANSITIONS=["#2525", "#2517"])   # in _1stperson/1hm_behavior
+V_MAGIC_FP = dict(STRING="#0077", VALUES="#0078", DATA="#0079", SM="#0901", STATE_TRANSITIONS=["#0897", "#0889"],
+                  CAST_ARMS="#0751")
+FP_MAGIC_PATCH_NAME = "firstperson~magicbehavior.xml"
 LAYER_MOVING_EXPR = "Speed > 20"     # leaving a layer dodge: to the moving state, else the standing one
 LAYER_STANDING_EXPR = "Speed <= 20"
 
@@ -632,7 +639,7 @@ def gen_onehand(fp=False):
     N = Names()
     v = V_1HM_FP if fp else V_1HM
     x = ["<patch>"]
-    for e in EVENTS + ONEHAND_START_EVENTS + CANCEL_EVENTS + ([] if fp else BOW_EVENTS):
+    for e in EVENTS + ONEHAND_START_EVENTS + CANCEL_EVENTS + BOW_EVENTS:
         x.append('  <append path="%s/eventNames"><hkcstring>%s</hkcstring></append>' % (v["STRING"], e))
         x.append('  <append path="%s/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>' % v["DATA"])
     for name, typ, init in VARIABLES:
@@ -661,17 +668,17 @@ def gen_onehand(fp=False):
         new_nodes += nodes
     exit_cond = N.new()
     new_nodes.append(expression_condition(exit_cond, ONEHAND_EXIT_EXPR))
-    bow_states, bow_starts = ([], [])
-    if not fp:   # the bow layer: the dodge on the body under a drawn bow (Bow_Attack_LowerBodyBehavior, 3P and its 1P branch)
-        bow_states, bow_starts = layer_states(N, new_nodes, BOW_STATES, BOW_EVENTS, fx, v)
+    # the bow layer: the dodge under a drawn bow (Bow_Attack_LowerBodyBehavior of the view's own file)
+    v_bow = V_BOW_FP if fp else V_BOW
+    bow_states, bow_starts = layer_states(N, new_nodes, BOW_STATES, BOW_EVENTS, fx, v, path=fp_clip_path if fp else None)
     x.append('  <insert path="">')
     x += ["    " + n.replace("\n", "\n    ") for n in new_nodes]
     x.append("  </insert>")
     for st in states:
         x.append('  <append path="%s/states">%s</append>' % (v["SM"], st))
     for st in bow_states:
-        x.append('  <append path="%s/states">%s</append>' % (V_BOW["SM"], st))
-    for arr in (V_BOW["STATE_TRANSITIONS"] if bow_states else []):
+        x.append('  <append path="%s/states">%s</append>' % (v_bow["SM"], st))
+    for arr in v_bow["STATE_TRANSITIONS"]:
         for t in bow_starts:
             x.append('  <append path="%s/transitions">%s</append>' % (arr, t))
     for event, sid in zip(ONEHAND_START_EVENTS, (id_a, id_b)):
@@ -683,7 +690,7 @@ def gen_onehand(fp=False):
     return "\n".join(x) + "\n", len(new_nodes)   # nodes written (some reserved names stay unused)
 
 
-def layer_states(N, out, states, events, fx, v, arms=None):
+def layer_states(N, out, states, events, fx, v, arms=None, path=None):
     """The two dodge states of a bow / magic layer, for a locomotion machine with a standing (0) and a moving (1) state.
     Each plays the dodge clip chooser under BSIsActiveModifier (bAnimationDriven, RDF_IsDodging); the rest of the body
     is the layer's own (a bow draw's upper body blended over the machine, or `arms`: a BSBoneSwitch child list laid over
@@ -704,7 +711,7 @@ def layer_states(N, out, states, events, fx, v, arms=None):
               transition(fx["out"], exit_event, 0, "0", cond_stand)]
         out.append(node(trans, "hkbStateMachineTransitionInfoArray", "0xe397b11e",
                         '<hkparam name="transitions" numelements="%d">%s</hkparam>' % (len(ts), "".join(ts))))
-        gen = dodge_selector(N, out, nm + "_Main")
+        gen = dodge_selector(N, out, nm + "_Main", path)   # path: the 1P clips (fp_clip_path)
         if arms:
             sw = N.new()
             out.append(node(sw, "BSBoneSwitchGenerator", "0xf33d3eea", "\n".join([
@@ -726,11 +733,11 @@ def layer_states(N, out, states, events, fx, v, arms=None):
     return ptrs, starts
 
 
-def gen_magic():
-    """magicbehavior patch: the magic layer, the dodge on the body while the arms go on casting
+def gen_magic(fp=False):
+    """magicbehavior patch (3P, or the 1P file): the magic layer, the dodge on the body while the arms go on casting
     (DefaultMagicCastingBehavior, its moving state's cast-arms bone switch child reused)."""
     N = Names()
-    v = V_MAGIC
+    v = V_MAGIC_FP if fp else V_MAGIC
     x = ["<patch>"]
     for e in EVENTS + CANCEL_EVENTS + MAGIC_EVENTS:
         x.append('  <append path="%s/eventNames"><hkcstring>%s</hkcstring></append>' % (v["STRING"], e))
@@ -747,7 +754,8 @@ def gen_magic():
     for key, spec in (("in", FX_IN), ("out", FX_OUT)):
         fx[key] = N.new()
         new_nodes.append(effect_node(fx[key], spec))
-    states, starts = layer_states(N, new_nodes, MAGIC_STATES, MAGIC_EVENTS, fx, v, arms=[v["CAST_ARMS"]])
+    states, starts = layer_states(N, new_nodes, MAGIC_STATES, MAGIC_EVENTS, fx, v, arms=[v["CAST_ARMS"]],
+                                  path=fp_clip_path if fp else None)
     x.append('  <insert path="">')
     x += ["    " + n.replace("\n", "\n    ") for n in new_nodes]
     x.append("  </insert>")
@@ -848,6 +856,47 @@ def verify_ids_1hm(root, fp=False):
         chk(name not in g.var_index, "variable %s is new" % name)
     for side, (cp, idx) in CHAR_PROP_1HM.items():
         chk(len(g.char_prop_names) > idx and g.char_prop_names[idx] == cp, "characterPropertyNames[%d] == %s" % (idx, cp))
+    ok &= verify_layer_ids(g, V_BOW_FP if fp else V_BOW, "Bow_Attack_LowerBodyBehavior", BOW_STATES, chk)
+    return ok
+
+
+def verify_layer_ids(g, v, sm_name, states, chk):
+    """A layer's machine: the name, standing 0 / moving 1 with the transition arrays we append to, our state ids free."""
+    sm = g.objs.get(v["SM"])
+    chk(sm is not None and sm.text("name") == sm_name, "%s %s" % (v["SM"], sm_name))
+    if sm is None:
+        return False
+    import hkxcheck as H
+    by_id = {g.objs[x].intval("stateId"): g.objs[x] for x in H.sm_states(g, sm)}
+    for sid, arr in zip((0, 1), v["STATE_TRANSITIONS"]):
+        chk(sid in by_id and by_id[sid].text("transitions") == arr, "%s: state %d's transition array is %s" % (sm_name, sid, arr))
+    chk(all(sid not in by_id for _, sid in states), "%s: %s free" % (sm_name, "/".join(str(sid) for _, sid in states)))
+    if "CAST_ARMS" in v:
+        sw = g.objs.get(by_id[1].text("generator")) if 1 in by_id else None
+        chk(sw is not None and sw.cls == "BSBoneSwitchGenerator" and sw.text("ChildrenA") == v["CAST_ARMS"],
+            "%s: moving state's bone switch ChildrenA is %s" % (sm_name, v["CAST_ARMS"]))
+    return True
+
+
+def verify_ids_magic(root, fp=False):
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import hkxcheck as H
+    g = H.Graph(os.path.join(root, "_work", "fp_nem_xml" if fp else "vanilla_nemesis_xml", "magicbehavior_nem.xml"))
+    ok = True
+
+    def chk(cond, msg):
+        nonlocal ok
+        print(("ok   " if cond else "FAIL ") + ("[1P magic] " if fp else "[magic] ") + msg)
+        ok &= bool(cond)
+    v = V_MAGIC_FP if fp else V_MAGIC
+    chk(g.objs[v["STRING"]].cls == "hkbBehaviorGraphStringData", v["STRING"] + " StringData")
+    chk(g.objs[v["VALUES"]].cls == "hkbVariableValueSet", v["VALUES"] + " VariableValueSet")
+    chk(g.objs[v["DATA"]].cls == "hkbBehaviorGraphData", v["DATA"] + " GraphData")
+    for name, _t, _i in VARIABLES + MAGIC_EXTRA_VARIABLES:
+        chk(name not in g.var_index, "variable %s is new" % name)
+    for name in ("IsCastingRight", "IsCastingLeft", "IsCastingDual", "Speed"):
+        chk(name in g.var_index, "variable %s exists" % name)
+    ok &= verify_layer_ids(g, v, "DefaultMagicCastingBehavior", MAGIC_STATES, chk)
     return ok
 
 
@@ -889,7 +938,8 @@ def main():
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     if "--verify-ids" in sys.argv:
-        return 0 if (verify_ids(root) & verify_ids_fp(root) & verify_ids_1hm(root) & verify_ids_1hm(root, True)) else 1
+        return 0 if (verify_ids(root) & verify_ids_fp(root) & verify_ids_1hm(root) & verify_ids_1hm(root, True)
+                     & verify_ids_magic(root) & verify_ids_magic(root, True)) else 1
     out = args[0] if args else os.path.join(root, "behavior", "Pandora_Engine", "mod", CODE)
     # DF_IsDodging is NOT in this modlist's 0_master -> do not bind. Pass --with-df to force when it exists.
     existing = set(OPTIONAL_BIND_VARS) if "--with-df" in sys.argv else set()
@@ -913,13 +963,14 @@ def main():
         print("first person 1hm_behavior: %d new nodes" % n_fp_1h)
     else:
         write(os.path.join(out, "patches", FP_1HM_PATCH_NAME), gen_events(V_1HM, CANCEL_EVENTS))
-    magic_path = os.path.join(out, "patches", MAGIC_PATCH_NAME)
-    if "--no-onehand" not in sys.argv:   # the magic layer goes with the 1hm part (BEHAVIOR_INTEGRATION.md 8)
-        magic, n_magic = gen_magic()
-        write(magic_path, magic)
-        print("magicbehavior: %d new nodes (the dodge under a cast)" % n_magic)
-    elif os.path.exists(magic_path):
-        os.remove(magic_path)
+    for fp, name in ((False, MAGIC_PATCH_NAME), (True, FP_MAGIC_PATCH_NAME)):
+        magic_path = os.path.join(out, "patches", name)
+        if "--no-onehand" not in sys.argv:   # the magic layer goes with the 1hm part (BEHAVIOR_INTEGRATION.md 8)
+            magic, n_magic = gen_magic(fp)
+            write(magic_path, magic)
+            print("%s: %d new nodes (the dodge under a cast)" % (name, n_magic))
+        elif os.path.exists(magic_path):
+            os.remove(magic_path)
     ch = gen_character()
     write(os.path.join(out, "patches", "defaultmale_character.xml"), ch)
     write(os.path.join(out, "patches", "defaultfemale_character.xml"), ch)

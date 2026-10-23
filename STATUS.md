@@ -53,8 +53,8 @@
   Pandora validated on STB and VanillaLike; needs a Pandora re-run; not yet run in game.
 
 * Bow and magic layers ([Casting] keywords, BEHAVIOR_INTEGRATION.md 8): a dodge that keeps a bow draw / a cast going,
-  third person; releases during it go out after it. Staged Pandora validated on STB and VanillaLike; needs a Pandora
-  re-run and a keyword; not yet run in game.
+  third and first person; releases during it go out after it. 3P bow verified in game (2026-10-23); magic after the
+  release-retry fix and both 1P layers built and staged-validated, not yet run. Needs a Pandora re-run and a keyword.
 
 ## Known limitations
 * A one-frame upper-body pop at dodge start, visible only in slow motion (parked; findings in JOURNAL.md).

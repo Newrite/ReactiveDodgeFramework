@@ -8,14 +8,14 @@
 
 Checks:
   A  Engine.log: the mod ran, no failure line beyond the reference run's
-  B  only 1hm_behavior.hkx (3P, 1P) and magicbehavior.hkx (the magic layer: validate_rdf.py) differ from the reference run
+  B  only 1hm_behavior.hkx and magicbehavior.hkx (3P, 1P; the magic layer: validate_rdf.py) differ from the reference run
   C  1hm_behavior: our events / variables present once each, tables consistent
   D  1HM_Behavior: +2 states (9701/9702), both leave by 1HM_Ready_State's OWN transition array (same object, unchanged content),
      enter / exit notify events, generator chain (BSIsActiveModifier bindings, 2 clip choosers of 18 clips, stance masks bound to
      1hm's RightArm / LeftArm character properties); every clip is in DefaultMale
   E  1HM_Behavior wildcards: +3 (start A, start B, exit to Ready under RDF_IsDodging == 1), the vanilla ones intact
   F  hkxcheck 1hm_behavior: no new errors / warnings
-  G  nothing else changed (beyond the bow layer in Bow_Attack_LowerBodyBehavior, 3P): other state machines keep #states / #transitions, objects lost = only the modified nodes
+  G  nothing else changed (beyond the bow layer in Bow_Attack_LowerBodyBehavior): other state machines keep #states / #transitions, objects lost = only the modified nodes
 """
 import argparse
 import os
@@ -114,7 +114,7 @@ def check_file(ref_x, new_x, stem, char, fp):
     male = H.Graph(os.path.join(new_x, char + ".xml"))
     tag = "[%s] " % stem
     # ---- C
-    bow = [] if fp else G.BOW_EVENTS   # the bow layer (3P only), BEHAVIOR_INTEGRATION.md 8
+    bow = G.BOW_EVENTS   # the bow layer, BEHAVIOR_INTEGRATION.md 8
     new_events = [e for e in G.EVENTS + G.ONEHAND_START_EVENTS + bow if e not in gr.ev_index]
     for e in G.EVENTS + G.ONEHAND_START_EVENTS + G.CANCEL_EVENTS + bow:
         check(tag + "C  event %s present once" % e, len(g.ev_index.get(e, [])) == 1)
@@ -164,7 +164,7 @@ def check_file(ref_x, new_x, stem, char, fp):
           "%d/%d errors, %d/%d warnings" % (len(r.errors), len(rr.errors), len(r.warns), len(rr.warns)))
     # ---- G
     sb, sg = VR.sm_stats(gr), VR.sm_stats(g)
-    mine = {("1HM_Behavior", "hkbStateMachine")} | (set() if fp else {("Bow_Attack_LowerBodyBehavior", "hkbStateMachine")})
+    mine = {("1HM_Behavior", "hkbStateMachine"), ("Bow_Attack_LowerBodyBehavior", "hkbStateMachine")}
     bad = [(k, v, sg.get(k)) for k, v in sb.items() if k not in mine and sg.get(k) != v]
     check(tag + "G  every other state machine keeps #states / #transitions (%d)" % (len(sb) - len(mine)), not bad, str(bad[:2]))
     cb, _ = VR.canon(gr)
@@ -172,8 +172,8 @@ def check_file(ref_x, new_x, stem, char, fp):
     lost = sorted(k[0] for k in (cb - cg).elements())
     want_lost = ["hkbBehaviorGraphData", "hkbBehaviorGraphStringData", "hkbVariableValueSet", "hkbStateMachine",
                  "hkbStateMachineTransitionInfoArray"]
-    if not fp:   # the bow layer: Bow_Attack_LowerBodyBehavior and its standing / moving states' transition arrays
-        want_lost += ["hkbStateMachine"] + ["hkbStateMachineTransitionInfoArray"] * len(G.V_BOW["STATE_TRANSITIONS"])
+    # the bow layer: Bow_Attack_LowerBodyBehavior and its standing / moving states' transition arrays
+    want_lost += ["hkbStateMachine"] + ["hkbStateMachineTransitionInfoArray"] * len((G.V_BOW_FP if fp else G.V_BOW)["STATE_TRANSITIONS"])
     want_lost.sort()
     check(tag + "G  objects lost vs the reference = only the %d modified nodes" % len(want_lost), lost == want_lost, str(lost))
     n_new = G.gen_onehand(fp)[1]
@@ -196,8 +196,8 @@ def main():
     diffs = [VR.xstem(sub, f) for sub, f in VR.FILES
              if VR.md5(os.path.join(VR.OUT, a.ref, VR.CHAR, sub, f)) != VR.md5(os.path.join(VR.OUT, a.label, VR.CHAR, sub, f))
              and not same_graph(ref_x, new_x, VR.xstem(sub, f))]
-    check("B  only 1hm_behavior (3P and 1P) and magicbehavior changed vs the reference",
-          sorted(diffs) == ["1hm_behavior", "fp_1hm_behavior", "magicbehavior"], str(diffs))
+    check("B  only 1hm_behavior and magicbehavior (3P and 1P) changed vs the reference",
+          sorted(diffs) == ["1hm_behavior", "fp_1hm_behavior", "fp_magicbehavior", "magicbehavior"], str(diffs))
     for stem, char, fp in (("1hm_behavior", "DefaultMale", False), ("fp_1hm_behavior", "fp_FirstPerson", True)):
         check_file(ref_x, new_x, stem, char, fp)
     print()

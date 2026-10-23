@@ -81,7 +81,7 @@ namespace rdf::game
 		bool              CancelInPlace(RE::Actor* actor, const Decision& d);
 		void              GateGraphEvents(RE::Actor* actor);
 		void              HoldReleases(RE::Actor* actor, float dt);
-		graph::Layer      CastingLayer(RE::Actor* actor, std::uint8_t attackState, bool firstPerson) const;
+		graph::Layer      CastingLayer(RE::Actor* actor, std::uint8_t attackState) const;
 		bool              StaggerEscape(RE::Actor* actor);
 		void              RetryDeferred(RE::Actor* actor);
 		void              VerifyAttack(RE::Actor* actor, float dt, std::uint8_t attackState);

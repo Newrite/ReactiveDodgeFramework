@@ -540,3 +540,9 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   press, cancelled the dodge. Open: a tap during a 1hm dodge (bow not drawn yet) is held back until the attack window;
   Input Support sees no draw starting in that frame and releases at once, so the draw replayed later stays drawn until
   the next click. Belongs in Input Support (wait for the draw to start); not changed.
+* First-person bow and magic layers (2026-10-23): the same states in `_1stperson/1hm_behavior` (Bow_Attack_LowerBodyBehavior
+  #2514) and a new `firstperson~magicbehavior.xml` (DefaultMagicCastingBehavior #0901, cast arms #0751), with the 1P dodge
+  clips. The 1P bow blend gives that machine bone 0 only: under a drawn bow the aim and camera stay the bow's. Plugin:
+  CastingLayer no longer refuses first person. gen_rdf_patch --verify-ids checks the layer ids (3P and 1P); validate_rdf
+  257/257, validate_onehand 131/131 (STB, VanillaLike), Nemesis 105/105, 1P layer clips all in FirstPerson. Deployed to STB
+  and VanillaLike; needs a Pandora re-run; not run in game.

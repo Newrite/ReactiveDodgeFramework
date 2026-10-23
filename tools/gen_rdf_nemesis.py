@@ -35,6 +35,7 @@ FILES = {
     "1hm_behavior.xml": "1hm_behavior",
     "firstperson~1hm_behavior.xml": os.path.join("_1stperson", "1hm_behavior"),
     "magicbehavior.xml": "magicbehavior",
+    "firstperson~magicbehavior.xml": os.path.join("_1stperson", "magicbehavior"),
 }
 # besides the MO2 mods: Nemesis mods kept for reference (the attack frameworks edit 1hm_behavior)
 EXTRA_MOD_ROOTS = [r"S:\AI Agent Skyrim\Attack Frameworks"]
@@ -90,6 +91,7 @@ VANILLA = {
     "1hm_behavior": os.path.join(ROOT, "_work", "vanilla_nemesis_xml", "1hm_behavior_nem.xml"),
     os.path.join("_1stperson", "1hm_behavior"): os.path.join(ROOT, "_work", "fp_nem_xml", "1hm_behavior_nem.xml"),
     "magicbehavior": os.path.join(ROOT, "_work", "vanilla_nemesis_xml", "magicbehavior_nem.xml"),
+    os.path.join("_1stperson", "magicbehavior"): os.path.join(ROOT, "_work", "fp_nem_xml", "magicbehavior_nem.xml"),
 }
 
 
