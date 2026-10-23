@@ -232,3 +232,37 @@ A FUCK `IWindow`, "CastOn rules", opened from the Rules page (button) and from t
   - a reload without restarting the game;
   - the fail sound;
   - skill XP for Engine casts.
+
+## 11. Presets, templates, schema (2026-10-24)
+
+The format stays JSON (user decision). The rest is why, and what was added instead of a richer config language.
+
+Why not Pkl, CUE, Nickel, Dhall, Jsonnet, KDL or Lua:
+- **The menu writes the rules back.** The evaluate-to-data languages can't be written back from data.
+- **Embedding in an SKSE DLL.** Each needs a JVM, Go, Rust, Haskell, a library that throws, or a scripting runtime.
+- **The evaluator compiles the rules anyway**, so the source language buys no speed.
+- **JSON is what those languages output**, so a designer can still author in one of them and ship JSON.
+
+What was added:
+- **Presets** (OAR's `conditionPresets`). A file's `"presets"` holds named condition lists. `{ "kind": "Preset", "text":
+  "<name>" }` stands for an AND of the list; presets may nest.
+  - Every file's presets are visible to every rule (a modpack's shared presets file). When two files name the same
+    preset, the first file by name wins and a warning is logged.
+  - The model keeps the Preset condition, and `Load` expands it before compiling (`ExpandPresets`), so the menu can show
+    and write the reference.
+  - An unknown preset, or presets naming each other in a circle, drops the rule with the reason.
+- **Templates.** A file's `"templates"` holds named partial rules; a rule (or a template) has `"extends": "<name>"`. The
+  merge happens on the JSON before the typed read, so a value equal to its default still overrides:
+  - the rule's keys replace the template's;
+  - the `cost` / `timing` / `limits` objects merge key by key;
+  - `conditions` add up, the template's first.
+
+  Known limit: a rule read from a template holds the merged values, so `WriteRules` writes it whole and without
+  `extends`. The menu will need a diff against the template to keep the link.
+- **Schema.** `JsonSchema()` (`glz::write_json_schema`) generates `dist/CastOn/rdf_caston.schema.json` via
+  `rdf_tests --write-schema <file>`, with field descriptions. The schema ships beside the rules (the loader skips
+  `*.schema.json`), and a file names it with `"$schema": "./rdf_caston.schema.json"` (VS Code then checks it and
+  completes the names). Its `$defs` keys are glaze's C++ type names: valid, if ugly.
+- **Strictness.** Unknown top-level keys are errors, like unknown keys inside rules.
+- **The examples** use both: the presets `HoldsASpell` / `AttackerAlive`, and the template `PerfectRetort` that two
+  rules extend.

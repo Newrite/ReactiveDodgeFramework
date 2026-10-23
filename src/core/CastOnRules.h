@@ -1,5 +1,7 @@
 #pragma once
 
+#include <functional>
+#include <map>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -104,6 +106,7 @@ namespace rdf::caston
 		ChainIndex,   // comparison: 0 = the first dodge of a chain
 		FromStagger,  // the dodge cut a stagger short
 		Random,       // value: chance in percent
+		Preset,       // text: a named condition list ("presets" of any rule file), as if written here (an AND of it)
 	};
 
 	struct Condition
@@ -166,6 +169,7 @@ namespace rdf::caston
 	struct Rule
 	{
 		std::string       name;
+		std::string       extends;  // the template the rule was built from (already applied when read)
 		bool              enabled{ true };
 		int               priority{ 0 };  // higher first
 		bool              exclusive{ false };  // fired: the lower rules of the trigger are not evaluated
@@ -177,22 +181,31 @@ namespace rdf::caston
 		Limits            limits;
 	};
 
-	// A rule file: SKSE/Plugins/ReactiveDodgeFramework/CastOn/<name>.json, or <name>.user.json beside it, which replaces it
-	// whole (OAR's user.json way). JSONC: comments allowed; an unknown key is an error (a typo must not pass silently).
-	struct RuleFile
-	{
-		int               version{ 1 };
-		std::vector<Rule> rules;
-	};
+	// Named condition lists: a file's "presets"; every file's presets are visible to every rule (a modpack's shared file).
+	using Presets = std::map<std::string, std::vector<Condition>, std::less<>>;
 
 	struct ParseResult
 	{
-		std::vector<Rule>        rules;   // the valid ones
-		std::vector<std::string> errors;  // the file's syntax error (then no rules), or "rules[2] 'Name': ..." for a dropped rule
+		std::vector<Rule>        rules;    // the valid ones (templates applied; Preset conditions kept, see ExpandPresets)
+		Presets                  presets;  // the file's own
+		std::vector<std::string> errors;   // the file's syntax error (then nothing else), or "rules[2] 'Name': ..." for a dropped rule
 	};
 
+	// A rule file: SKSE/Plugins/ReactiveDodgeFramework/CastOn/<name>.json, or <name>.user.json beside it, which replaces it
+	// whole (OAR's user.json way). JSONC: comments allowed; an unknown key is an error (a typo must not pass silently).
+	// Keys: "$schema" (for editors), "version", "presets", "templates", "rules". A rule with "extends" starts from that
+	// template (a template may extend another): the rule's keys replace the template's, the cost / timing / limits
+	// objects merge key by key, and the conditions add up (the template's and the rule's must all hold).
 	ParseResult ParseRules(std::string_view json);
-	std::string WriteRules(const std::vector<Rule>& rules);
+	// Rules are written whole: a rule read from a template already holds the merged values, so "extends" is not written.
+	std::string WriteRules(const std::vector<Rule>& rules, const Presets& presets = {});
+
+	// Replaces every Preset condition by an AND of the named list (nested presets too). False, with the reasons in
+	// `errors`, when a name is unknown or presets name each other in a circle.
+	bool ExpandPresets(std::vector<Condition>& conditions, const Presets& presets, std::vector<std::string>& errors);
+
+	// The JSON Schema of a rule file, for editors (VS Code: "json.schemas", or "$schema" in the file).
+	std::string JsonSchema();
 
 	// Problems that make a rule unusable (a condition without its form, an unknown layer name...). Empty = valid.
 	std::vector<std::string> Validate(const Rule& rule);

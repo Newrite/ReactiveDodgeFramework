@@ -1,0 +1,599 @@
+{
+   "type": [
+      "object"
+   ],
+   "properties": {
+      "$schema": {
+         "$ref": "#/$defs/std::optional<std::string>"
+      },
+      "presets": {
+         "$ref": "#/$defs/std::map<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,class std::vector<struct rdf::caston::Condition,class std::allocator<struct rdf::caston::Condition> >,struct std::less<void>,class std::allocator<struct std::pair<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const ,class std::vector<struct rdf::caston::Condition,class std::allocator<struct rdf::caston::Condition> > > > >"
+      },
+      "rules": {
+         "$ref": "#/$defs/std::vector<rdf::caston::Rule>"
+      },
+      "templates": {
+         "$ref": "#/$defs/std::map<std::string,glz::generic>"
+      },
+      "version": {
+         "$ref": "#/$defs/int32_t"
+      }
+   },
+   "additionalProperties": false,
+   "$defs": {
+      "bool": {
+         "type": [
+            "boolean"
+         ]
+      },
+      "float": {
+         "type": [
+            "number"
+         ],
+         "minimum": -3.4028234663852886E38,
+         "maximum": 3.4028234663852886E38
+      },
+      "glz::generic": {
+         "type": [
+            "number",
+            "string",
+            "boolean",
+            "object",
+            "array",
+            "null"
+         ]
+      },
+      "int32_t": {
+         "type": [
+            "integer"
+         ],
+         "minimum": -2147483648,
+         "maximum": 2147483647
+      },
+      "rdf::caston::Cast": {
+         "type": [
+            "object"
+         ],
+         "properties": {
+            "caster": {
+               "$ref": "#/$defs/rdf::caston::Subject",
+               "description": "Who casts: Dodger, Attacker, CombatTarget (Attacker casting on the Dodger = Reflyem's reverse cast)."
+            },
+            "duration": {
+               "$ref": "#/$defs/float",
+               "description": "Seconds a concentration spell runs (others ignore it).",
+               "minimum": 0,
+               "maximum": 60
+            },
+            "effectiveness": {
+               "$ref": "#/$defs/float"
+            },
+            "magnitude": {
+               "$ref": "#/$defs/float"
+            },
+            "noHitEffectArt": {
+               "$ref": "#/$defs/bool"
+            },
+            "spell": {
+               "$ref": "#/$defs/std::string",
+               "description": "Spell, scroll, enchantment or potion: \"Plugin.esp|0xID\" or an EditorID."
+            },
+            "target": {
+               "$ref": "#/$defs/rdf::caston::TargetKind",
+               "description": "Self, Dodger, Attacker, CombatTarget, or Aim (no target; an aimed spell flies ahead)."
+            }
+         },
+         "additionalProperties": false
+      },
+      "rdf::caston::Compare": {
+         "type": [
+            "string"
+         ],
+         "oneOf": [
+            {
+               "title": "None",
+               "const": "None"
+            },
+            {
+               "title": "Eq",
+               "const": "Eq"
+            },
+            {
+               "title": "Ne",
+               "const": "Ne"
+            },
+            {
+               "title": "Lt",
+               "const": "Lt"
+            },
+            {
+               "title": "Le",
+               "const": "Le"
+            },
+            {
+               "title": "Gt",
+               "const": "Gt"
+            },
+            {
+               "title": "Ge",
+               "const": "Ge"
+            }
+         ]
+      },
+      "rdf::caston::Condition": {
+         "type": [
+            "object"
+         ],
+         "properties": {
+            "children": {
+               "$ref": "#/$defs/std::vector<rdf::caston::Condition>"
+            },
+            "compare": {
+               "$ref": "#/$defs/rdf::caston::Compare",
+               "description": "None, Eq, Ne, Lt, Le, Gt, Ge (against 'value')."
+            },
+            "form": {
+               "$ref": "#/$defs/std::string",
+               "description": "Keyword / perk / race / faction: \"Plugin.esp|0xID\" or an EditorID."
+            },
+            "hand": {
+               "$ref": "#/$defs/rdf::caston::Hand"
+            },
+            "kind": {
+               "$ref": "#/$defs/rdf::caston::ConditionKind",
+               "description": "What is checked. And / Or group 'children'; Preset names a list from 'presets' in 'text'."
+            },
+            "mode": {
+               "$ref": "#/$defs/rdf::caston::ValueMode"
+            },
+            "negated": {
+               "$ref": "#/$defs/bool",
+               "description": "The opposite. A condition on a participant that is absent fails, negated or not."
+            },
+            "subject": {
+               "$ref": "#/$defs/rdf::caston::Subject",
+               "description": "Whose: Dodger, Attacker (PerfectDodge only), CombatTarget."
+            },
+            "text": {
+               "$ref": "#/$defs/std::string",
+               "description": "Equipped type, actor value name, Layer, Direction or the Preset name."
+            },
+            "value": {
+               "$ref": "#/$defs/float"
+            }
+         },
+         "additionalProperties": false
+      },
+      "rdf::caston::ConditionKind": {
+         "type": [
+            "string"
+         ],
+         "oneOf": [
+            {
+               "title": "And",
+               "const": "And"
+            },
+            {
+               "title": "Or",
+               "const": "Or"
+            },
+            {
+               "title": "HasKeyword",
+               "const": "HasKeyword"
+            },
+            {
+               "title": "HasEffectKeyword",
+               "const": "HasEffectKeyword"
+            },
+            {
+               "title": "HasPerk",
+               "const": "HasPerk"
+            },
+            {
+               "title": "IsRace",
+               "const": "IsRace"
+            },
+            {
+               "title": "InFaction",
+               "const": "InFaction"
+            },
+            {
+               "title": "Equipped",
+               "const": "Equipped"
+            },
+            {
+               "title": "ActorValue",
+               "const": "ActorValue"
+            },
+            {
+               "title": "InCombat",
+               "const": "InCombat"
+            },
+            {
+               "title": "Sneaking",
+               "const": "Sneaking"
+            },
+            {
+               "title": "Sprinting",
+               "const": "Sprinting"
+            },
+            {
+               "title": "Blocking",
+               "const": "Blocking"
+            },
+            {
+               "title": "Attacking",
+               "const": "Attacking"
+            },
+            {
+               "title": "PowerAttacking",
+               "const": "PowerAttacking"
+            },
+            {
+               "title": "Casting",
+               "const": "Casting"
+            },
+            {
+               "title": "IsPlayer",
+               "const": "IsPlayer"
+            },
+            {
+               "title": "FirstPerson",
+               "const": "FirstPerson"
+            },
+            {
+               "title": "Layer",
+               "const": "Layer"
+            },
+            {
+               "title": "Direction",
+               "const": "Direction"
+            },
+            {
+               "title": "ChainIndex",
+               "const": "ChainIndex"
+            },
+            {
+               "title": "FromStagger",
+               "const": "FromStagger"
+            },
+            {
+               "title": "Random",
+               "const": "Random"
+            },
+            {
+               "title": "Preset",
+               "const": "Preset"
+            }
+         ]
+      },
+      "rdf::caston::Cost": {
+         "type": [
+            "object"
+         ],
+         "properties": {
+            "dualCast": {
+               "$ref": "#/$defs/bool"
+            },
+            "feedback": {
+               "$ref": "#/$defs/bool"
+            },
+            "flat": {
+               "$ref": "#/$defs/float"
+            },
+            "maxShare": {
+               "$ref": "#/$defs/float"
+            },
+            "mode": {
+               "$ref": "#/$defs/rdf::caston::CostMode"
+            },
+            "mult": {
+               "$ref": "#/$defs/float"
+            },
+            "realCast": {
+               "$ref": "#/$defs/bool"
+            },
+            "shortfall": {
+               "$ref": "#/$defs/rdf::caston::Shortfall"
+            },
+            "spellShare": {
+               "$ref": "#/$defs/float"
+            },
+            "value": {
+               "$ref": "#/$defs/rdf::caston::CostValue"
+            }
+         },
+         "additionalProperties": false
+      },
+      "rdf::caston::CostMode": {
+         "type": [
+            "string"
+         ],
+         "oneOf": [
+            {
+               "title": "Free",
+               "const": "Free"
+            },
+            {
+               "title": "Engine",
+               "const": "Engine"
+            },
+            {
+               "title": "Custom",
+               "const": "Custom"
+            }
+         ]
+      },
+      "rdf::caston::CostValue": {
+         "type": [
+            "string"
+         ],
+         "oneOf": [
+            {
+               "title": "Magicka",
+               "const": "Magicka"
+            },
+            {
+               "title": "Stamina",
+               "const": "Stamina"
+            },
+            {
+               "title": "Health",
+               "const": "Health"
+            }
+         ]
+      },
+      "rdf::caston::Hand": {
+         "type": [
+            "string"
+         ],
+         "oneOf": [
+            {
+               "title": "Right",
+               "const": "Right"
+            },
+            {
+               "title": "Left",
+               "const": "Left"
+            },
+            {
+               "title": "Either",
+               "const": "Either"
+            }
+         ]
+      },
+      "rdf::caston::Limits": {
+         "type": [
+            "object"
+         ],
+         "properties": {
+            "chance": {
+               "$ref": "#/$defs/float"
+            },
+            "cooldown": {
+               "$ref": "#/$defs/float"
+            },
+            "oncePerChain": {
+               "$ref": "#/$defs/bool"
+            }
+         },
+         "additionalProperties": false
+      },
+      "rdf::caston::Rule": {
+         "type": [
+            "object"
+         ],
+         "properties": {
+            "casts": {
+               "$ref": "#/$defs/std::vector<rdf::caston::Cast>"
+            },
+            "conditions": {
+               "$ref": "#/$defs/std::vector<rdf::caston::Condition>"
+            },
+            "cost": {
+               "$ref": "#/$defs/rdf::caston::Cost"
+            },
+            "enabled": {
+               "$ref": "#/$defs/bool"
+            },
+            "exclusive": {
+               "$ref": "#/$defs/bool"
+            },
+            "extends": {
+               "$ref": "#/$defs/std::string",
+               "description": "A template of this file's 'templates' to start from."
+            },
+            "limits": {
+               "$ref": "#/$defs/rdf::caston::Limits"
+            },
+            "name": {
+               "$ref": "#/$defs/std::string"
+            },
+            "priority": {
+               "$ref": "#/$defs/int32_t",
+               "description": "Higher first; 'exclusive' stops the lower ones of the trigger when this one fires."
+            },
+            "timing": {
+               "$ref": "#/$defs/rdf::caston::Timing"
+            },
+            "trigger": {
+               "$ref": "#/$defs/rdf::caston::Trigger",
+               "description": "Dodge or PerfectDodge."
+            }
+         },
+         "additionalProperties": false
+      },
+      "rdf::caston::Shortfall": {
+         "type": [
+            "string"
+         ],
+         "oneOf": [
+            {
+               "title": "Skip",
+               "const": "Skip"
+            },
+            {
+               "title": "CastAnyway",
+               "const": "CastAnyway"
+            },
+            {
+               "title": "Scale",
+               "const": "Scale"
+            }
+         ]
+      },
+      "rdf::caston::Subject": {
+         "type": [
+            "string"
+         ],
+         "oneOf": [
+            {
+               "title": "Dodger",
+               "const": "Dodger"
+            },
+            {
+               "title": "Attacker",
+               "const": "Attacker"
+            },
+            {
+               "title": "CombatTarget",
+               "const": "CombatTarget"
+            }
+         ]
+      },
+      "rdf::caston::TargetKind": {
+         "type": [
+            "string"
+         ],
+         "oneOf": [
+            {
+               "title": "Self",
+               "const": "Self"
+            },
+            {
+               "title": "Dodger",
+               "const": "Dodger"
+            },
+            {
+               "title": "Attacker",
+               "const": "Attacker"
+            },
+            {
+               "title": "CombatTarget",
+               "const": "CombatTarget"
+            },
+            {
+               "title": "Aim",
+               "const": "Aim"
+            }
+         ]
+      },
+      "rdf::caston::Timing": {
+         "type": [
+            "object"
+         ],
+         "properties": {
+            "annotation": {
+               "$ref": "#/$defs/bool"
+            },
+            "delay": {
+               "$ref": "#/$defs/float"
+            },
+            "tag": {
+               "$ref": "#/$defs/std::string"
+            }
+         },
+         "additionalProperties": false
+      },
+      "rdf::caston::Trigger": {
+         "type": [
+            "string"
+         ],
+         "oneOf": [
+            {
+               "title": "Dodge",
+               "const": "Dodge"
+            },
+            {
+               "title": "PerfectDodge",
+               "const": "PerfectDodge"
+            }
+         ]
+      },
+      "rdf::caston::ValueMode": {
+         "type": [
+            "string"
+         ],
+         "oneOf": [
+            {
+               "title": "Current",
+               "const": "Current"
+            },
+            {
+               "title": "Max",
+               "const": "Max"
+            },
+            {
+               "title": "Percent",
+               "const": "Percent"
+            },
+            {
+               "title": "Base",
+               "const": "Base"
+            }
+         ]
+      },
+      "std::map<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,class std::vector<struct rdf::caston::Condition,class std::allocator<struct rdf::caston::Condition> >,struct std::less<void>,class std::allocator<struct std::pair<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const ,class std::vector<struct rdf::caston::Condition,class std::allocator<struct rdf::caston::Condition> > > > >": {
+         "type": [
+            "object"
+         ],
+         "additionalProperties": {
+            "$ref": "#/$defs/std::vector<rdf::caston::Condition>"
+         }
+      },
+      "std::map<std::string,glz::generic>": {
+         "type": [
+            "object"
+         ],
+         "additionalProperties": {
+            "$ref": "#/$defs/glz::generic"
+         }
+      },
+      "std::optional<std::string>": {
+         "type": [
+            "string",
+            "null"
+         ]
+      },
+      "std::string": {
+         "type": [
+            "string"
+         ]
+      },
+      "std::vector<rdf::caston::Cast>": {
+         "type": [
+            "array"
+         ],
+         "items": {
+            "$ref": "#/$defs/rdf::caston::Cast"
+         }
+      },
+      "std::vector<rdf::caston::Condition>": {
+         "type": [
+            "array"
+         ],
+         "items": {
+            "$ref": "#/$defs/rdf::caston::Condition"
+         }
+      },
+      "std::vector<rdf::caston::Rule>": {
+         "type": [
+            "array"
+         ],
+         "items": {
+            "$ref": "#/$defs/rdf::caston::Rule"
+         }
+      }
+   },
+   "title": "rdf::caston::detail::FileOut"
+}

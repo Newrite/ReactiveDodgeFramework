@@ -1,24 +1,40 @@
 // CastOn rule examples (docs/CASTON_DESIGN.md). Every rule here is disabled: copy one into your own file, or set
 // "enabled": true in RDF_Examples.user.json (a .user.json beside a file replaces it whole, so copy the file first).
 // Forms: "Plugin.esp|0xID" (the id as xEdit shows it) or an EditorID (keywords always keep theirs).
+// "$schema" lets an editor (VS Code) check the file and complete the names as you type.
 {
+   "$schema": "./rdf_caston.schema.json",
    "version": 1,
+
+   // Named condition lists. { "kind": "Preset", "text": "<name>" } stands for all of them; any rule file may use any
+   // file's presets (a modpack can keep its shared ones in one file).
+   "presets": {
+      "HoldsASpell": [ { "kind": "Equipped", "text": "Spell", "hand": "Either" } ],
+      "AttackerAlive": [ { "kind": "ActorValue", "subject": "Attacker", "text": "Health", "mode": "Percent", "compare": "Gt", "value": 0 } ]
+   },
+
+   // Rule templates of this file. A rule with "extends" starts from one: its own keys replace the template's, cost /
+   // timing / limits merge key by key, and the conditions add up (all must hold).
+   "templates": {
+      "PerfectRetort": {
+         "trigger": "PerfectDodge",
+         "priority": 10,
+         "conditions": [ { "kind": "Preset", "text": "AttackerAlive" } ],
+         "cost": { "mode": "Engine", "realCast": true },
+         "limits": { "cooldown": 1.5 }
+      }
+   },
+
    "rules": [
       {
          // A perfect dodge answers with a stream of Flames at the attacker for 1.5 s (a concentration spell: "duration" is
-         // how long it runs). Engine cost: the engine drains its cost per second while it runs, as for a real cast (skill,
-         // perks, cost mods), and it stops early when there is no magicka left. Free / Custom would not drain.
+         // how long it runs). Engine cost: drained per second while it runs, as a real cast is (skill, perks, cost
+         // mods); it stops early when there is no magicka left. Free / Custom would not drain.
          "name": "Example: flames on a perfect dodge",
          "enabled": false,
-         "priority": 10,
-         "trigger": "PerfectDodge",
-         "conditions": [
-            { "kind": "Equipped", "text": "Spell", "hand": "Either" },
-            { "kind": "ActorValue", "subject": "Attacker", "text": "Health", "mode": "Percent", "compare": "Gt", "value": 0 }
-         ],
-         "casts": [ { "spell": "Skyrim.esm|0x12FCD", "caster": "Dodger", "target": "Attacker", "duration": 1.5 } ],
-         "cost": { "mode": "Engine", "realCast": true },
-         "limits": { "cooldown": 1.5 }
+         "extends": "PerfectRetort",
+         "conditions": [ { "kind": "Preset", "text": "HoldsASpell" } ],
+         "casts": [ { "spell": "Skyrim.esm|0x12FCD", "caster": "Dodger", "target": "Attacker", "duration": 1.5 } ]
       },
       {
          // A dodge out of a stagger heals a little (Fast Healing), paid in stamina; the clip may place the moment
@@ -34,10 +50,10 @@
       },
       {
          // The reverse cast (Reflyem's caster swap): the attacker hits itself with an Ice Spike when a dodger with this
-         // keyword dodges it perfectly. Free.
+         // keyword dodges it perfectly. The same template, but free and exclusive.
          "name": "Example: the attacker's own ice spike",
          "enabled": false,
-         "trigger": "PerfectDodge",
+         "extends": "PerfectRetort",
          "conditions": [
             { "kind": "HasKeyword", "form": "RDF_Example_FrostRetort" },
             { "kind": "Or", "children": [
@@ -46,6 +62,8 @@
             ] }
          ],
          "casts": [ { "spell": "Skyrim.esm|0x2B96C", "caster": "Attacker", "target": "Self" } ],
+         "cost": { "mode": "Free" },
+         "priority": 20,
          "exclusive": true
       }
    ]

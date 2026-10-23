@@ -128,6 +128,132 @@ TEST(caston_a_cast_duration_reads_and_is_checked)
 	CHECK(d.rules.size() == 1 && d.rules[0].casts[0].duration == 1.0f);  // the default
 }
 
+TEST(caston_presets_are_read_and_expand_into_and_groups)
+{
+	const auto r = ParseRules(R"({
+		"presets": {
+			"Caster": [ { "kind": "Equipped", "text": "Spell" } ],
+			"CasterInCombat": [ { "kind": "Preset", "text": "Caster" }, { "kind": "InCombat" } ]
+		},
+		"rules": [ { "name": "r", "conditions": [ { "kind": "Preset", "text": "CasterInCombat", "negated": true } ], "casts": [ { "spell": "a" } ] } ]
+	})");
+	CHECK(r.errors.empty());
+	CHECK(r.presets.size() == 2);
+	CHECK(r.rules.size() == 1);
+	if (r.rules.size() != 1) {
+		return;
+	}
+	auto                     conditions = r.rules[0].conditions;
+	std::vector<std::string> errors;
+	CHECK(conditions[0].kind == ConditionKind::Preset);  // kept as written until expanded
+	CHECK(ExpandPresets(conditions, r.presets, errors));
+	CHECK(conditions.size() == 1 && conditions[0].kind == ConditionKind::And && conditions[0].negated);
+	CHECK(conditions[0].children.size() == 2);
+	CHECK(conditions[0].children[0].kind == ConditionKind::And);  // the nested preset
+	CHECK(conditions[0].children[0].children.size() == 1 && conditions[0].children[0].children[0].kind == ConditionKind::Equipped);
+}
+
+TEST(caston_unknown_and_circular_presets_fail_with_reasons)
+{
+	Presets presets;
+	presets["A"] = { Condition{ .kind = ConditionKind::Preset, .text = "B" } };
+	presets["B"] = { Condition{ .kind = ConditionKind::Preset, .text = "A" } };
+	std::vector<Condition>   circle{ Condition{ .kind = ConditionKind::Preset, .text = "A" } };
+	std::vector<std::string> errors;
+	CHECK(!ExpandPresets(circle, presets, errors));
+	CHECK(!errors.empty() && errors[0].find("name each other") != std::string::npos);
+	std::vector<Condition> missing{ Condition{ .kind = ConditionKind::Preset, .text = "Nope" } };
+	errors.clear();
+	CHECK(!ExpandPresets(missing, presets, errors));
+	CHECK(errors.size() == 1 && errors[0].find("Nope") != std::string::npos);
+}
+
+TEST(caston_templates_merge_objects_add_conditions_and_let_the_rule_win)
+{
+	const auto r = ParseRules(R"({
+		"templates": {
+			"Base": { "trigger": "PerfectDodge", "conditions": [ { "kind": "InCombat" } ],
+			          "cost": { "mode": "Custom", "value": "Stamina", "flat": 10 }, "limits": { "cooldown": 2 } },
+			"Hot": { "extends": "Base", "conditions": [ { "kind": "IsPlayer" } ], "casts": [ { "spell": "fire" } ] }
+		},
+		"rules": [
+			{ "name": "a", "extends": "Hot", "conditions": [ { "kind": "Sneaking" } ], "cost": { "flat": 25 }, "priority": 3 },
+			{ "name": "b", "extends": "Hot", "casts": [ { "spell": "ice" } ], "trigger": "Dodge" }
+		]
+	})");
+	CHECK(r.errors.empty());
+	for (const auto& e : r.errors) {
+		std::printf("    %s\n", e.c_str());
+	}
+	CHECK(r.rules.size() == 2);
+	if (r.rules.size() != 2) {
+		return;
+	}
+	const auto& a = r.rules[0];
+	CHECK(a.extends == "Hot");
+	CHECK(a.trigger == Trigger::PerfectDodge);  // from Base through Hot
+	CHECK(a.conditions.size() == 3);            // Base's, Hot's, then its own
+	CHECK(a.conditions.size() == 3 && a.conditions[0].kind == ConditionKind::InCombat && a.conditions[2].kind == ConditionKind::Sneaking);
+	CHECK(a.cost.mode == CostMode::Custom && a.cost.value == CostValue::Stamina && a.cost.flat == 25.0f);  // merged key by key
+	CHECK(a.limits.cooldown == 2.0f && a.priority == 3);
+	CHECK(a.casts.size() == 1 && a.casts[0].spell == "fire");
+	const auto& b = r.rules[1];
+	CHECK(b.trigger == Trigger::Dodge && b.casts.size() == 1 && b.casts[0].spell == "ice");  // replaced
+	CHECK(b.conditions.size() == 2);
+}
+
+TEST(caston_template_problems_drop_only_their_rules)
+{
+	const auto r = ParseRules(R"({
+		"templates": { "X": { "extends": "Y" }, "Y": { "extends": "X" } },
+		"rules": [
+			{ "name": "circle", "extends": "X", "casts": [ { "spell": "a" } ] },
+			{ "name": "missing", "extends": "Z", "casts": [ { "spell": "a" } ] },
+			{ "name": "typo in a template field", "extends": "T", "casts": [ { "spell": "a" } ] },
+			{ "name": "fine", "casts": [ { "spell": "a" } ] }
+		]
+	})");
+	CHECK(r.rules.size() == 1 && r.rules[0].name == "fine");
+	CHECK(r.errors.size() == 3);
+	CHECK(r.errors.size() == 3 && r.errors[0].find("extend each other") != std::string::npos);
+	CHECK(r.errors.size() == 3 && r.errors[1].find("no template 'Z'") != std::string::npos);
+}
+
+TEST(caston_schema_key_is_accepted_and_unknown_top_keys_are_not)
+{
+	const auto ok = ParseRules(R"({ "$schema": "./rdf_caston.schema.json", "version": 1, "rules": [] })");
+	CHECK(ok.errors.empty());
+	const auto bad = ParseRules(R"({ "rulez": [] })");
+	CHECK(bad.errors.size() == 1);
+}
+
+TEST(caston_write_keeps_presets)
+{
+	Presets presets;
+	presets["Caster"] = { Condition{ .kind = ConditionKind::Equipped, .text = "Spell" } };
+	Rule rule;
+	rule.name = "r";
+	rule.casts.push_back({ "a" });
+	rule.conditions.push_back(Condition{ .kind = ConditionKind::Preset, .text = "Caster" });
+	const auto text = WriteRules({ rule }, presets);
+	const auto again = ParseRules(text);
+	CHECK(again.errors.empty());
+	for (const auto& e : again.errors) {
+		std::printf("    %s\n%s\n", e.c_str(), text.substr(0, 300).c_str());
+	}
+	CHECK(again.presets.size() == 1 && again.rules.size() == 1);
+	CHECK(again.rules.size() == 1 && again.rules[0].conditions[0].kind == ConditionKind::Preset);
+}
+
+TEST(caston_json_schema_names_the_condition_kinds)
+{
+	const auto schema = JsonSchema();
+	CHECK(!schema.empty());
+	CHECK(schema.find("HasKeyword") != std::string::npos);
+	CHECK(schema.find("PerfectDodge") != std::string::npos);
+	CHECK(schema.find("\"$schema\"") != std::string::npos);
+}
+
 TEST(caston_compare_holds)
 {
 	CHECK(Holds(Compare::Ge, 2.0f, 2.0f));
@@ -148,4 +274,9 @@ TEST(caston_the_shipped_examples_parse_and_validate)
 		std::printf("    %s\n", e.c_str());
 	}
 	CHECK(r.rules.size() == 3);
+	for (const auto& rule : r.rules) {  // every Preset it names exists
+		auto                     conditions = rule.conditions;
+		std::vector<std::string> errors;
+		CHECK(ExpandPresets(conditions, r.presets, errors));
+	}
 }

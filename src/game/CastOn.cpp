@@ -186,6 +186,9 @@ namespace rdf::game::caston
 				}
 				auto name = Utf8(it->path().filename());
 				std::transform(name.begin(), name.end(), name.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+				if (name.ends_with(".schema.json")) {
+					continue;  // rdf_caston.schema.json: for editors
+				}
 				if (name.ends_with(".user.json")) {
 					byName[name.substr(0, name.size() - 10)].second = it->path();
 				} else if (name.ends_with(".json")) {
@@ -678,12 +681,27 @@ namespace rdf::game::caston
 		}
 		Compiler   compiler(*set);
 		std::size_t files = 0, dropped = 0;
+		// Two passes: every file's presets first (any rule may name any of them), then the rules.
+		std::vector<std::pair<std::string, ParseResult>> parsedFiles;
+		Presets                                          presets;
+		std::map<std::string, std::string, std::less<>>  presetFile;
 		for (const auto& [file, json] : ReadFiles()) {
 			++files;
 			auto parsed = ParseRules(json);
 			for (const auto& e : parsed.errors) {
 				logger::warn("CastOn {}: {}", file, e);
 			}
+			for (auto& [name, list] : parsed.presets) {
+				if (const auto it = presetFile.find(name); it != presetFile.end()) {
+					logger::warn("CastOn {}: preset '{}' is also in {}; that one is used", file, name, it->second);
+					continue;
+				}
+				presetFile.emplace(name, file);
+				presets.emplace(name, list);
+			}
+			parsedFiles.emplace_back(file, std::move(parsed));
+		}
+		for (const auto& [file, parsed] : parsedFiles) {
 			for (std::size_t i = 0; i < parsed.rules.size(); ++i) {
 				const auto& rule = parsed.rules[i];
 				if (!rule.enabled) {
@@ -699,8 +717,15 @@ namespace rdf::game::caston
 				c.cost = rule.cost;
 				c.timing = rule.timing;
 				c.limits = rule.limits;
-				std::string error;
-				const auto  root = compiler.Conditions(rule.conditions, error);
+				std::string              error;
+				auto                     conditions = rule.conditions;
+				std::vector<std::string> presetErrors;
+				if (!ExpandPresets(conditions, presets, presetErrors)) {
+					++dropped;
+					logger::warn("CastOn {}: rule '{}' dropped: {}", file, c.name, presetErrors.empty() ? std::string() : presetErrors.front());
+					continue;
+				}
+				const auto root = compiler.Conditions(conditions, error);
 				for (const auto& cast : rule.casts) {
 					if (!error.empty()) {
 						break;
@@ -728,7 +753,8 @@ namespace rdf::game::caston
 		for (auto& list : set->byTrigger) {
 			std::stable_sort(list.begin(), list.end(), [&](std::uint32_t a, std::uint32_t b) { return set->rules[a].priority > set->rules[b].priority; });
 		}
-		logger::info("CastOn: {} rule(s) from {} file(s) in {} ({} dropped)", set->rules.size(), files, kFolder, dropped);
+		logger::info("CastOn: {} rule(s) and {} preset(s) from {} file(s) in {} ({} dropped)", set->rules.size(), presets.size(), files,
+			kFolder, dropped);
 		std::scoped_lock lock(g_lock);
 		g_current = std::move(set);
 	}
