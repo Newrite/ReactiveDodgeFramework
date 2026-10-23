@@ -131,16 +131,22 @@ Constant effects (abilities) are refused.
 - `ActorMagicCaster::Update` (0x140541FC0) keeps a concentration spell going (`sub_14054C1A0`) and drains its cost per
   second, unless the caster's `kSkipCheckCast` flag (bit 1 of +0xF8) is set.
 
+A second finding came from the first in-game test (2026-10-24): one burst, then nothing. `MagicCaster::Fire` (0x14054C950)
+runs on every interval of a concentration cast and asks the caster's `CheckCast` first; when that refuses, it calls
+`InterruptCast`. For the instant caster it refuses. `kSkipCheckCast` makes `CheckCast` pass at once.
+
 So CastOn:
+- sets `kSkipCheckCast` on every concentration cast it starts (`SetSkipCheckCast`, vfunc 0x13, 0x140543620);
 - keeps a module-wide list of the concentration casts it started, advanced from the per-frame tick on game time;
 - ends each with `MagicCaster::InterruptCast` (ID 33630: `InterruptCastImpl`, which also clears `kSkipCheckCast`, then
   state 9 and `SpellCast(false)`, so nothing is charged);
 - forgets a cast whose caster died, unloaded, or went on to another spell (a load or a new game forgets them all).
 
-The cost by mode:
-- **Engine:** nothing up front; the engine's own per-second drain, as on a real cast. Refused at 0, stopped at 0.
-- **Free:** `SetSkipCheckCast()` (vfunc 0x13, 0x140543620) right after the cast, so there is no drain.
-- **Custom:** the spell share is the cost per second × the duration, paid up front, then no drain as in Free.
+The flag also turns off `ActorMagicCaster::Update`'s per-second drain. The cost by mode:
+- **Engine:** nothing up front. CastOn drains it per frame: `CalculateCost` (the cost per second, perks and cost mods
+  included) × dt, through `ModActorValue`, clamped to what is left, free in god mode. Refused at 0, stopped at 0.
+- **Free:** no drain.
+- **Custom:** the spell share is the cost per second × the duration, paid up front, then no drain.
 
 ## 5. Timing and annotations
 

@@ -125,16 +125,18 @@ namespace rdf::game::caston
 			RE::MagicItem*      spell{ nullptr };
 			float               left{ 0.0f };                      // game seconds
 			float               duration{ 0.0f };
-			RE::ActorValue      drained{ RE::ActorValue::kNone };  // Engine: the value the engine drains; stops at 0
+			RE::ActorValue      drained{ RE::ActorValue::kNone };  // Engine: the value we drain per second; stops at 0
+			float               perSecond{ 0.0f };                 // ... and how much (CalculateCost of the spell)
 			std::string         rule;
 		};
 		std::vector<Channel> g_channels;  // main thread
 
-		void StartChannel(RE::Actor* caster, RE::MagicItem* spell, float duration, RE::ActorValue drained, const std::string& rule)
+		void StartChannel(RE::Actor* caster, RE::MagicItem* spell, float duration, RE::ActorValue drained, float perSecond,
+			const std::string& rule)
 		{
 			const auto handle = caster->GetHandle();
 			std::erase_if(g_channels, [&](const Channel& c) { return c.caster == handle; });  // its instant caster now casts this
-			g_channels.push_back({ handle, spell, duration, duration, drained, rule });
+			g_channels.push_back({ handle, spell, duration, duration, drained, perSecond, rule });
 		}
 
 		std::mt19937& Rng()
@@ -632,15 +634,18 @@ namespace rdf::game::caston
 				}
 				magicCaster->CastSpellImmediate(cast.spell, cast.noHitEffectArt, target, effectiveness, false, cast.magnitude, caster);
 				if (concentration) {
-					// Free / Custom: no per-second drain (ActorMagicCaster::Update skips it under kSkipCheckCast, vfunc 0x13 sets it
-					// at 0x140543620; InterruptCastImpl clears it again). Engine: the engine's own drain, stopped at 0.
-					auto drained = RE::ActorValue::kNone;
+					// kSkipCheckCast (vfunc 0x13 sets it at 0x140543620; InterruptCastImpl clears it again), every mode. Without it
+					// MagicCaster::Fire (0x14054C950), run each interval of a concentration cast, asks CheckCast first and interrupts
+					// the cast when it refuses, and for the instant caster it does: one burst, then nothing (in game 2026-10-24).
+					// The flag also stops ActorMagicCaster::Update's per-second drain, so Engine drains here instead (UpdateChannels).
+					magicCaster->SetSkipCheckCast();
+					auto  drained = RE::ActorValue::kNone;
+					float perSecond = 0.0f;
 					if (rule.cost.mode == CostMode::Engine) {
 						drained = ActorValueForCost(cast.spell, RE::MagicSystem::CastingSource::kInstant);
-					} else {
-						magicCaster->SetSkipCheckCast();
+						perSecond = drained == RE::ActorValue::kNone ? 0.0f : CalculateCost(cast.spell, caster);
 					}
-					StartChannel(caster, cast.spell, cast.duration, drained, rule.name);
+					StartChannel(caster, cast.spell, cast.duration, drained, perSecond, rule.name);
 					DevLog("CastOn '{}': instant caster after the cast: holds {:08X}, state {}", rule.name,
 						magicCaster->currentSpell ? magicCaster->currentSpell->GetFormID() : 0u, static_cast<int>(magicCaster->state.underlying()));
 				}
@@ -745,7 +750,17 @@ namespace rdf::game::caston
 				return true;
 			}
 			c.left -= dt;
-			const bool spent = c.drained != RE::ActorValue::kNone && actor->AsActorValueOwner()->GetActorValue(c.drained) <= 0.0f;
+			bool spent = false;
+			if (c.drained != RE::ActorValue::kNone && !(actor->IsPlayerRef() && RE::PlayerCharacter::IsGodMode())) {
+				// Engine: what ActorMagicCaster::Update would drain (cost per second x dt, clamped to what is left)
+				auto*       owner = actor->AsActorValueOwner();
+				const float available = owner->GetActorValue(c.drained);
+				const float amount = std::min(c.perSecond * dt, std::max(0.0f, available));
+				if (amount > 0.0f) {
+					owner->ModActorValue(RE::ACTOR_VALUE_MODIFIER::kDamage, c.drained, -amount);
+				}
+				spent = available - amount <= 0.0f;
+			}
 			if (c.left > 0.0f && !spent) {
 				return false;
 			}
