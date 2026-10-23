@@ -299,9 +299,9 @@ What the plugin does with it ([Graph] bOneHandDodge, sEventStart1H / sEventStart
   Character / PlayerCharacter, `src/game/GraphGate`) and sent when the dodge may be left: from the block window of a 1hm
   dodge, after the graph has left a root one. Their cancel event (`blockStop`) drops them; our own sends bypass the hook.
 
-Still open: first person and the Nemesis variant have only the root dodge in 1P; `1HM_Behavior`'s wildcards (recoil,
-Precision's `Collision_Recoil`, combat idles, BFCO / MCO sprint-attack wildcards) apply to a 1hm dodge too; nothing of
-this has run in game yet.
+Since then: the 1P file and the Nemesis variant have the 1hm dodge too, and it has run in game (3P, user play-tests
+2026-10-23). Still open: `1HM_Behavior`'s wildcards (recoil, Precision's `Collision_Recoil`, combat idles, BFCO / MCO
+sprint-attack wildcards) apply to a 1hm dodge too; none seen to cut one short yet.
 
 ## 8. Bow and magic layers (`[Casting]`, both views; 3P bow run in game 2026-10-23, the rest not yet)
 
