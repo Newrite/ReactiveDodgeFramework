@@ -280,3 +280,25 @@ TEST(caston_the_shipped_examples_parse_and_validate)
 		CHECK(ExpandPresets(conditions, r.presets, errors));
 	}
 }
+
+TEST(caston_disabled_conditions_drop_and_skip_validation)
+{
+	const auto r = ParseRules(R"({ "rules": [ { "name": "a", "casts": [ { "spell": "X" } ], "conditions": [
+		{ "kind": "InCombat", "comment": "kept" },
+		{ "kind": "HasPerk", "disabled": true },
+		{ "kind": "Or", "children": [ { "kind": "Sneaking", "disabled": true }, { "kind": "Random", "value": 10, "disabled": true } ] },
+		{ "kind": "Or", "children": [ { "kind": "Sneaking" }, { "kind": "Blocking", "disabled": true } ] } ] } ] })");
+	CHECK(r.errors.empty());  // the switched-off HasPerk has no form: no error
+	CHECK(r.rules.size() == 1);
+	auto conditions = r.rules[0].conditions;
+	CHECK(conditions.size() == 4);
+	CHECK(conditions[0].comment == "kept");
+	DropDisabled(conditions);
+	CHECK(conditions.size() == 2);  // the HasPerk and the group with nothing left are gone
+	CHECK(conditions[0].kind == ConditionKind::InCombat);
+	CHECK(conditions[1].children.size() == 1);
+	CHECK(conditions[1].children[0].kind == ConditionKind::Sneaking);
+	// written back, read again: the flags and the comment survive
+	const auto again = ParseRules(WriteRules(r.rules));
+	CHECK(again.rules.size() == 1 && again.rules[0].conditions[1].disabled && again.rules[0].conditions[0].comment == "kept");
+}

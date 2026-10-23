@@ -580,3 +580,7 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   documents (read, save, delete), CompileRule (shared by Load, the live results and Fire now), WatchRule / PollLive /
   LiveResults (evaluated in SKSE tasks, since the menu pauses the frame tick) and FireNow. 77 translation keys; the
   generator now scans every src/game/*.cpp. Built and deployed to STB and VanillaLike; not opened in game yet.
+* CastOn editor, more of OAR (2026-10-24; docs/CASTON_DESIGN.md 13). Conditions gained "disabled" (as if not written:
+  dropped before and after preset expansion, skipped by Validate, no live result) and "comment" (shown on the node).
+  The editor has an on/off tick per node, drag-and-drop reordering within a list, and the section notes beside the add
+  buttons. In game since the previous build: the node headers show their text and the casts are visible. 96 tests.

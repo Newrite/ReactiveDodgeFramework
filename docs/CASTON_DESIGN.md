@@ -312,3 +312,16 @@ context; whether the conditions hold now is only logged.
 - No vanilla condition functions yet (phase 3).
 - Enum names are shown as the JSON writes them (untranslated).
 - How the window behaves in game (cursor, pause, Esc) is not tried yet.
+
+## 13. Switched-off conditions, comments, drag and drop (2026-10-24)
+
+- **`disabled`** (a condition key, default false): the condition is as if not written, OAR's way. The game drops it
+  (`DropDisabled`) before and after the presets are expanded, so a switched-off reference to a missing preset is no
+  error, and a preset's switched-off conditions go too. A group left with nothing inside is dropped as well: it holds.
+  `Validate` skips a switched-off condition, so a half-made one does not stop the rule. Live rows: -2, nothing drawn; a
+  group decides on the rest (all off: it holds).
+- **`comment`**: a note for people. The node's line shows it after `//`; hovering the line shows it whole.
+- **Editor.** A tick before each node switches it on and off (the line greys). A node dragged by its line onto another
+  node of the same list moves there: before it going up, after it going down. Moves into or out of a group are not
+  supported (copy and paste do that). The section notes moved from a "(?)" on a line of its own to beside the add
+  buttons.

@@ -121,6 +121,8 @@ namespace rdf::caston
 		Compare                compare{ Compare::None };
 		float                  value{ 0.0f };
 		std::vector<Condition> children;  // And / Or
+		bool                   disabled{ false };  // switched off for now: as if not written (OAR's way)
+		std::string            comment;            // the author's note, shown on the editor's node
 	};
 
 	struct Cast
@@ -203,6 +205,9 @@ namespace rdf::caston
 	// Replaces every Preset condition by an AND of the named list (nested presets too). False, with the reasons in
 	// `errors`, when a name is unknown or presets name each other in a circle.
 	bool ExpandPresets(std::vector<Condition>& conditions, const Presets& presets, std::vector<std::string>& errors);
+
+	// Removes the disabled conditions, nested ones too; a group left with no conditions goes as well (it would hold).
+	void DropDisabled(std::vector<Condition>& conditions);
 
 	// The JSON Schema of a rule file, for editors (VS Code: "json.schemas", or "$schema" in the file).
 	std::string JsonSchema();

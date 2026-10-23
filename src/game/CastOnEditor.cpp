@@ -14,6 +14,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cstring>
 #include <format>
 #include <optional>
 #include <string>
@@ -256,6 +257,7 @@ namespace rdf::game::caston_editor
 				Duplicate,
 				Delete,
 				PasteBelow,
+				Move,  // drag and drop
 			};
 
 			enum class Selected
@@ -520,7 +522,7 @@ namespace rdf::game::caston_editor
 					return;  // `list` belonged to the old node
 				}
 				DrawLiveHeader();
-				DrawConditionTable(list);
+				DrawConditionTable(list, "$RDF_CO_Conditions_Tip"_T);
 				FUCK::Spacing();
 				if (FUCK::Button(FUCK::IconText(ICON_FA_TRASH, "$RDF_CO_DeletePreset"_T))) {
 					doc.presets.erase(preset_);
@@ -543,14 +545,10 @@ namespace rdf::game::caston_editor
 					Tip("$RDF_CO_FromTemplate_Tip"_T);
 				}
 
-				FUCK::HelpMarker("$RDF_CO_Conditions_Tip"_T);
-				FUCK::SameLine();
 				FUCK::SeparatorText("$RDF_CO_Conditions"_T);
 				DrawLiveHeader();
-				DrawConditionTable(rule.conditions);
+				DrawConditionTable(rule.conditions, "$RDF_CO_Conditions_Tip"_T);
 
-				FUCK::HelpMarker("$RDF_CO_CastsNote"_T);
-				FUCK::SameLine();
 				FUCK::SeparatorText("$RDF_CO_Casts"_T);
 				DrawCasts(rule.casts);
 
@@ -608,11 +606,11 @@ namespace rdf::game::caston_editor
 			// arrow, live result, NOT and the name, a dim summary of its arguments); opened, its type, participant and each
 			// argument on a row of their own; a group draws its children the same way inside. Right click: copy, paste,
 			// duplicate, delete. Live results come in depth-first order over the whole tree, collapsed parts included.
-			void DrawConditionTable(std::vector<Condition>& list)
+			void DrawConditionTable(std::vector<Condition>& list, const char* note)
 			{
 				const auto live = co::LiveResults();
 				int        row = 0;
-				DrawConditionList(list, row, live.results);
+				DrawConditionList(list, row, live.results, note);
 			}
 
 			static int RowsOf(const Condition& c)
@@ -624,7 +622,7 @@ namespace rdf::game::caston_editor
 				return n;
 			}
 
-			void AddButtons(std::vector<Condition>& list)
+			void AddButtons(std::vector<Condition>& list, const char* note)
 			{
 				if (FUCK::Button(FUCK::IconText(ICON_FA_PLUS, "$RDF_CO_AddCondition"_T))) {
 					list.push_back(Condition{ .kind = lastKind_ });
@@ -642,6 +640,10 @@ namespace rdf::game::caston_editor
 					OpenNext(list, list.size() - 1);
 				}
 				FUCK::EndDisabled();
+				if (note) {
+					FUCK::SameLine();
+					FUCK::HelpMarker(note);
+				}
 			}
 
 			void OpenNext(const std::vector<Condition>& list, std::size_t index)
@@ -651,10 +653,19 @@ namespace rdf::game::caston_editor
 				changed_ = true;
 			}
 
-			void DrawConditionList(std::vector<Condition>& list, int& row, const std::vector<std::int8_t>& live)
+			// A dragged condition: reordered within its own list (dropped on a node: before it going up, after it going down).
+			struct DragCondition
+			{
+				const std::vector<Condition>* list;
+				int                           index;
+			};
+			static constexpr const char* kDragCondition = "RDF_CO_COND";
+
+			void DrawConditionList(std::vector<Condition>& list, int& row, const std::vector<std::int8_t>& live, const char* note = nullptr)
 			{
 				Op  op = Op::None;
 				int at = -1;
+				int from = -1;
 				for (int i = 0; i < static_cast<int>(list.size()); ++i) {
 					auto&      c = list[i];
 					const int  myRow = row;
@@ -667,17 +678,51 @@ namespace rdf::game::caston_editor
 							FUCK::SetNextItemOpen(true, 1 /* Always */);
 							openList_ = nullptr;
 						}
+						bool on = !c.disabled;
+						if (FUCK::Checkbox("##on", &on, false, false)) {
+							c.disabled = !on;
+							changed_ = true;
+						}
+						Tip("$RDF_CO_Enabled_Tip"_T);
+						FUCK::SameLine();
 						LiveIcon(result);
 						FUCK::SameLine();
-						const auto summary = Summary(c);
-						const auto label = std::format("{}{}{}{}###open", c.negated ? "NOT " : "", Info(c.kind).name, summary.empty() ? "" : "     ", summary);
-						const bool colored = c.kind == ConditionKind::Preset || Info(c.kind).group;
+						const auto shown = Header(c);
+						const auto label = shown + "###open";
+						const bool colored = c.disabled || c.kind == ConditionKind::Preset || Info(c.kind).group;
 						if (colored) {
-							FUCK::PushStyleColor(0 /* Text */, c.kind == ConditionKind::Preset ? ImVec4(0.55f, 0.75f, 1.0f, 1.0f) : ImVec4(0.95f, 0.8f, 0.45f, 1.0f));
+							FUCK::PushStyleColor(0 /* Text */, c.disabled                         ? ImVec4(0.5f, 0.5f, 0.5f, 1.0f) :
+							                                   c.kind == ConditionKind::Preset ? ImVec4(0.55f, 0.75f, 1.0f, 1.0f) :
+							                                                                     ImVec4(0.95f, 0.8f, 0.45f, 1.0f));
 						}
 						const bool open = FUCK::TreeNode(label.c_str(), kNodeFlags);
 						if (colored) {
 							FUCK::PopStyleColor();
+						}
+						if (!c.comment.empty()) {
+							Tip(c.comment);
+						}
+						if (FUCK::BeginDragDropSource()) {
+							const DragCondition drag{ &list, i };
+							FUCK::SetDragDropPayload(kDragCondition, &drag, sizeof(drag));
+							FUCK::Text("%s", shown.c_str());
+							FUCK::EndDragDropSource();
+						}
+						if (FUCK::BeginDragDropTarget()) {
+							// peek first: only this list's nodes take the drop (and only they light up)
+							const auto*   peek = FUCK::AcceptDragDropPayload(kDragCondition, FUCK::DragDropFlags::kAcceptPeekOnly);
+							DragCondition drag{};
+							if (peek && peek->DataSize == sizeof(drag)) {
+								std::memcpy(&drag, peek->Data, sizeof(drag));
+							}
+							if (drag.list == &list && drag.index != i) {
+								if (FUCK::AcceptDragDropPayload(kDragCondition)) {
+									op = Op::Move;
+									from = drag.index;
+									at = i;
+								}
+							}
+							FUCK::EndDragDropTarget();
 						}
 						if (FUCK::BeginPopupContextItem("##menu")) {
 							if (FUCK::Selectable(FUCK::IconText(ICON_FA_COPY, "$RDF_CO_Copy"_T))) {
@@ -709,6 +754,14 @@ namespace rdf::game::caston_editor
 					FUCK::PopID();
 				}
 				switch (op) {
+				case Op::Move:
+					if (from >= 0 && from < static_cast<int>(list.size())) {
+						auto moved = std::move(list[from]);
+						list.erase(list.begin() + from);
+						list.insert(list.begin() + at, std::move(moved));
+						changed_ = true;
+					}
+					break;
 				case Op::Up:
 					std::swap(list[at], list[at - 1]);
 					changed_ = true;
@@ -734,7 +787,7 @@ namespace rdf::game::caston_editor
 				default:
 					break;
 				}
-				AddButtons(list);
+				AddButtons(list, note);
 			}
 
 			void DrawConditionBody(Condition& c, int i, int count, Op& op, int& at, int& row, const std::vector<std::int8_t>& live)
@@ -755,6 +808,8 @@ namespace rdf::game::caston_editor
 					changed_ |= EnumCombo("$RDF_CO_ColWho"_T, c.subject, kSubjects, -1.0f);
 				}
 				DrawArguments(c);
+				changed_ |= Text("$RDF_CO_Comment"_T, c.comment, -1.0f);
+				Tip("$RDF_CO_Comment_Tip"_T);
 				if (Info(c.kind).group) {
 					FUCK::Spacing();
 					DrawConditionList(c.children, row, live);
@@ -859,6 +914,21 @@ namespace rdf::game::caston_editor
 				}
 			}
 
+			// The node's line: NOT, the kind, the summary, the comment. "##" would end the shown text: spaced out.
+			static std::string Header(const Condition& c)
+			{
+				const auto summary = Summary(c);
+				auto       out = std::format("{}{}{}{}", c.negated ? "NOT " : "", Info(c.kind).name, summary.empty() ? "" : "     ", summary);
+				if (!c.comment.empty()) {
+					auto comment = c.comment;
+					for (auto at = comment.find("##"); at != std::string::npos; at = comment.find("##", at)) {
+						comment.replace(at, 2, "# #");
+					}
+					out += "     // " + comment;
+				}
+				return out;
+			}
+
 			// The header's dim summary, as OAR's argument column: the participant, then the arguments.
 			static std::string Summary(const Condition& c)
 			{
@@ -952,6 +1022,8 @@ namespace rdf::game::caston_editor
 					openCast_ = static_cast<int>(casts.size()) - 1;
 					changed_ = true;
 				}
+				FUCK::SameLine();
+				FUCK::HelpMarker("$RDF_CO_CastsNote"_T);
 			}
 
 			void DrawCost(Cost& cost)

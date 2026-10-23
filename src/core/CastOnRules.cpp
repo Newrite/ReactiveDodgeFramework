@@ -100,6 +100,8 @@ struct glz::json_schema<rdf::caston::Condition>
 	schema form{ .description = "Keyword / perk / race / faction: \"Plugin.esp|0xID\" or an EditorID." };
 	schema text{ .description = "Equipped type, actor value name, Layer, Direction or the Preset name." };
 	schema compare{ .description = "None, Eq, Ne, Lt, Le, Gt, Ge (against 'value')." };
+	schema disabled{ .description = "Switched off: the condition (a group with all inside) is as if not written." };
+	schema comment{ .description = "A note for people; the editor shows it on the condition." };
 };
 template <>
 struct glz::json_schema<rdf::caston::Cast>
@@ -174,6 +176,9 @@ namespace rdf::caston
 		{
 			const auto& info = Info(c.kind);
 			const auto  fail = [&](std::string what) { errors.push_back(std::format("{} ({}): {}", path, info.name, what)); };
+			if (c.disabled) {
+				return;  // switched off: a half-made condition does not stop the rule
+			}
 			if (info.group) {
 				if (c.children.empty()) {
 					fail("an empty group");
@@ -409,6 +414,20 @@ namespace rdf::caston
 	{
 		std::vector<std::string> chain;
 		return Expand(conditions, presets, chain, errors);
+	}
+
+	void DropDisabled(std::vector<Condition>& conditions)
+	{
+		std::erase_if(conditions, [](Condition& c) {
+			if (c.disabled) {
+				return true;
+			}
+			if (!Info(c.kind).group) {
+				return false;
+			}
+			DropDisabled(c.children);
+			return c.children.empty();
+		});
 	}
 
 	ParseResult ParseRules(std::string_view json)

@@ -379,10 +379,12 @@ namespace rdf::game::caston
 			c.limits = rule.limits;
 			auto                     conditions = rule.conditions;
 			std::vector<std::string> presetErrors;
+			DropDisabled(conditions);  // before: a switched-off reference to a missing preset is no error
 			if (!ExpandPresets(conditions, presets, presetErrors)) {
 				error = presetErrors.empty() ? std::string("a preset failed") : presetErrors.front();
 				return false;
 			}
+			DropDisabled(conditions);  // after: what the presets switched off
 			const auto root = compiler.Conditions(conditions, error);
 			if (!root) {
 				return false;
@@ -869,24 +871,44 @@ namespace rdf::game::caston
 			}
 		}
 
-		// One row of the editor's condition tree, then its children (depth-first, as the editor draws them).
+		// Rows of a switched-off subtree: no result (-2), as many rows as the editor draws.
+		void SkipRows(const Condition& c, std::vector<std::int8_t>& out)
+		{
+			out.push_back(-2);
+			for (const auto& child : c.children) {
+				SkipRows(child, out);
+			}
+		}
+
+		// One row of the editor's condition tree, then its children (depth-first, as the editor draws them). -2 = the
+		// condition is switched off; a group decides on the rest.
 		std::int8_t LiveRow(const Condition& c, const Presets& presets, const Context& ctx, const RuleSet& base, Memo& memo,
 			std::vector<std::int8_t>& out)
 		{
+			if (c.disabled) {
+				SkipRows(c, out);
+				return -2;
+			}
 			const auto at = out.size();
 			out.push_back(-1);
 			std::int8_t result = -1;
 			if (Info(c.kind).group) {
-				bool decided = false, unknown = false;
+				bool decided = false, unknown = false, any = false;
 				for (const auto& child : c.children) {
 					const auto v = LiveRow(child, presets, ctx, base, memo, out);
+					if (v == -2) {
+						continue;
+					}
+					any = true;
 					unknown = unknown || v < 0;
 					if (!decided && v >= 0 && (v == 1) == (c.kind == ConditionKind::Or)) {
 						decided = true;  // an Or with a true child, an And with a false one
 					}
 				}
 				result = decided ? (c.kind == ConditionKind::Or ? 1 : 0) : unknown ? -1 : (c.kind == ConditionKind::Or ? 0 : 1);
-				if (result >= 0 && c.negated) {
+				if (!any) {
+					result = 1;  // everything inside switched off: the group is dropped (DropDisabled), it holds
+				} else if (result >= 0 && c.negated) {
 					result = static_cast<std::int8_t>(1 - result);
 				}
 			} else if (!NeedsActor(c.kind) || SubjectOf(c.subject, ctx)) {
@@ -897,6 +919,7 @@ namespace rdf::game::caston
 				std::vector<std::string> errors;
 				std::string              error;
 				if (ExpandPresets(list, presets, errors)) {
+					DropDisabled(list);  // a preset's switched-off conditions
 					if (const auto root = compiler.Conditions(list, error)) {
 						result = Eval(one, *root, ctx, memo) ? 1 : 0;
 					}

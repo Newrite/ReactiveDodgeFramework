@@ -128,9 +128,17 @@
             "children": {
                "$ref": "#/$defs/std::vector<rdf::caston::Condition>"
             },
+            "comment": {
+               "$ref": "#/$defs/std::string",
+               "description": "A note for people; the editor shows it on the condition."
+            },
             "compare": {
                "$ref": "#/$defs/rdf::caston::Compare",
                "description": "None, Eq, Ne, Lt, Le, Gt, Ge (against 'value')."
+            },
+            "disabled": {
+               "$ref": "#/$defs/bool",
+               "description": "Switched off: the condition (a group with all inside) is as if not written."
             },
             "form": {
                "$ref": "#/$defs/std::string",
