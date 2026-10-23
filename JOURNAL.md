@@ -546,3 +546,7 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   CastingLayer no longer refuses first person. gen_rdf_patch --verify-ids checks the layer ids (3P and 1P); validate_rdf
   257/257, validate_onehand 131/131 (STB, VanillaLike), Nemesis 105/105, 1P layer clips all in FirstPerson. Deployed to STB
   and VanillaLike; needs a Pandora re-run; not run in game.
+* Dodge attacks stay on OAR (2026-10-24, user: "Оставим пока так под ОАР ... выглядит надежней"): RDF_AttackFromDodge /
+  RDF_AttackFromDodgeClip as conditions on the attack frameworks' own clips. Own attack states in 1HM_Behavior next to the
+  dodge states were weighed and not taken: they would work without MCO / BFCO, but need attack data for the hits and
+  would only reach the first hit of a framework's combo.
