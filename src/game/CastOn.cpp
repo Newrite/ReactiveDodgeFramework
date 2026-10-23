@@ -6,6 +6,7 @@
 #include "Settings.h"
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <filesystem>
 #include <format>
@@ -161,6 +162,8 @@ namespace rdf::game::caston
 		{
 			std::string file;  // as named in the log
 			std::string json;
+			std::string name;  // <name> of <name>.json / <name>.user.json, as the mod spelled it
+			bool        user{ false };
 		};
 
 		std::string Utf8(const std::filesystem::path& p)
@@ -179,7 +182,7 @@ namespace rdf::game::caston
 			if (!fs::is_directory(folder, ec)) {
 				return out;
 			}
-			std::map<std::string, std::pair<fs::path, fs::path>> byName;  // name -> (mod file, user file)
+			std::map<std::string, std::pair<fs::path, fs::path>> byName;  // lower-case name -> (mod file, user file)
 			for (fs::directory_iterator it(folder, ec), end; !ec && it != end; it.increment(ec)) {
 				if (!it->is_regular_file(ec)) {
 					continue;
@@ -196,13 +199,16 @@ namespace rdf::game::caston
 				}
 			}
 			for (const auto& [name, paths] : byName) {
-				const auto& path = paths.second.empty() ? paths.first : paths.second;
+				const bool  user = !paths.second.empty();
+				const auto& path = user ? paths.second : paths.first;
 				std::ifstream in(path, std::ios::binary);
 				if (!in) {
 					logger::warn("CastOn: cannot read {}", Utf8(path));
 					continue;
 				}
-				out.push_back({ Utf8(path.filename()), std::string(std::istreambuf_iterator<char>(in), {}) });
+				auto stem = Utf8(path.filename());  // the spelling on disk, without .json / .user.json
+				stem.resize(stem.size() - (user ? 10 : 5));
+				out.push_back({ Utf8(path.filename()), std::string(std::istreambuf_iterator<char>(in), {}), stem, user });
 			}
 			return out;
 		}
@@ -355,6 +361,50 @@ namespace rdf::game::caston
 				h = (h ^ 0x1f) * 1099511628211ull;
 			}
 			return h;
+		}
+
+		// One rule against the loaded forms: presets expanded, conditions compiled into `set`, casts resolved. False with
+		// `error` when something is missing (a form, a preset, a spell) or a spell cannot be cast (an ability).
+		bool CompileRule(RuleSet& set, Compiler& compiler, const Rule& rule, const Presets& presets, const std::string& file,
+			std::size_t index, CompiledRule& c, std::string& error)
+		{
+			c.name = rule.name.empty() ? std::format("#{}", index) : rule.name;
+			c.file = file;
+			c.key = KeyOf(file, rule.name, index);
+			c.priority = rule.priority;
+			c.exclusive = rule.exclusive;
+			c.trigger = rule.trigger;
+			c.cost = rule.cost;
+			c.timing = rule.timing;
+			c.limits = rule.limits;
+			auto                     conditions = rule.conditions;
+			std::vector<std::string> presetErrors;
+			if (!ExpandPresets(conditions, presets, presetErrors)) {
+				error = presetErrors.empty() ? std::string("a preset failed") : presetErrors.front();
+				return false;
+			}
+			const auto root = compiler.Conditions(conditions, error);
+			if (!root) {
+				return false;
+			}
+			c.root = *root;
+			for (const auto& cast : rule.casts) {
+				auto* form = ResolveSpell(cast.spell, error);
+				auto* spell = form ? form->As<RE::MagicItem>() : nullptr;
+				if (!spell) {
+					if (error.empty()) {
+						error = std::format("{} is not a magic item", cast.spell);
+					}
+					return false;
+				}
+				if (spell->GetCastingType() == RE::MagicSystem::CastingType::kConstantEffect) {
+					error = std::format("{} is a constant effect (an ability): it cannot be cast", cast.spell);
+					return false;
+				}
+				c.casts.push_back({ spell, cast.caster, cast.target, cast.effectiveness, cast.magnitude, cast.noHitEffectArt, cast.duration });
+			}
+			(void)set;
+			return true;
 		}
 
 		// ------------------------------------------------------------------------------------------------ evaluation
@@ -682,12 +732,13 @@ namespace rdf::game::caston
 		Compiler   compiler(*set);
 		std::size_t files = 0, dropped = 0;
 		// Two passes: every file's presets first (any rule may name any of them), then the rules.
-		std::vector<std::pair<std::string, ParseResult>> parsedFiles;
+		std::vector<std::pair<std::string, ParseResult>> parsedFiles;  // (file name as logged, its rules)
 		Presets                                          presets;
 		std::map<std::string, std::string, std::less<>>  presetFile;
-		for (const auto& [file, json] : ReadFiles()) {
+		for (const auto& text : ReadFiles()) {
 			++files;
-			auto parsed = ParseRules(json);
+			const auto& file = text.file;
+			auto        parsed = ParseRules(text.json);
 			for (const auto& e : parsed.errors) {
 				logger::warn("CastOn {}: {}", file, e);
 			}
@@ -708,42 +759,12 @@ namespace rdf::game::caston
 					continue;
 				}
 				CompiledRule c;
-				c.name = rule.name.empty() ? std::format("#{}", i) : rule.name;
-				c.file = file;
-				c.key = KeyOf(file, rule.name, i);
-				c.priority = rule.priority;
-				c.exclusive = rule.exclusive;
-				c.trigger = rule.trigger;
-				c.cost = rule.cost;
-				c.timing = rule.timing;
-				c.limits = rule.limits;
-				std::string              error;
-				auto                     conditions = rule.conditions;
-				std::vector<std::string> presetErrors;
-				if (!ExpandPresets(conditions, presets, presetErrors)) {
-					++dropped;
-					logger::warn("CastOn {}: rule '{}' dropped: {}", file, c.name, presetErrors.empty() ? std::string() : presetErrors.front());
-					continue;
-				}
-				const auto root = compiler.Conditions(conditions, error);
-				for (const auto& cast : rule.casts) {
-					if (!error.empty()) {
-						break;
-					}
-					auto* form = ResolveSpell(cast.spell, error);
-					auto* spell = form ? form->As<RE::MagicItem>() : nullptr;
-					if (spell && spell->GetCastingType() == RE::MagicSystem::CastingType::kConstantEffect) {
-						error = std::format("{} is a constant effect (an ability): it cannot be cast", cast.spell);
-					} else if (spell) {
-						c.casts.push_back({ spell, cast.caster, cast.target, cast.effectiveness, cast.magnitude, cast.noHitEffectArt, cast.duration });
-					}
-				}
-				if (!root || !error.empty()) {
+				std::string  error;
+				if (!CompileRule(*set, compiler, rule, presets, file, i, c, error)) {
 					++dropped;
 					logger::warn("CastOn {}: rule '{}' dropped: {}", file, c.name, error);
 					continue;
 				}
-				c.root = *root;
 				set->rules.push_back(std::move(c));
 			}
 		}
@@ -757,6 +778,225 @@ namespace rdf::game::caston
 			kFolder, dropped);
 		std::scoped_lock lock(g_lock);
 		g_current = std::move(set);
+	}
+
+	// ---------------------------------------------------------------------------------------------------- the editor
+	std::vector<Document> ReadDocuments()
+	{
+		std::vector<Document> out;
+		for (auto& text : ReadFiles()) {
+			out.push_back({ text.name, text.user, ParseRules(text.json) });
+		}
+		return out;
+	}
+
+	bool SaveUserDocument(const std::string& name, const std::vector<Rule>& rules, const Presets& presets, std::string& error)
+	{
+		namespace fs = std::filesystem;
+		std::error_code ec;
+		fs::create_directories(fs::path(kFolder), ec);
+		const auto text = WriteRules(rules, presets);
+		if (text.empty()) {
+			error = "the rules could not be written as JSON";
+			return false;
+		}
+		const auto    path = fs::path(kFolder) / fs::path(reinterpret_cast<const char8_t*>((name + ".user.json").c_str()));
+		std::ofstream out(path, std::ios::binary | std::ios::trunc);
+		out << text;
+		if (!out) {
+			error = std::format("cannot write {}", Utf8(path));
+			return false;
+		}
+		logger::info("CastOn: saved {} ({} rule(s), {} preset(s))", Utf8(path), rules.size(), presets.size());
+		return true;
+	}
+
+	bool DeleteUserDocument(const std::string& name, std::string& error)
+	{
+		namespace fs = std::filesystem;
+		std::error_code ec;
+		const auto      path = fs::path(kFolder) / fs::path(reinterpret_cast<const char8_t*>((name + ".user.json").c_str()));
+		if (!fs::remove(path, ec) || ec) {
+			error = std::format("cannot delete {}", Utf8(path));
+			return false;
+		}
+		logger::info("CastOn: deleted {}", Utf8(path));
+		return true;
+	}
+
+	namespace
+	{
+		struct Watch
+		{
+			std::mutex                 lock;
+			std::optional<Rule>        rule;  // what the editor shows; nullopt = nothing
+			Presets                    presets;
+			std::uint32_t              requested{ 0 };
+			Live                       result;
+		};
+		std::atomic<bool>                     g_liveQueued{ false };
+		std::chrono::steady_clock::time_point g_liveLast{};
+		Watch g_watch;
+
+		// The player as the dodger; its combat target as the attacker and the combat target (the editor has no dodge).
+		Context PlayerContext(RE::NiPointer<RE::Actor>& hold)
+		{
+			Context ctx;
+			auto*   player = RE::PlayerCharacter::GetSingleton();
+			if (!player) {
+				return ctx;
+			}
+			hold = player->GetActorRuntimeData().currentCombatTarget.get();
+			ctx.dodger = player;
+			ctx.attacker = hold.get();
+			ctx.combatTarget = hold.get();
+			const auto* camera = RE::PlayerCamera::GetSingleton();
+			ctx.firstPerson = camera && camera->IsInFirstPerson();
+			return ctx;
+		}
+
+		bool NeedsActor(ConditionKind kind)
+		{
+			switch (kind) {
+			case ConditionKind::Layer:
+			case ConditionKind::Direction:
+			case ConditionKind::ChainIndex:
+			case ConditionKind::FromStagger:
+			case ConditionKind::FirstPerson:
+			case ConditionKind::Random:
+			case ConditionKind::Preset: return false;
+			default: return true;
+			}
+		}
+
+		// One row of the editor's condition tree, then its children (depth-first, as the editor draws them).
+		std::int8_t LiveRow(const Condition& c, const Presets& presets, const Context& ctx, const RuleSet& base, Memo& memo,
+			std::vector<std::int8_t>& out)
+		{
+			const auto at = out.size();
+			out.push_back(-1);
+			std::int8_t result = -1;
+			if (Info(c.kind).group) {
+				bool decided = false, unknown = false;
+				for (const auto& child : c.children) {
+					const auto v = LiveRow(child, presets, ctx, base, memo, out);
+					unknown = unknown || v < 0;
+					if (!decided && v >= 0 && (v == 1) == (c.kind == ConditionKind::Or)) {
+						decided = true;  // an Or with a true child, an And with a false one
+					}
+				}
+				result = decided ? (c.kind == ConditionKind::Or ? 1 : 0) : unknown ? -1 : (c.kind == ConditionKind::Or ? 0 : 1);
+				if (result >= 0 && c.negated) {
+					result = static_cast<std::int8_t>(1 - result);
+				}
+			} else if (!NeedsActor(c.kind) || SubjectOf(c.subject, ctx)) {
+				RuleSet  one;
+				Compiler compiler(one);
+				one.warhammer = base.warhammer;
+				std::vector<Condition>   list{ c };
+				std::vector<std::string> errors;
+				std::string              error;
+				if (ExpandPresets(list, presets, errors)) {
+					if (const auto root = compiler.Conditions(list, error)) {
+						result = Eval(one, *root, ctx, memo) ? 1 : 0;
+					}
+				}
+			}
+			out[at] = result;
+			return result;
+		}
+	}
+
+	void WatchRule(std::optional<Rule> rule, Presets presets)
+	{
+		std::scoped_lock lock(g_watch.lock);
+		g_watch.rule = std::move(rule);
+		g_watch.presets = std::move(presets);
+		++g_watch.requested;
+		g_liveLast = {};  // at once
+	}
+
+	Live LiveResults()
+	{
+		std::scoped_lock lock(g_watch.lock);
+		return g_watch.result;
+	}
+
+	// Main thread. A task the editor posts (PollLive): the game is usually paused while the menu is open, so the frame
+	// tick (UpdateChannels) does not run, but SKSE tasks do.
+	void EvaluateLive()
+	{
+		std::optional<Rule> rule;
+		Presets             presets;
+		std::uint32_t       generation = 0;
+		{
+			std::scoped_lock lock(g_watch.lock);
+			if (!g_watch.rule) {
+				return;
+			}
+			rule = g_watch.rule;
+			presets = g_watch.presets;
+			generation = g_watch.requested;
+		}
+		RE::NiPointer<RE::Actor> hold;
+		const auto               ctx = PlayerContext(hold);
+		Live                     live;
+		live.generation = generation;
+		if (ctx.dodger) {
+			RuleSet base;
+			if (const auto set = Current()) {
+				base.warhammer = set->warhammer;
+			}
+			Memo memo;
+			for (const auto& c : rule->conditions) {
+				LiveRow(c, presets, ctx, base, memo, live.results);
+			}
+			live.participants = ctx.attacker ? std::format("{:08X} '{}'", ctx.attacker->GetFormID(), ctx.attacker->GetName()) : std::string();
+		}
+		std::scoped_lock lock(g_watch.lock);
+		g_watch.result = std::move(live);
+	}
+
+	void PollLive()
+	{
+		const auto now = std::chrono::steady_clock::now();
+		if (g_liveQueued.load() || now - g_liveLast < std::chrono::milliseconds(250)) {
+			return;
+		}
+		g_liveLast = now;
+		g_liveQueued = true;
+		SKSE::GetTaskInterface()->AddTask([] {
+			EvaluateLive();
+			g_liveQueued = false;
+		});
+	}
+
+	void FireNow(Rule rule, Presets presets)
+	{
+		SKSE::GetTaskInterface()->AddTask([rule = std::move(rule), presets = std::move(presets)]() {
+			RuleSet      set;
+			Compiler     compiler(set);
+			CompiledRule c;
+			std::string  error;
+			if (!CompileRule(set, compiler, rule, presets, "(editor)", 0, c, error)) {
+				logger::warn("CastOn: Fire now '{}': {}", rule.name, error);
+				return;
+			}
+			RE::NiPointer<RE::Actor> hold;
+			const auto               ctx = PlayerContext(hold);
+			if (!ctx.dodger) {
+				return;
+			}
+			Memo       memo;
+			const bool holds = Eval(set, c.root, ctx, memo);
+			logger::info("CastOn: Fire now '{}' (its conditions {} now)", c.name, holds ? "hold" : "do not hold");
+			Execute(c, ctx);
+		});
+	}
+
+	void ReloadInGame()
+	{
+		SKSE::GetTaskInterface()->AddTask([] { Load(); });
 	}
 
 	void UpdateChannels(float dt)

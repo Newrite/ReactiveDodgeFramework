@@ -5,6 +5,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -43,6 +44,41 @@ namespace rdf::game::caston
 	void UpdateChannels(float dt);
 	// Load / new game: forgets them (the casters of the last session are gone).
 	void ClearChannels();
+
+	// ---- the editor window (game/CastOnEditor), render thread unless said
+	using rdf::caston::Presets;
+	using rdf::caston::Rule;
+
+	// A rule file as the editor shows it: <name>.user.json when there is one, else the mod's <name>.json.
+	struct Document
+	{
+		std::string                 name;
+		bool                        user{ false };
+		rdf::caston::ParseResult    parsed;
+	};
+	std::vector<Document> ReadDocuments();
+	// Writes <name>.user.json (the mod's file stays as it is) / deletes it. False with `error`.
+	bool SaveUserDocument(const std::string& name, const std::vector<Rule>& rules, const Presets& presets, std::string& error);
+	bool DeleteUserDocument(const std::string& name, std::string& error);
+	// Load() again on the main thread (after a save).
+	void ReloadInGame();
+
+	// Live results of the conditions the editor shows, for the player (its combat target as the attacker): one per row
+	// of the condition tree in depth-first order, 1 holds, 0 fails, -1 cannot tell (no such participant, a missing form).
+	struct Live
+	{
+		std::uint32_t            generation{ 0 };  // the WatchRule call they answer
+		std::vector<std::int8_t> results;
+		std::string              participants;     // the attacker used, or empty
+	};
+	// What to evaluate; nullopt stops.
+	void WatchRule(std::optional<Rule> rule, Presets presets);
+	// Every frame the editor draws: at most four times a second, queues the evaluation as a main-thread task (those run
+	// while the menu pauses the game).
+	void PollLive();
+	Live LiveResults();
+	// Casts the rule's spells now, for the player (main thread task; the conditions are only logged).
+	void FireNow(Rule rule, Presets presets);
 
 	// The CastOn state of one dodging actor (its DodgeAgent owns it): evaluates a trigger's rules, keeps their limits,
 	// and fires the casts at their moment.

@@ -57,8 +57,8 @@
   release-retry fix and both 1P layers built and staged-validated, not yet run. Needs a Pandora re-run and a keyword.
 
 * CastOn rules, phase 1 (docs/CASTON_DESIGN.md): JSON rules with conditions, casts, three cost modes, timing and clip
-  annotations on the Dodge and PerfectDodge triggers. Built, unit- and staged-validated, not run in game; no menu window
-  yet (phase 2).
+  annotations on the Dodge and PerfectDodge triggers; in game 2026-10-24: perfect-dodge Flames for 1.5 s worked. Presets,
+  templates and a JSON Schema since; the editor window (phase 2, Rules page button) is built but not opened in game yet.
 
 ## Known limitations
 * A one-frame upper-body pop at dodge start, visible only in slow motion (parked; findings in JOURNAL.md).

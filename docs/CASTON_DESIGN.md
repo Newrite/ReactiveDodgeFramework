@@ -266,3 +266,49 @@ What was added:
 - **Strictness.** Unknown top-level keys are errors, like unknown keys inside rules.
 - **The examples** use both: the presets `HoldsASpell` / `AttackerAlive`, and the template `PerfectRetort` that two
   rules extend.
+
+## 12. Phase 2: the window (built 2026-10-24, not run in game)
+
+**Where it is.**
+- `src/game/CastOnEditor`: a FLICK `IWindow` ("CastOnRules"), opened by the button at the top of the Rules page.
+- `src/game/MenuWidgets`: the form picker, moved out of Menu.cpp and shared with the settings pages. Its `compact` mode is
+  for table cells: a status icon, the pick and clear buttons, then the box, with the resolution in its tooltip.
+
+**What it shows.**
+- **Left:** each rule file as the game picks it (`<name>.user.json` over `<name>.json`), with its load errors. Under each
+  file, its rules (an enable tick, then name, trigger and priority) and its presets. Buttons add a rule or a preset.
+- **Right, for the selected rule:**
+  - name, enabled, trigger, priority, exclusive (a note when the rule came from a template);
+  - the condition tree as one table in depth-first order: live result, NOT, kind (indented by depth), whose, what (a form
+    picker, a list for Layer / Direction / Equipped / Preset, a text box for an actor value), how (hand, mode, compare and
+    value, chance), and move up / down / delete. A group row adds a condition or a group;
+  - the casts table (spell picker, caster, target, effectiveness, magnitude, duration, no hit art);
+  - cost by mode, timing, limits;
+  - `Validate`'s problems in red;
+  - Fire now, Duplicate, Delete.
+- **Right, for a selected preset:** rename, its conditions with live results, delete.
+
+**Toolbar.**
+- **Save:** `SaveUserDocument` writes `<name>.user.json`, then `ReloadInGame` (`Load` as a main-thread task).
+- **Reload files:** drops unsaved edits.
+- **Apply in game.**
+- **Delete user file:** the mod's own file comes back.
+- **New file:** a user-only file.
+
+**Live results.**
+- `WatchRule` hands the selected rule (or a preset as a rule) and every file's presets to the module. While the window
+  draws, `PollLive` posts `EvaluateLive` as an SKSE task at most every 0.25 s. Tasks run while the menu pauses the game;
+  the frame tick does not.
+- Each row of the tree is evaluated on its own, for the player (the dodger), with its combat target as the attacker and
+  the combat target. A Preset row stands for its whole expansion. Groups are folded from their children (an Or with a true
+  child, an And with a false one, decides even with unknown children).
+- -1 (grey ?) = no such participant, or a missing form or preset.
+
+**Fire now.** `FireNow` compiles the rule like `Load` (`CompileRule`, now shared) and runs `Execute` for the player
+context; whether the conditions hold now is only logged.
+
+**Known limits.**
+- A rule built from a template is saved whole, without `extends` (section 11).
+- No vanilla condition functions yet (phase 3).
+- Enum names are shown as the JSON writes them (untranslated).
+- How the window behaves in game (cursor, pause, Esc) is not tried yet.

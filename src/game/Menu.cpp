@@ -1,6 +1,8 @@
 #include "Menu.h"
 
+#include "CastOnEditor.h"
 #include "Forms.h"
+#include "MenuWidgets.h"
 #include "Settings.h"
 #include "SettingsSchema.h"
 
@@ -126,70 +128,7 @@ namespace rdf::game::menu
 		// clear button. The game keeps running with whatever the text resolves to, null included.
 		bool DrawForm(const Field& f, const char* label)
 		{
-			auto&        s = State::Get().Draft();
-			std::string& text = *f.str(s);
-			bool         changed = false;
-			// The host lays a labelled widget out as label | field stretched to the row's end (item width ignored), so the
-			// buttons go on the line below, in front of the resolution.
-			FUCK::InputText(label, &text);
-			const bool editing = FUCK::IsItemActive();
-			changed |= FUCK::IsItemDeactivatedAfterEdit();
-			if (FUCK::IsItemHovered()) {
-				FUCK::SetTooltip("$RDF_Form_Hint"_T);  // no % in the text: the host formats it printf-style
-			}
-			if (FUCK::Button(ICON_FA_MAGNIFYING_GLASS "##pick")) {
-				FUCK::OpenPopup("pick");
-			}
-			FUCK::SameLine();
-			if (FUCK::Button(ICON_FA_XMARK "##clear") && !text.empty()) {
-				text.clear();
-				changed = true;
-			}
-			FUCK::SameLine();
-			if (FUCK::BeginPopup("pick")) {
-				static std::string filter;
-				FUCK::InputText("$RDF_Form_Filter"_T, &filter);
-				std::string needle = filter;
-				std::transform(needle.begin(), needle.end(), needle.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-				FUCK::BeginChild("list", ImVec2(560.0f, 320.0f), true);
-				if (const auto catalog = forms::CatalogOf(f.formType); !catalog) {
-					FUCK::TextDisabled("%s", "$RDF_Form_Loading"_T);
-				} else {
-					int shown = 0;
-					for (const auto& e : *catalog) {
-						if (!needle.empty() && e.search.find(needle) == std::string::npos) {
-							continue;
-						}
-						if (++shown > 400) {
-							FUCK::TextDisabled("%s", "$RDF_Form_More"_T);
-							break;
-						}
-						if (FUCK::Selectable(e.label.c_str(), e.text == text)) {
-							text = e.text;
-							changed = true;
-							FUCK::CloseCurrentPopup();
-						}
-					}
-					if (shown == 0) {
-						FUCK::TextDisabled("%s", "$RDF_Form_NoMatch"_T);
-					}
-				}
-				FUCK::EndChild();
-				FUCK::EndPopup();
-			}
-			// what the text resolves to
-			if (editing) {
-				FUCK::TextDisabled("%s", "$RDF_Form_Editing"_T);
-			} else {
-				const auto r = forms::Peek(text, f.formType);
-				switch (r.status) {
-				case forms::Status::Empty: FUCK::TextDisabled("%s", "$RDF_Form_None"_T); break;
-				case forms::Status::Pending: FUCK::TextDisabled("%s", "$RDF_Form_Pending"_T); break;
-				case forms::Status::Found: FUCK::TextColored(ImVec4(0.5f, 0.9f, 0.5f, 1.0f), "%s %s", ICON_FA_CHECK, r.detail.c_str()); break;
-				default: FUCK::TextColored(ImVec4(1.0f, 0.55f, 0.35f, 1.0f), "%s %s", ICON_FA_TRIANGLE_EXCLAMATION, r.detail.c_str()); break;
-				}
-			}
-			return changed;
+			return FormInput(label, *f.str(State::Get().Draft()), f.formType);
 		}
 
 		void DrawField(const Field& f, const FieldText& t)
@@ -408,6 +347,14 @@ namespace rdf::game::menu
 					FUCK::SeparatorText("$RDF_Section_Keys"_T);
 					DodgeKey::Get().Draw();
 				}
+				if (page_ == Page::Rules) {
+					if (FUCK::Button(FUCK::IconText(ICON_FA_WAND_MAGIC_SPARKLES, "$RDF_CO_Open"_T))) {
+						caston_editor::Open();
+					}
+					if (FUCK::IsItemHovered()) {
+						FUCK::SetTooltip("$RDF_CO_OpenTip"_T);
+					}
+				}
 				const auto  fields = schema::Fields();
 				const auto& texts = Texts();
 				const char* section = nullptr;
@@ -465,6 +412,7 @@ namespace rdf::game::menu
 		for (auto& tool : Tools()) {
 			FUCK::RegisterTool(&tool);
 		}
+		caston_editor::Install();
 		logger::info("menu: {} pages registered with FLICK", Tools().size());
 	}
 }
