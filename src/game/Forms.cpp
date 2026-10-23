@@ -3,8 +3,11 @@
 #include <algorithm>
 #include <atomic>
 #include <cctype>
+#include <charconv>
 #include <format>
 #include <mutex>
+#include <optional>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -22,6 +25,20 @@ namespace rdf::game::forms
 			const auto b = s.find_first_not_of(" \t");
 			const auto e = s.find_last_not_of(" \t");
 			return b == std::string::npos ? std::string() : s.substr(b, e - b + 1);
+		}
+
+		// A hexadecimal id, "0x" optional, nothing after it; nullopt for anything else (no exceptions).
+		std::optional<std::uint32_t> ParseHex(std::string_view text)
+		{
+			if (text.size() > 2 && text[0] == '0' && (text[1] == 'x' || text[1] == 'X')) {
+				text.remove_prefix(2);
+			}
+			std::uint32_t value = 0;
+			const auto [end, ec] = std::from_chars(text.data(), text.data() + text.size(), value, 16);
+			if (text.empty() || ec != std::errc{} || end != text.data() + text.size()) {
+				return std::nullopt;
+			}
+			return value;
 		}
 
 		std::string Describe(const RE::TESForm* form)
@@ -49,16 +66,11 @@ namespace rdf::game::forms
 			if (const auto bar = text.find('|'); bar != std::string::npos) {
 				const auto plugin = Trim(text.substr(0, bar));
 				const auto idText = Trim(text.substr(bar + 1));
-				std::uint32_t id = 0;
-				try {
-					std::size_t used = 0;
-					id = static_cast<std::uint32_t>(std::stoul(idText, &used, 16));
-					if (used != idText.size()) {
-						throw std::invalid_argument("trailing characters");
-					}
-				} catch (...) {
+				const auto parsed = ParseHex(idText);
+				if (!parsed) {
 					return { nullptr, Status::BadText, std::format("'{}' is not a hexadecimal form id", idText) };
 				}
+				const std::uint32_t id = *parsed;
 				auto* handler = RE::TESDataHandler::GetSingleton();
 				if (!handler || !handler->LookupModByName(plugin)) {
 					return { nullptr, Status::NotFound, std::format("plugin '{}' is not loaded", plugin) };
@@ -71,11 +83,11 @@ namespace rdf::game::forms
 					return { nullptr, Status::NotFound, std::format("no form {:X} in {}", id, plugin) };
 				}
 			} else if (text.size() > 2 && text[0] == '0' && (text[1] == 'x' || text[1] == 'X')) {  // a runtime form id
-				try {
-					form = RE::TESForm::LookupByID(static_cast<RE::FormID>(std::stoul(text, nullptr, 16)));
-				} catch (...) {
+				const auto parsed = ParseHex(text);
+				if (!parsed) {
 					return { nullptr, Status::BadText, std::format("'{}' is not a hexadecimal form id", text) };
 				}
+				form = RE::TESForm::LookupByID(*parsed);
 				if (!form) {
 					return { nullptr, Status::NotFound, std::format("no form {}", text) };
 				}
