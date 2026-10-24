@@ -279,6 +279,8 @@ namespace rdf::game
 			c.shortfall = ParseShortfall(ReadString("Cost", "sShortfall", "Minimum"));
 			c.minimum = ReadFloat("Cost", "fMinimum", c.minimum, 0.0f, 1000.0f);
 			c.perfectRefund = ReadFloat("Cost", "fPerfectRefund", c.perfectRefund, 0.0f, 100.0f);
+			s.staminaCostKeyword = ReadString("Cost", "sStaminaKeyword", s.staminaCostKeyword);
+			s.magickaCostKeyword = ReadString("Cost", "sMagickaKeyword", s.magickaCostKeyword);
 			s.costKeyword = ReadString("Cost", "sCostKeyword", s.costKeyword);
 			s.costMultKeyword = ReadString("Cost", "sCostMultKeyword", s.costMultKeyword);
 			s.chainCostKeyword = ReadString("Cost", "sChainCostKeyword", s.chainCostKeyword);

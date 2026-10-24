@@ -4,9 +4,9 @@
 
 namespace rdf::game::effects
 {
-	// Spend / give back the configured dodge cost resource (no-op when the dodge is free).
-	void ChargeCost(RE::Actor* actor, float cost);
-	void RefundCost(RE::Actor* actor, float cost);
+	// Spend / give back `amount` of a dodge's cost resource.
+	void ChargeCost(RE::Actor* actor, RE::ActorValue resource, float amount);
+	void RefundCost(RE::Actor* actor, RE::ActorValue resource, float amount);
 
 	// Melee hit hook (ID 37673 + 0x3C0): while invulnerable, hits on the player are dropped.
 	bool InstallIFrames();

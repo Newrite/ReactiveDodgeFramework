@@ -206,6 +206,8 @@ namespace rdf::game::schema
 				Shortfall(),
 				Float(Page::Rules, "Cost", "fMinimum", RDF_F(price.minimum), 0.0f, 200.0f, "%.0f"),
 				Float(Page::Rules, "Cost", "fPerfectRefund", RDF_F(price.perfectRefund), 0.0f, 100.0f, "%.0f %%"),
+				Form(Page::Rules, "Cost", "sStaminaKeyword", RDF_S(staminaCostKeyword), RE::FormType::Keyword),
+				Form(Page::Rules, "Cost", "sMagickaKeyword", RDF_S(magickaCostKeyword), RE::FormType::Keyword),
 				Form(Page::Rules, "Cost", "sCostKeyword", RDF_S(costKeyword), RE::FormType::Keyword),
 				Form(Page::Rules, "Cost", "sCostMultKeyword", RDF_S(costMultKeyword), RE::FormType::Keyword),
 				Form(Page::Rules, "Cost", "sChainCostKeyword", RDF_S(chainCostKeyword), RE::FormType::Keyword),

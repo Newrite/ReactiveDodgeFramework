@@ -274,19 +274,17 @@ namespace rdf::game::effects
 		}
 	}
 
-	void ChargeCost(RE::Actor* actor, float cost)
+	void ChargeCost(RE::Actor* actor, RE::ActorValue resource, float amount)
 	{
-		const auto resource = Settings::Get().costResource;
-		if (resource && cost > 0.0f) {
-			actor->AsActorValueOwner()->DamageActorValue(*resource, cost);
+		if (amount > 0.0f) {
+			actor->AsActorValueOwner()->DamageActorValue(resource, amount);
 		}
 	}
 
-	void RefundCost(RE::Actor* actor, float cost)
+	void RefundCost(RE::Actor* actor, RE::ActorValue resource, float amount)
 	{
-		const auto resource = Settings::Get().costResource;
-		if (resource && cost > 0.0f) {
-			actor->AsActorValueOwner()->RestoreActorValue(*resource, cost);
+		if (amount > 0.0f) {
+			actor->AsActorValueOwner()->RestoreActorValue(resource, amount);
 		}
 	}
 

@@ -4,6 +4,7 @@
 #include "GraphCoordinator.h"
 #include "core/ReactiveCore.h"
 
+#include <array>
 #include <chrono>
 #include <functional>
 #include <memory>
@@ -85,7 +86,17 @@ namespace rdf::game
 		void              TriggerCastOn(RE::Actor* actor, caston::Trigger trigger, RE::Actor* attacker);
 		void              DrainCastOnAnnotations(RE::Actor* actor);
 		void              ApplyClipMotion(RE::Actor* actor);
+		// [Cost] what pays a dodge of `actor` now: sResource, or the resource keywords' choice (both: half each).
+		struct CostResources
+		{
+			std::array<RE::ActorValue, 2> values{};
+			int                           count{ 0 };
+		};
+		CostResources     ResourcesOf(RE::Actor* actor) const;
 		float             CostOf(RE::Actor* actor, int chainIndex, bool escape) const;
+		bool              CostAllowed(RE::Actor* actor, float cost) const;
+		void              Charge(RE::Actor* actor, float cost);
+		void              Refund(RE::Actor* actor, float amount);
 		bool              PerfectKeywordHeld(RE::Actor* actor) const;
 		graph::Layer      CastingLayer(RE::Actor* actor, std::uint8_t attackState) const;
 		bool              StaggerEscape(RE::Actor* actor);
@@ -102,7 +113,7 @@ namespace rdf::game
 		void              OnStopped(RE::Actor* actor);
 		void              Trace(RE::Actor* actor);
 		void              LogRejection(const Decision& d);
-		void              LogCost(RE::Actor* actor, float current) const;
+		void              LogCost(RE::Actor* actor) const;
 		static int        ClipIndex(float angleDeg, bool keepFacing, bool neutral);
 
 		std::unique_ptr<ReactiveCore> core_;
@@ -146,6 +157,7 @@ namespace rdf::game
 		float           clipLength_{ 0.667f };    // the dodge clip's length: fClipLength*, or its RDF_ClipLength
 		float           clipSpeed_{ 1.0f };       // its playback multiplier: fAnimSpeed, or its RDF_Speed
 		bool            stanceKept_{ false };
+		CostResources   chargedFrom_{};  // what charged_ was taken from (refunds go back there)
 		// this dodge's keyword amounts, read as it starts: window changes (s) and whether it may be perfect
 		float           iframeDelta_{ 0.0f };
 		float           perfectDelta_{ 0.0f };

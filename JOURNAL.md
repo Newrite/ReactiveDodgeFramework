@@ -691,3 +691,18 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   - Double dodges came from presses during a dodge, which bHoldPressesDuringDodge keeps for the chain window; presses
     before the start are already merged (StartDodge consumes them), and fDebounce merges same-button presses within 60 ms.
   - Checks: 112 tests. Deployed; not tried in game.
+* Cost resource keywords (2026-10-24): [Cost] sStaminaKeyword / sMagickaKeyword (any keyword source) override sResource,
+  even None; with both, half from each, and each half must pass sShortfall (Reflyem's split was 50/50 too). The agent
+  charges and refunds per resource (Charge / Refund, chargedFrom_); the max-percent term averages the payers' maxima.
+* Reflyem dodge audit (TKDodge config, DodgeCore is_allow_checks_for_dodge / success_dodge_handler) against RDF:
+  - Covered: the cost formula (weight, flat, percent, min/max, MGEF keyword), not-enough-resource, the resource
+    keywords, i-frames from an MGEF keyword, dodge in stagger with a keyword and its cost multiplier, MCO recovery, the
+    tapping dodge on Sprint with key-up delay, gamepad keys, ranged attacks not blocking, the bIsDodging re-entry guard,
+    dodge at attack start (sAttackStates Draw), cast-on-dodge (CastOn), step/roll animations (clip sets), TDM.
+  - Not covered:
+    - block dodge while casting, with a keyword that inverts it;
+    - a separate power-attack rule, with an inverting keyword;
+    - the stamina / magicka regen delay plus the HUD flash when a dodge empties the resource
+      (AIProcess::SetRegenerationDelay, 38526 = 0x14065A940, IDA);
+    - interrupting a cast on dodge;
+    - refusing while ControlMap movement / looking controls are disabled.

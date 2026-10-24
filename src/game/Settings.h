@@ -83,6 +83,10 @@ namespace rdf::game
 		// Keywords on magic effects whose summed magnitudes (Detrimental ones negative; inactive and dispelled effects
 		// left out; see MagicEffects.h) feed the formula: added to the base, a percent on the cost, a percent on
 		// fChainCostStep.
+		// An actor with one of these keywords (on it, a worn item or an active effect) pays its dodges with that resource
+		// instead of sResource (even a free dodge); with both, half from each.
+		std::string                   staminaCostKeyword;
+		std::string                   magickaCostKeyword;
 		std::string                   costKeyword;
 		std::string                   costMultKeyword;
 		std::string                   chainCostKeyword;
