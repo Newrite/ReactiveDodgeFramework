@@ -226,7 +226,7 @@ T = {
     "fPerfectRefund": ("Perfect dodge refund", "Возврат за идеальный додж"),
     "fPerfectRefund_Desc": ("Percent of the dodge's cost given back on a perfect dodge.", "Процент стоимости доджа, который возвращается при идеальном додже."),
     "fEscapeCostMult": ("Stagger escape cost multiplier", "Множитель цены выхода из стаггера"),
-    "fEscapeCostMult_Desc": ("The cost of a dodge out of a stagger is multiplied by this before the escape cost is added.", "Стоимость доджа из стаггера умножается на это, затем прибавляется цена выхода."),
+    "fEscapeCostMult_Desc": ("The whole cost of a dodge out of a stagger, the escape cost included, is multiplied by this.", "Вся стоимость доджа из стаггера, вместе с ценой выхода, умножается на это."),
     "fMinimum": ("Minimum to dodge", "Минимум для доджа"),
     "fMinimum_Desc": ("A dodge is refused below this much of the resource.", "Ниже этого значения ресурса додж не выполняется."),
     "bPerfectDodge": ("Perfect dodge", "Идеальный додж"),

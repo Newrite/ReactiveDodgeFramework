@@ -24,7 +24,7 @@ namespace rdf
 		float         min{ 0.0f };                 // fCostMin
 		float         max{ 0.0f };                 // fCostMax, 0 = no cap
 		float         escapeFlat{ 0.0f };          // [Stagger] fEscapeCost: added when the dodge cuts a stagger short
-		float         escapeMult{ 1.0f };          // [Stagger] fEscapeCostMult: x the cost when it does
+		float         escapeMult{ 1.0f };          // [Stagger] fEscapeCostMult: x the cost, escape part included, when it does
 		CostShortfall shortfall{ CostShortfall::Minimum };
 		float         minimum{ 10.0f };            // fMinimum (Minimum)
 		float         perfectRefund{ 0.0f };       // fPerfectRefund: % of the dodge's cost given back on a perfect dodge
@@ -42,7 +42,7 @@ namespace rdf
 
 	//   (fCost + fCostMaxPercent% x max + fCostWeightMult x equipped weight)
 	//   x (1 + fChainCostStep x chain index) x fOverencumberedMult (over-encumbered)
-	//   escaping a stagger: x fEscapeCostMult + max(0, fEscapeCost + the escape keyword's magnitudes)
+	//   escaping a stagger: (+ max(0, fEscapeCost + the escape keyword's magnitudes)) x fEscapeCostMult
 	//   clamped to [fCostMin, fCostMax] (fCostMax 0 = no cap), never below 0
 	inline float DodgeCost(const CostConfig& c, const CostInputs& in)
 	{
@@ -52,7 +52,7 @@ namespace rdf
 			cost *= c.overencumberedMult;
 		}
 		if (in.escape) {
-			cost = cost * c.escapeMult + std::max(0.0f, c.escapeFlat + in.escapeBonus);
+			cost = (cost + std::max(0.0f, c.escapeFlat + in.escapeBonus)) * c.escapeMult;
 		}
 		cost = std::max(cost, c.min);
 		if (c.max > 0.0f) {

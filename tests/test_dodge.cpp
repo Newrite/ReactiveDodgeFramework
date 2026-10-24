@@ -1122,7 +1122,9 @@ TEST(dodge_cost_formula_terms)
 	c.escapeFlat = 10.0f;
 	in.escape = true;
 	in.escapeBonus = -15.0f;  // the keyword's magnitudes may not make the escape part negative
-	CHECK(std::fabs(DodgeCost(c, in) - 90.0f) < 1e-3f);
+	CHECK(std::fabs(DodgeCost(c, in) - 90.0f) < 1e-3f);  // (180 + max(0, 10 - 15)) x 0.5
+	in.escapeBonus = 20.0f;
+	CHECK(std::fabs(DodgeCost(c, in) - 105.0f) < 1e-3f);  // (180 + 30) x 0.5
 	c.max = 50.0f;
 	CHECK(DodgeCost(c, in) == 50.0f);
 	c.min = 5.0f;
