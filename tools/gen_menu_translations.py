@@ -206,6 +206,27 @@ T = {
     "sResource_Magicka": ("Magicka", "Магия"),
     "fCost": ("Cost", "Стоимость"),
     "fCost_Desc": ("Amount spent per dodge.", "Сколько тратится за додж."),
+    "fCostMaxPercent": ("Cost: percent of the maximum", "Стоимость: процент от максимума"),
+    "fCostMaxPercent_Desc": ("Adds this percent of the resource's maximum to the cost.", "Добавляет к стоимости этот процент от максимума ресурса."),
+    "fCostWeightMult": ("Cost per equipped weight", "Стоимость за вес снаряжения"),
+    "fCostWeightMult_Desc": ("Adds the equipped weight times this to the cost.", "Добавляет к стоимости вес надетого снаряжения, умноженный на это число."),
+    "fChainCostStep": ("Chain cost step", "Удорожание в цепочке"),
+    "fChainCostStep_Desc": ("Each dodge further down a chain costs this much more: x (1 + step x its place in the chain).", "Каждый следующий додж в цепочке дороже: x (1 + шаг x его номер в цепочке)."),
+    "fOverencumberedMult": ("Over-encumbered multiplier", "Множитель при перегрузе"),
+    "fOverencumberedMult_Desc": ("The cost is multiplied by this while over-encumbered (the game's rule: the player only).", "Стоимость умножается на это при перегрузе (правило игры: только игрок)."),
+    "fCostMin": ("Cost floor", "Нижний предел стоимости"),
+    "fCostMin_Desc": ("The cost never goes below this.", "Стоимость не бывает ниже этого."),
+    "fCostMax": ("Cost cap", "Верхний предел стоимости"),
+    "fCostMax_Desc": ("The cost never goes above this; 0 = no cap.", "Стоимость не бывает выше этого; 0 = без предела."),
+    "sShortfall": ("Not enough resource", "Ресурса не хватает"),
+    "sShortfall_Desc": ("Refuse: the resource must cover the whole cost. Minimum: allowed from the minimum up, it drains what there is. Always: never refused.", "Refuse: ресурс должен покрыть всю стоимость. Minimum: разрешено от минимума, тратится сколько есть. Always: никогда не отказывать."),
+    "sShortfall_Refuse": ("Refuse", "Отказать"),
+    "sShortfall_Minimum": ("From the minimum", "От минимума"),
+    "sShortfall_Always": ("Always dodge", "Всегда доджить"),
+    "fPerfectRefund": ("Perfect dodge refund", "Возврат за идеальный додж"),
+    "fPerfectRefund_Desc": ("Percent of the dodge's cost given back on a perfect dodge.", "Процент стоимости доджа, который возвращается при идеальном додже."),
+    "fEscapeCostMult": ("Stagger escape cost multiplier", "Множитель цены выхода из стаггера"),
+    "fEscapeCostMult_Desc": ("The cost of a dodge out of a stagger is multiplied by this before the escape cost is added.", "Стоимость доджа из стаггера умножается на это, затем прибавляется цена выхода."),
     "fMinimum": ("Minimum to dodge", "Минимум для доджа"),
     "fMinimum_Desc": ("A dodge is refused below this much of the resource.", "Ниже этого значения ресурса додж не выполняется."),
     "bPerfectDodge": ("Perfect dodge", "Идеальный додж"),
@@ -466,7 +487,8 @@ def schema_keys(root):
     keys = set()
     for key in re.findall(r'"(?:Timing|IFrames|Motion|Steering|Graph|Cost|Jump|Stagger|Input|Dev)", "([A-Za-z]+)"', src):
         keys |= {key, key + "_Desc"}
-    for key, items in (("sOrientation", "Auto FaceMotion KeepFacing"), ("sResource", "None Stamina Magicka")):
+    for key, items in (("sOrientation", "Auto FaceMotion KeepFacing"), ("sResource", "None Stamina Magicka"),
+                       ("sShortfall", "Refuse Minimum Always")):
         keys |= {"%s_%s" % (key, c) for c in items.split()}
     keys |= {"Section_" + s for s in set(re.findall(r'Page::\w+, "(\w+)"', src))}
     keys |= {k for k in re.findall(r'"\$RDF_(\w+)"', menu) if not k.endswith("_")}

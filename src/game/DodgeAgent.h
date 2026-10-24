@@ -85,6 +85,7 @@ namespace rdf::game
 		void              TriggerCastOn(RE::Actor* actor, caston::Trigger trigger, RE::Actor* attacker);
 		void              DrainCastOnAnnotations(RE::Actor* actor);
 		void              ApplyClipMotion(RE::Actor* actor);
+		float             CostOf(RE::Actor* actor, int chainIndex, bool escape) const;
 		graph::Layer      CastingLayer(RE::Actor* actor, std::uint8_t attackState) const;
 		bool              StaggerEscape(RE::Actor* actor);
 		void              RetryDeferred(RE::Actor* actor);

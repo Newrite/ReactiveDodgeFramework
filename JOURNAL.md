@@ -644,3 +644,13 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   come through forms::Peek, and the walk is the usual one over actor, worn items and effects. The user never hit a data race reading keywords in
   such hooks in Reflyem. The keyword walk no longer checks the race separately: the actor's own HasKeyword already
   includes its race's keywords.
+* Dodge cost formula (2026-10-24), after reading Reflyem (DodgeCore calc_dodge_cost) and Dodge for All (ResolveDodgeValue):
+  - The formula: (fCost + fCostMaxPercent % of the resource's max + fCostWeightMult x equipped weight)
+    x (1 + fChainCostStep x chain index) x fOverencumberedMult. A stagger escape adds
+    x fEscapeCostMult + max(0, fEscapeCost + keyword magnitudes). The result is clamped to [fCostMin, fCostMax].
+  - Over-encumbrance is the engine's Actor::IsOverEncumbered (0x1405E18B0, IDA): the player only, never in god mode or
+    mounted.
+  - sShortfall: Refuse (must cover the whole cost), Minimum (the old rule: from fMinimum up), Always.
+  - fPerfectRefund gives back a percent of the dodge's charge on a perfect dodge.
+  - core/DodgeCost.h is engine-free, with tests (109). Settings.price holds it, and the menu has every key.
+  - Defaults keep the old price. Deployed; not tried in game. Keyword-driven cost from magic effects is the next step.

@@ -164,7 +164,9 @@ namespace rdf::game
 		if (dodgeWaits && !ownDodge && !view.cancelAnyTime && CastingLayer(actor, state.attackState) == graph::Layer::Bow) {
 			view.cancelAnyTime = true;
 		}
-		view.staminaOk = !settings.costResource || state.resource >= settings.minimum;
+		// [Cost] the dodge a press would start now: the next one of the chain while one runs.
+		view.staminaOk = !settings.costResource || !dodgeWaits ||
+		                 CostAllows(settings.price, state.resource, CostOf(actor, core_->DodgeRunning() ? core_->ChainCount() : 0, escapeStagger_));
 		const Decision decision = core_->Evaluate(view);
 		if (decision.reject == RejectReason::StaminaLow) {
 			LogCost(actor, state.resource);
@@ -420,6 +422,10 @@ namespace rdf::game
 			return;
 		}
 		perfectFired_ = true;
+		if (const float refund = charged_ * Settings::Get().price.perfectRefund * 0.01f; refund > 0.0f) {
+			effects::RefundCost(actor, refund);  // [Cost] fPerfectRefund
+			charged_ -= refund;
+		}
 		const auto ref = *attacker ? RE::TESObjectREFR::LookupByHandle(*attacker) : RE::NiPointer<RE::TESObjectREFR>{};
 		auto*      attackerActor = ref ? ref->As<RE::Actor>() : nullptr;
 		logger::info("{:08X}: perfect dodge at t={:.3f} against {:08X}", formID_, t, ref ? ref->GetFormID() : 0u);
@@ -454,13 +460,39 @@ namespace rdf::game
 		return ((octant % 8) + 8) % 8;  // F, FR, R, BR, B, BL, L, FL
 	}
 
+	// [Cost] what a dodge costs `actor` now (DodgeCost): the chain index of that dodge, and whether it cuts a stagger short.
+	float DodgeAgent::CostOf(RE::Actor* actor, int chainIndex, bool escape) const
+	{
+		const auto& settings = Settings::Get();
+		if (!settings.costResource) {
+			return 0.0f;
+		}
+		const auto resource = *settings.costResource;
+		CostInputs in;
+		if (settings.price.maxPercent > 0.0f) {
+			in.resourceMax = actor->AsActorValueOwner()->GetPermanentActorValue(resource) +
+			                 actor->GetActorValueModifier(RE::ACTOR_VALUE_MODIFIER::kTemporary, resource);
+		}
+		if (settings.price.weightMult > 0.0f) {
+			in.equippedWeight = actor->GetEquippedWeight();
+		}
+		in.chainIndex = chainIndex;
+		in.overencumbered = settings.price.overencumberedMult != 1.0f && actor->IsOverEncumbered();  // the engine's: the player only
+		in.escape = escape;
+		if (escape) {
+			in.escapeBonus = attack::StaggerEscapeCostBonus(actor);
+		}
+		return DodgeCost(settings.price, in);
+	}
+
 	void DodgeAgent::LogCost(RE::Actor* actor, float current) const
 	{
 		const auto& settings = Settings::Get();
 		auto*       owner = actor->AsActorValueOwner();
 		const auto  resource = *settings.costResource;  // only called after a cost rejection
-		DevLog("{:08X}: cost resource {} current={:.1f} permanent={:.1f} minimum={:.1f}", formID_, static_cast<int>(resource), current,
-			owner->GetPermanentActorValue(resource), settings.minimum);
+		DevLog("{:08X}: cost resource {} current={:.1f} permanent={:.1f} cost={:.1f} minimum={:.1f}", formID_, static_cast<int>(resource),
+			current, owner->GetPermanentActorValue(resource), CostOf(actor, core_->DodgeRunning() ? core_->ChainCount() : 0, escapeStagger_),
+			settings.price.minimum);
 	}
 
 	void DodgeAgent::LogRejection(const Decision& d)
@@ -586,10 +618,7 @@ namespace rdf::game
 			DevLog("{:08X}: dodge out of stagger after {:.2f}s", formID_, staggerAge_);
 		}
 		graph::LogEvents(settings.devLog);
-		float cost = settings.cost;
-		if (escapeStagger_) {   // [Stagger] the price of leaving a stagger
-			cost += std::max(0.0f, settings.stagger.escapeCost + attack::StaggerEscapeCostBonus(actor));
-		}
+		const float cost = settings.costResource ? CostOf(actor, d.kind == DecisionKind::ChainDodge ? core_->ChainCount() : 0, escapeStagger_) : 0.0f;
 		effects::ChargeCost(actor, cost);
 		charged_ = cost;
 		core_->Apply(d, true);

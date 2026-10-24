@@ -179,6 +179,16 @@ namespace rdf::game
 			return RE::ActorValue::kStamina;
 		}
 
+		CostShortfall ParseShortfall(const std::string& text)
+		{
+			if (_stricmp(text.c_str(), "Refuse") == 0) return CostShortfall::Refuse;
+			if (_stricmp(text.c_str(), "Always") == 0) return CostShortfall::Always;
+			if (_stricmp(text.c_str(), "Minimum") != 0) {
+				logger::warn("[Cost] sShortfall: unknown '{}', using Minimum", text);
+			}
+			return CostShortfall::Minimum;
+		}
+
 		void LoadTiming(Settings& s)
 		{
 			auto& t = s.core.timing;
@@ -245,8 +255,17 @@ namespace rdf::game
 			s.idleReplayChains = Split(ReadString("Input", "sIdleReplayChains", Join(s.idleReplayChains)));
 
 			s.costResource = ParseResource(ReadString("Cost", "sResource", "Stamina"));
-			s.cost = ReadFloat("Cost", "fCost", s.cost, 0.0f, 1000.0f);
-			s.minimum = ReadFloat("Cost", "fMinimum", s.minimum, 0.0f, 1000.0f);
+			auto& c = s.price;
+			c.flat = ReadFloat("Cost", "fCost", c.flat, 0.0f, 1000.0f);
+			c.maxPercent = ReadFloat("Cost", "fCostMaxPercent", c.maxPercent, 0.0f, 100.0f);
+			c.weightMult = ReadFloat("Cost", "fCostWeightMult", c.weightMult, 0.0f, 10.0f);
+			c.chainStep = ReadFloat("Cost", "fChainCostStep", c.chainStep, 0.0f, 10.0f);
+			c.overencumberedMult = ReadFloat("Cost", "fOverencumberedMult", c.overencumberedMult, 0.0f, 10.0f);
+			c.min = ReadFloat("Cost", "fCostMin", c.min, 0.0f, 1000.0f);
+			c.max = ReadFloat("Cost", "fCostMax", c.max, 0.0f, 1000.0f);
+			c.shortfall = ParseShortfall(ReadString("Cost", "sShortfall", "Minimum"));
+			c.minimum = ReadFloat("Cost", "fMinimum", c.minimum, 0.0f, 1000.0f);
+			c.perfectRefund = ReadFloat("Cost", "fPerfectRefund", c.perfectRefund, 0.0f, 100.0f);
 
 			auto& g = s.graph;
 			g.start = ReadString("Graph", "sEventStart", g.start);
@@ -345,7 +364,8 @@ namespace rdf::game
 			st.recoveryOpenEvents = Split(ReadString("Stagger", "sRecoveryOpenEvents", Join(st.recoveryOpenEvents)));
 			st.recoveryCloseEvents = Split(ReadString("Stagger", "sRecoveryCloseEvents", Join(st.recoveryCloseEvents)));
 			st.staggerStartEvents = Split(ReadString("Stagger", "sStaggerStartEvents", Join(st.staggerStartEvents)));
-			st.escapeCost = ReadFloat("Stagger", "fEscapeCost", st.escapeCost, 0.0f, 1000.0f);
+			s.price.escapeFlat = ReadFloat("Stagger", "fEscapeCost", s.price.escapeFlat, 0.0f, 1000.0f);
+			s.price.escapeMult = ReadFloat("Stagger", "fEscapeCostMult", s.price.escapeMult, 0.0f, 10.0f);
 			st.escapeCostKeyword = ReadString("Stagger", "sEscapeCostKeyword", st.escapeCostKeyword);
 		}
 		s.casting.drawKeyword = ReadString("Casting", "sDrawDuringDodgeKeyword", s.casting.drawKeyword);

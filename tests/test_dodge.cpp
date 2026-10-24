@@ -1,4 +1,5 @@
 #include "check.h"
+#include "core/DodgeCost.h"
 #include "sim.h"
 
 #include <cmath>
@@ -1097,4 +1098,46 @@ TEST(clip_run_speed_replans_the_hand_over_speed)
 	CHECK(std::fabs(plain - MotionConfig{}.runSpeed) < 10.0f);
 	CHECK(std::fabs(slow - 120.0f) < 10.0f);
 	CHECK(std::fabs(slowDistance - plainDistance) < 4.0f);  // the distance stays the dodge's
+}
+
+// ---- dodge cost ------------------------------------------------------------------------------
+
+TEST(dodge_cost_formula_terms)
+{
+	CostConfig c;  // defaults: the old fixed 20
+	CHECK(DodgeCost(c, {}) == 20.0f);
+	c.maxPercent = 10.0f;
+	c.weightMult = 0.5f;
+	CostInputs in;
+	in.resourceMax = 200.0f;
+	in.equippedWeight = 40.0f;
+	CHECK(std::fabs(DodgeCost(c, in) - (20.0f + 20.0f + 20.0f)) < 1e-4f);
+	c.chainStep = 0.5f;
+	in.chainIndex = 2;
+	CHECK(std::fabs(DodgeCost(c, in) - 60.0f * 2.0f) < 1e-4f);
+	c.overencumberedMult = 1.5f;
+	in.overencumbered = true;
+	CHECK(std::fabs(DodgeCost(c, in) - 180.0f) < 1e-3f);
+	c.escapeMult = 0.5f;
+	c.escapeFlat = 10.0f;
+	in.escape = true;
+	in.escapeBonus = -15.0f;  // the keyword's magnitudes may not make the escape part negative
+	CHECK(std::fabs(DodgeCost(c, in) - 90.0f) < 1e-3f);
+	c.max = 50.0f;
+	CHECK(DodgeCost(c, in) == 50.0f);
+	c.min = 5.0f;
+	c.max = 0.0f;
+	c.flat = 0.0f;
+	CHECK(DodgeCost(c, {}) == 5.0f);
+}
+
+TEST(dodge_cost_shortfall_modes)
+{
+	CostConfig c;
+	c.minimum = 10.0f;
+	CHECK(CostAllows(c, 12.0f, 30.0f) && !CostAllows(c, 8.0f, 5.0f));  // Minimum
+	c.shortfall = CostShortfall::Refuse;
+	CHECK(!CostAllows(c, 12.0f, 30.0f) && CostAllows(c, 30.0f, 30.0f));
+	c.shortfall = CostShortfall::Always;
+	CHECK(CostAllows(c, 0.0f, 30.0f));
 }

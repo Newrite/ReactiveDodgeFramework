@@ -3,6 +3,7 @@
 #include <functional>
 
 #include "core/Config.h"
+#include "core/DodgeCost.h"
 
 #include <optional>
 #include <string>
@@ -63,8 +64,7 @@ namespace rdf::game
 		// [Cost]
 		// Resource a dodge costs; nullopt = free.
 		std::optional<RE::ActorValue> costResource{ RE::ActorValue::kStamina };
-		float                         cost{ 20.0f };
-		float                         minimum{ 10.0f };  // refuse below this much of costResource
+		CostConfig                    price;  // [Cost] the formula (and [Stagger] fEscapeCost / fEscapeCostMult)
 		// After a dodge hands over into running, the engine re-accelerates from below the dodge's exit
 		// speed; its speed may not drop under the exit speed decaying at this rate (u/s^2, 0 = off).
 		float carryDecay{ 1200.0f };
@@ -114,7 +114,6 @@ namespace rdf::game
 			std::vector<std::string> staggerStartEvents{ "staggerStart", "StaggerPlayer" };
 			// The price: fEscapeCost on top of [Cost] fCost (same resource), plus the magnitudes of the active magic effects
 			// carrying sEscapeCostKeyword (negative ones make it cheaper; the total never goes below 0).
-			float       escapeCost{ 0.0f };
 			std::string escapeCostKeyword;
 		} stagger;
 

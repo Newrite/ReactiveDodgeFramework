@@ -63,6 +63,7 @@ namespace rdf::game::schema
 
 		constexpr std::array<const char*, 3> kOrientations{ "Auto", "FaceMotion", "KeepFacing" };
 		constexpr std::array<const char*, 3> kResources{ "None", "Stamina", "Magicka" };
+		constexpr std::array<const char*, 3> kShortfalls{ "Refuse", "Minimum", "Always" };  // CostShortfall order
 
 		Field Orientation()
 		{
@@ -88,6 +89,15 @@ namespace rdf::game::schema
 				                          std::optional<RE::ActorValue>(RE::ActorValue::kStamina);
 			};
 			x.choices = kResources;
+			return x;
+		}
+
+		Field Shortfall()
+		{
+			Field x{ Page::Rules, "Cost", "sShortfall", Kind::Choice };
+			x.getChoice = [](const Settings& s) { return static_cast<int>(s.price.shortfall); };
+			x.setChoice = [](Settings& s, int v) { s.price.shortfall = static_cast<CostShortfall>(std::clamp(v, 0, 2)); };
+			x.choices = kShortfalls;
 			return x;
 		}
 
@@ -150,8 +160,16 @@ namespace rdf::game::schema
 				Float(Page::Animation, "Graph", "fFirstPersonLookScale", RDF_F(firstPersonLookScale), -2.0f, 2.0f, "%.2f"),
 				// --- rules and cost
 				Resource(),
-				Float(Page::Rules, "Cost", "fCost", RDF_F(cost), 0.0f, 200.0f, "%.0f"),
-				Float(Page::Rules, "Cost", "fMinimum", RDF_F(minimum), 0.0f, 200.0f, "%.0f"),
+				Float(Page::Rules, "Cost", "fCost", RDF_F(price.flat), 0.0f, 200.0f, "%.0f"),
+				Float(Page::Rules, "Cost", "fCostMaxPercent", RDF_F(price.maxPercent), 0.0f, 50.0f, "%.1f %%"),
+				Float(Page::Rules, "Cost", "fCostWeightMult", RDF_F(price.weightMult), 0.0f, 2.0f, "%.2f"),
+				Float(Page::Rules, "Cost", "fChainCostStep", RDF_F(price.chainStep), 0.0f, 2.0f, "%.2f"),
+				Float(Page::Rules, "Cost", "fOverencumberedMult", RDF_F(price.overencumberedMult), 0.0f, 5.0f, "%.2f"),
+				Float(Page::Rules, "Cost", "fCostMin", RDF_F(price.min), 0.0f, 200.0f, "%.0f"),
+				Float(Page::Rules, "Cost", "fCostMax", RDF_F(price.max), 0.0f, 500.0f, "%.0f"),
+				Shortfall(),
+				Float(Page::Rules, "Cost", "fMinimum", RDF_F(price.minimum), 0.0f, 200.0f, "%.0f"),
+				Float(Page::Rules, "Cost", "fPerfectRefund", RDF_F(price.perfectRefund), 0.0f, 100.0f, "%.0f %%"),
 				Bool(Page::Rules, "Perfect", "bPerfectDodge", RDF_B(perfect.enabled)),
 				Float(Page::Rules, "Perfect", "fPerfectWindowStart", RDF_F(perfect.windowStart), 0.0f, 1.0f, "%.2f s"),
 				Float(Page::Rules, "Perfect", "fPerfectWindowEnd", RDF_F(perfect.windowEnd), 0.0f, 1.0f, "%.2f s"),
@@ -170,7 +188,8 @@ namespace rdf::game::schema
 				Bool(Page::Rules, "Jump", "bBlockDuringDodge", RDF_B(blockJumpDuringDodge)),
 				Bool(Page::Rules, "Stagger", "bDodgeFromStagger", RDF_B(dodgeFromStagger)),
 				Float(Page::Rules, "Stagger", "fDodgeDelay", RDF_F(staggerDodgeDelay), -1.0f, 3.0f, "%.2f s"),
-				Float(Page::Rules, "Stagger", "fEscapeCost", RDF_F(stagger.escapeCost), 0.0f, 100.0f, "%.0f"),
+				Float(Page::Rules, "Stagger", "fEscapeCost", RDF_F(price.escapeFlat), 0.0f, 100.0f, "%.0f"),
+				Float(Page::Rules, "Stagger", "fEscapeCostMult", RDF_F(price.escapeMult), 0.0f, 5.0f, "%.2f"),
 				Form(Page::Rules, "Stagger", "sNoEscapeKeyword", RDF_S(stagger.noEscapeKeyword), RE::FormType::Keyword),
 				Named(Form(Page::Rules, "Stagger", "sAnyTimeKeyword", RDF_S(stagger.anyTimeKeyword), RE::FormType::Keyword), "Stagger_sAnyTimeKeyword"),
 				Form(Page::Rules, "Stagger", "sDelayKeyword", RDF_S(stagger.delayKeyword), RE::FormType::Keyword),
