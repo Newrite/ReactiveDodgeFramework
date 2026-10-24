@@ -102,6 +102,7 @@ namespace rdf::game
 			graph::SetLayer(actor, graph::Layer::Root);
 			ClearAttackFromDodge(actor);
 			effects::SetInvulnerable(actor, false);
+			effects::SetPerfectOpen(actor, false);
 			graph::UnregisterSink(actor);
 			effects::TakeDodgedHit(actor);
 		}
@@ -846,6 +847,40 @@ namespace rdf::game
 				}
 				return;
 			}
+			if (kind >= 6 && kind <= 9) {
+				std::optional<ClipDriving> driving;
+				const char*                name = "";
+				switch (kind) {
+				case 6:
+					name = "RDF_Warp (degrees 0..90)";
+					if (const auto v = clip_motion::ParseWarp(payload)) {
+						driving.emplace().warpMax = *v;
+					}
+					break;
+				case 7:
+					name = "RDF_RunSpeed (units/s 0..1500)";
+					if (const auto v = clip_motion::ParseRunSpeed(payload)) {
+						driving.emplace().runSpeed = *v;
+					}
+					break;
+				case 8:
+					name = "RDF_YawRate (<face>[,<startup>] deg/s)";
+					driving = clip_motion::ParseYawRates(payload);
+					break;
+				default:
+					name = "RDF_Commit (seconds 0..0.5)";
+					if (const auto v = clip_motion::ParseCommit(payload)) {
+						driving.emplace().commitTime = *v;
+					}
+					break;
+				}
+				if (!driving) {
+					DevLog("{:08X}: {} '{}' is malformed: ignored", formID_, name, payload);
+				} else if (core_->OnClipDriving(*driving)) {
+					DevLog("{:08X}: clip {} '{}' at t={:.3f}", formID_, name, payload, core_->ActionTime());
+				}
+				return;
+			}
 			if (kind == 5) {
 				const auto steering = clip_motion::ParseSteering(payload);
 				if (!steering) {
@@ -1008,7 +1043,14 @@ namespace rdf::game
 		requestedDistance_ = step.command.speed * dt;
 		requestedHeading_ = core_->Heading();
 
-		effects::SetInvulnerable(actor, settings.iFrames && core_->Invulnerable(settings.iFrameStart, settings.iFrameEnd));
+		const bool invulnerable = settings.iFrames && core_->Invulnerable(settings.iFrameStart, settings.iFrameEnd);
+		if (invulnerable && !invulnerable_) {
+			attack::RefreshAttackerRules(actor);  // [Rules] who may hit through the i-frames, read once as they begin
+		}
+		invulnerable_ = invulnerable;
+		effects::SetInvulnerable(actor, invulnerable);
+		effects::SetPerfectOpen(actor, settings.perfect.enabled && core_->DodgeRunning() &&
+		                                   core_->PerfectWindow(settings.perfect.windowStart, settings.perfect.windowEnd));
 
 		if (step.completed && !exitSent_) {
 			graph::SendExit(actor, layer_);
@@ -1032,6 +1074,8 @@ namespace rdf::game
 		graph::SetChainIndex(actor, 0);  // the chain is over, whatever ended it
 		graph::SetLayer(actor, graph::Layer::Root);
 		effects::SetInvulnerable(actor, false);
+		effects::SetPerfectOpen(actor, false);
+		invulnerable_ = false;
 		awaitingEnter_ = false;
 		charged_ = 0.0f;
 		if (driver_) {

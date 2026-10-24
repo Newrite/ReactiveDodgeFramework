@@ -119,12 +119,17 @@ When a dodge's clip sends `RDF_Windows`, that dodge ignores the ini timers (`fCh
 | `RDF_ExitBlend.<run>,<block>,<attack>` (or one value for all three) | at 0: this clip's own `[Timing] fExitBlend` / `fActionExitBlend` / `fAttackExitBlend`: how long its momentum takes to run out when cancelled into running, a block or an attack (0.02 .. 1 s; the attack's may be 0). Until the dodge starts exiting |
 | `RDF_ArmStance.<share>` | at 0: this clip's own `fArmStance` / `fArmStanceFirstPerson` (0 = the clip moves the arms, 1 = the weapon stance stays). Only where there is a stance to keep, as at the start (a drawn weapon, or `bArmStanceWhenSheathed`) |
 | `RDF_Steer.<startup>,<active>,<recovery>[,<maxDeviation>]` | at 0: this clip's own `[Steering] fRateStartup / fRateActive / fRateRecovery` (deg/s, 0 .. 10000) and, if given, `fMaxDeviation` (deg, 0 .. 180). 0 everywhere = the clip keeps its start direction |
+| `RDF_Warp.<degrees>` | at 0: this clip's own `[Steering] fOrientationWarpMax` (0 .. 90): how far the body turns past a directional clip toward the real path. A set that reuses one clip for two directions wants up to 45, a full 8-direction set 22.5 or 0 |
+| `RDF_RunSpeed.<units per second>` | at 0: this clip's own `[Motion] fRunSpeed` (0 .. 1500): the speed a dodge with move input held hands over into running (its curve is planned again to end at it) |
+| `RDF_YawRate.<face>[,<startup>]` | at 0: this clip's own `fFaceYawRate` and, if given, `fStartupYawRate` (deg/s): how fast the body follows the path |
+| `RDF_Commit.<seconds>` | at 0: this clip's own `fDirectionCommitTime` (0 .. 0.5): how long the live input still re-aims the dodge outright |
 | `RDF_JumpOpen` | the jump (`[Jump] bBlockDuringDodge`) may cut the dodge from here. Without it the exit window decides; it only opens the jump earlier, it cannot hold it shut past `RDF_ExitOpen` |
 | `RDF_ClipLength.<seconds>` | at 0: the clip's real length, replacing `[Graph] fClipLength` / `fClipLengthFirstPerson`, so `RDF_DodgeSpeed` makes it span its own timeline. The clip's length cannot be read from the game: a clip played for the first time is still streaming in and reports 0 |
 
-`RDF_Motion`, `RDF_ClipLength`, `RDF_Speed`, `RDF_ExitBlend`, `RDF_ArmStance` and `RDF_Steer` carry their numbers
+`RDF_Motion`, `RDF_ClipLength`, `RDF_Speed`, `RDF_ExitBlend`, `RDF_ArmStance`, `RDF_Steer`, `RDF_Warp`, `RDF_RunSpeed`,
+`RDF_YawRate` and `RDF_Commit` carry their numbers
 after the first '.': the graph splits an annotation there, and the rest arrives as the event's payload, so each name is
-registered once. `[Graph] bClipMotion=0` ignores all six (`RDF_JumpOpen` is a window and always counts). A
+registered once. `[Graph] bClipMotion=0` ignores all of them (`RDF_JumpOpen` is a window and always counts). A
 malformed or out-of-range one is ignored and logged with `bDevLog`. Limits: distance 0..5000, each phase 0..5 s with a
 total of at least 0.05 s, length 0.05..10 s.
 

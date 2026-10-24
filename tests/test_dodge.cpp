@@ -1059,3 +1059,42 @@ TEST(clip_jump_open_opens_the_jump_before_the_exit_window)
 	CHECK(s.core.JumpWindowOpen());
 	CHECK(!s.core.ClipAnnotated());  // the jump alone does not switch the clip's other windows to annotations
 }
+
+TEST(clip_driving_payloads_parse_and_reject)
+{
+	using namespace rdf::clip_motion;
+	CHECK(ParseWarp("45") && !ParseWarp("100"));
+	CHECK(ParseRunSpeed("420") && !ParseRunSpeed("-1"));
+	CHECK(ParseCommit("0.1") && !ParseCommit("1"));
+	const auto both = ParseYawRates("500,2000");
+	CHECK(both && *both->faceYawRate == 500.0f && *both->startupYawRate == 2000.0f);
+	const auto face = ParseYawRates("300");
+	CHECK(face && !face->startupYawRate);
+	CHECK(!ParseYawRates("1,2,3") && !ParseYawRates(""));
+}
+
+TEST(clip_run_speed_replans_the_hand_over_speed)
+{
+	const auto endSpeed = [](std::optional<float> run) {
+		Config c;
+		c.policy.exitFrom = 99.0f;  // run the curve to its end with input held
+		Sim s(c);
+		s.Frame(kDt64, Dir(0), { CommandKind::Dodge });
+		if (run) {
+			ClipDriving d;
+			d.runSpeed = *run;
+			CHECK(s.core.OnClipDriving(d));
+		}
+		float last = 0.0f;
+		while (s.core.DodgeRunning()) {
+			s.Frame(kDt64, Dir(0));
+			last = s.core.Speed();
+		}
+		return std::tuple{ last, Length(s.pos) };
+	};
+	const auto [plain, plainDistance] = endSpeed(std::nullopt);
+	const auto [slow, slowDistance] = endSpeed(120.0f);
+	CHECK(std::fabs(plain - MotionConfig{}.runSpeed) < 10.0f);
+	CHECK(std::fabs(slow - 120.0f) < 10.0f);
+	CHECK(std::fabs(slowDistance - plainDistance) < 4.0f);  // the distance stays the dodge's
+}

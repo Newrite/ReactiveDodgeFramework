@@ -625,3 +625,17 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
     spec "clipSettings" / "jumpOpen").
   - Checks: 105 tests; check_rdf_nemesis 105/105; staged validate_rdf 277/277.
   - Deployed; Pandora must be run again. Cost and the graph's constant blends stay out, as the user asked.
+* Attacker rules and more per-clip driving (2026-10-24):
+  - `[Rules] sPerfectOnlyKeyword`: an attacker with it is dodged only inside the dodger's perfect window.
+    `sUndodgeableKeyword`: an attacker with it is never dodged. Both use the same keyword sources as the other keyword
+    rules.
+  - When a dodger's i-frames begin, the main thread classifies every high-process actor and the player
+    (attack::RefreshAttackerRules -> effects::UpdateAttackerRules, by handle; dead handles are dropped). The i-frame
+    hooks (melee 37673, projectiles, explosions, Precision) now ask effects::Dodges(target, attacker). That reads the
+    cached rule and the new per-dodger "perfect window open" set, published every tick beside SetInvulnerable, so no
+    keyword walk runs off the main thread.
+  - New clip annotations: `RDF_Warp.<deg>`, `RDF_RunSpeed.<u/s>` (replans the hand-over speed, keeping the distance),
+    `RDF_YawRate.<face>[,<startup>]` and `RDF_Commit.<s>`. All live in MotionDriver members reset at Begin;
+    annotate_clips / build_clip_set write them as constants.
+  - Checks: 107 tests; check_rdf_nemesis 105/105; staged validate_rdf 285/285.
+  - Deployed; Pandora must be run again. Not tried in game.

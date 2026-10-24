@@ -21,7 +21,14 @@ namespace rdf
 		origin_ = WrapAngle(s.heading);
 		keepFacing_ = s.keepFacing;
 		holdFacing_ = s.keepFacing && s.holdFacing;
-		warp_ = s.keepFacing && s.warp && cfg_.steering.orientationWarpMax > 0.0f;
+		runSpeed_ = cfg_.motion.runSpeed;
+		faceYawRate_ = cfg_.steering.faceYawRate;
+		startupYawRate_ = cfg_.steering.startupYawRate;
+		commitTime_ = cfg_.steering.commitTime;
+		warpMax_ = cfg_.steering.orientationWarpMax;
+		warpWanted_ = s.keepFacing && s.warp;
+		warp_ = warpWanted_ && warpMax_ > 0.0f;
+		distance_ = cfg_.motion.distance;
 		clipAngle_ = s.clipAngle;
 		warpOffset_ = 0.0f;
 		exitFrom_ = -1.0f;
@@ -82,7 +89,7 @@ namespace rdf
 
 	float MotionDriver::YawRate(DodgePhase phase) const
 	{
-		return (phase == DodgePhase::Startup ? cfg_.steering.startupYawRate : cfg_.steering.faceYawRate) * kDegToRad;
+		return (phase == DodgePhase::Startup ? startupYawRate_ : faceYawRate_) * kDegToRad;
 	}
 
 	MotionCommand MotionDriver::Step(float t0, float t1, float dt, DodgePhase phase, const DriverInput& in)
@@ -94,7 +101,7 @@ namespace rdf
 		}
 
 		// Commit window: the direction is still being chosen, so the live input re-aims the dodge outright.
-		const bool committing = t0 < cfg_.steering.commitTime && in.hasMove && steering_.Strength(in.moveMagnitude) > 0.0f;
+		const bool committing = t0 < commitTime_ && in.hasMove && steering_.Strength(in.moveMagnitude) > 0.0f;
 		if (committing) {
 			steering_.Reset(in.moveHeading);
 			origin_ = steering_.Heading();
@@ -119,7 +126,7 @@ namespace rdf
 		warpOffset_ = 0.0f;
 		const float weight = WarpWeight(t1);
 		if (warp_) {
-			const float limit = cfg_.steering.orientationWarpMax * kDegToRad;
+			const float limit = warpMax_ * kDegToRad;
 			float       rest = AngleDelta(WrapAngle(heldFacing_ + clipAngle_), steering_.Heading());
 			rest = std::fabs(rest) < 1e-4f ? 0.0f : rest;  // the clip already runs along the path
 			warpOffset_ = std::clamp(rest, -limit, limit) * weight;
@@ -162,8 +169,9 @@ namespace rdf
 		timing_.startup = timing.startup;
 		timing_.active = timing.active;
 		timing_.recovery = timing.recovery;
+		distance_ = distance;
 		auto motion = cfg_.motion;
-		motion.distance = distance;
+		motion.distance = distance_;
 		profile_.Plan(timing_, motion, carrySpeed_, exitSpeed_);
 		retargeted_ = false;  // the recovery may start later now: the exit speed is decided there again
 	}
@@ -173,6 +181,32 @@ namespace rdf
 		steering_.SetRates(steering.rates[0], steering.rates[1], steering.rates[2]);
 		if (steering.maxDeviation) {
 			maxDeviation_ = *steering.maxDeviation;
+		}
+	}
+
+	void MotionDriver::SetDriving(const ClipDriving& d)
+	{
+		if (d.warpMax) {
+			warpMax_ = *d.warpMax;
+			warp_ = warpWanted_ && warpMax_ > 0.0f;
+		}
+		if (d.faceYawRate) {
+			faceYawRate_ = *d.faceYawRate;
+		}
+		if (d.startupYawRate) {
+			startupYawRate_ = *d.startupYawRate;
+		}
+		if (d.commitTime) {
+			commitTime_ = *d.commitTime;
+		}
+		if (d.runSpeed) {
+			runSpeed_ = *d.runSpeed;
+			// A dodge planned to hand over into running ends at the new speed; one planned to stop is unchanged. Not once
+			// it is exiting: the blend-out already runs toward its own speed.
+			if (!exiting_ && exitSpeed_ > 0.0f) {
+				exitSpeed_ = runSpeed_;
+				Replan(timing_, distance_);
+			}
 		}
 	}
 

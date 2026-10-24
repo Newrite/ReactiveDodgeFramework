@@ -43,6 +43,58 @@ namespace rdf::game::effects
 			return std::ranges::find(g_invulnerable, handle) != g_invulnerable.end();
 		}
 
+		// ---- actors whose perfect window is open (main thread writes, hooks read), as the i-frame list
+		std::shared_mutex          g_perfectLock;
+		std::vector<std::uint32_t> g_perfect;
+		std::atomic<int>           g_perfectCount{ 0 };
+
+		bool IsPerfectOpen(const RE::TESObjectREFR* ref)
+		{
+			if (!ref || g_perfectCount.load(std::memory_order_acquire) == 0) {
+				return false;
+			}
+			const auto       handle = HandleOf(ref);
+			std::shared_lock lock(g_perfectLock);
+			return std::ranges::find(g_perfect, handle) != g_perfect.end();
+		}
+
+		// ---- [Rules] attackers whose hits the i-frames treat differently, by attacker handle (main thread writes)
+		std::shared_mutex                                g_rulesLock;
+		std::unordered_map<std::uint32_t, AttackerRule>  g_rules;
+		std::atomic<bool>                                g_anyRules{ false };
+
+		AttackerRule RuleOf(std::uint32_t attacker)
+		{
+			if (!attacker || !g_anyRules.load(std::memory_order_acquire)) {
+				return AttackerRule::Normal;
+			}
+			std::shared_lock lock(g_rulesLock);
+			const auto       it = g_rules.find(attacker);
+			return it == g_rules.end() ? AttackerRule::Normal : it->second;
+		}
+
+		// The i-frames dodge this hit: the target is invulnerable, and the attacker's rule allows it (a perfect-only
+		// attacker only inside the target's perfect window, an undodgeable one never).
+		bool Dodges(const RE::TESObjectREFR* target, std::uint32_t attacker)
+		{
+			if (!IsInvulnerable(target)) {
+				return false;
+			}
+			switch (RuleOf(attacker)) {
+			case AttackerRule::Undodgeable:
+				DevLog("i-frames: {:08X} is undodgeable, its hit on {:08X} lands", attacker, target->GetFormID());
+				return false;
+			case AttackerRule::PerfectOnly:
+				if (!IsPerfectOpen(target)) {
+					DevLog("i-frames: {:08X} needs a perfect dodge, its hit on {:08X} lands", attacker, target->GetFormID());
+					return false;
+				}
+				return true;
+			default:
+				return true;
+			}
+		}
+
 		// ---- hits the i-frames dodged, per dodger (any thread), for the perfect-dodge check on the main thread
 		std::mutex                                       g_dodgedHitsLock;
 		std::unordered_map<std::uint32_t, std::uint32_t> g_dodgedHits;  // dodger handle -> attacker handle (0 = unknown)
@@ -58,8 +110,8 @@ namespace rdf::game::effects
 
 		void HitThunk(RE::Actor* victim, RE::HitData* hit)
 		{
-			if (IsInvulnerable(victim)) {
-				NoteDodgedHit(victim, hit ? hit->aggressor.native_handle() : 0);
+			if (const auto attacker = hit ? hit->aggressor.native_handle() : 0u; Dodges(victim, attacker)) {
+				NoteDodgedHit(victim, attacker);
 				return;
 			}
 			g_originalHit(victim, hit);
@@ -123,7 +175,7 @@ namespace rdf::game::effects
 			if (!p || !target) {
 				return false;
 			}
-			if (IsInvulnerable(target)) {
+			if (Dodges(target, p->GetProjectileRuntimeData().shooter.native_handle())) {
 				const auto dodger = HandleOf(target);
 				if (remember) {
 					Remember(p, HandleOf(p), dodger);
@@ -223,9 +275,10 @@ namespace rdf::game::effects
 
 		bool LineOfSightThunk(RE::Explosion* explosion, RE::NiPoint3* from, RE::Actor* target)
 		{
-			if (IsInvulnerable(target)) {
+			const auto owner = explosion ? explosion->GetExplosionRuntimeData().actorOwner.native_handle() : 0u;
+			if (Dodges(target, owner)) {
 				DevLog("i-frames: explosion {:08X} skips {:08X}", explosion ? explosion->GetFormID() : 0u, target->GetFormID());
-				NoteDodgedHit(target, explosion ? explosion->GetExplosionRuntimeData().actorOwner.native_handle() : 0);
+				NoteDodgedHit(target, owner);
 				return false;
 			}
 			return g_lineOfSight(explosion, from, target);
@@ -304,7 +357,7 @@ namespace rdf::game::effects
 		}
 		const auto result = api->AddPreHitCallback(SKSE::GetPluginHandle(), [](const PRECISION_API::PrecisionHitData& hit) {
 			PRECISION_API::PreHitCallbackReturn ret;
-			if (IsInvulnerable(hit.target)) {
+			if (Dodges(hit.target, HandleOf(hit.attacker))) {
 				ret.bIgnoreHit = true;
 				NoteDodgedHit(hit.target, HandleOf(hit.attacker));
 				DevLog("i-frames: Precision hit from {:08X} ignored", hit.attacker ? hit.attacker->GetFormID() : 0u);
@@ -337,6 +390,41 @@ namespace rdf::game::effects
 			g_invulnerable.erase(it);
 		}
 		g_invulnerableCount.store(static_cast<int>(g_invulnerable.size()), std::memory_order_release);
+	}
+
+	void SetPerfectOpen(RE::Actor* actor, bool open)
+	{
+		const auto       handle = HandleOf(actor);
+		std::unique_lock lock(g_perfectLock);
+		const auto       it = std::ranges::find(g_perfect, handle);
+		if (open && it == g_perfect.end() && handle) {
+			g_perfect.push_back(handle);
+		} else if (!open && it != g_perfect.end()) {
+			g_perfect.erase(it);
+		}
+		g_perfectCount.store(static_cast<int>(g_perfect.size()), std::memory_order_release);
+	}
+
+	void UpdateAttackerRules(const std::vector<std::pair<std::uint32_t, AttackerRule>>& rules)
+	{
+		std::unique_lock lock(g_rulesLock);
+		for (const auto& [handle, rule] : rules) {
+			if (rule == AttackerRule::Normal) {
+				g_rules.erase(handle);
+			} else {
+				g_rules.insert_or_assign(handle, rule);
+			}
+		}
+		// a handle that no longer resolves never comes back
+		std::erase_if(g_rules, [](const auto& entry) { return !RE::TESObjectREFR::LookupByHandle(entry.first); });
+		g_anyRules.store(!g_rules.empty(), std::memory_order_release);
+	}
+
+	void ClearAttackerRules()
+	{
+		std::unique_lock lock(g_rulesLock);
+		g_rules.clear();
+		g_anyRules.store(false, std::memory_order_release);
 	}
 
 	void ClearInvulnerable()

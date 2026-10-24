@@ -167,6 +167,10 @@ namespace rdf::game
 			std::string anyTimePowerKeyword;
 			// [Rules] sNoDodgeKeyword: an actor with this keyword (same sources) cannot dodge at all.
 			std::string noDodgeKeyword;
+			// [Rules] an attacker with sPerfectOnlyKeyword is dodged only by a perfect dodge (inside the perfect window);
+			// one with sUndodgeableKeyword is never dodged (its hits pass the i-frames). Same sources as the others.
+			std::string perfectOnlyKeyword;
+			std::string undodgeableKeyword;
 		} attackCancel;
 
 		// [Perfect]: a hit the i-frames dodge inside this part of the dodge (seconds from its start) is a perfect

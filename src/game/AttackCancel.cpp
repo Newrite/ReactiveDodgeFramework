@@ -1,5 +1,6 @@
 #include "AttackCancel.h"
 
+#include "Effects.h"
 #include "Forms.h"
 #include "MagicEffects.h"
 #include "Settings.h"
@@ -91,6 +92,35 @@ namespace rdf::game::attack
 	float StaggerEscapeCostBonus(RE::Actor* actor)
 	{
 		return magic::Query(actor, { .keyword = forms::Get<RE::BGSKeyword>(Settings::Get().stagger.escapeCostKeyword) }, magic::Reading::Authored).total;
+	}
+
+	void RefreshAttackerRules(RE::Actor* dodger)
+	{
+		const auto& ac = Settings::Get().attackCancel;
+		auto*       perfectOnly = forms::Get<RE::BGSKeyword>(ac.perfectOnlyKeyword);
+		auto*       undodgeable = forms::Get<RE::BGSKeyword>(ac.undodgeableKeyword);
+		if (!perfectOnly && !undodgeable) {
+			effects::ClearAttackerRules();
+			return;
+		}
+		using Rule = effects::AttackerRule;
+		std::vector<std::pair<std::uint32_t, Rule>> rules;
+		const auto classify = [&](RE::Actor* a) {
+			if (!a || a == dodger || a->IsDead()) {
+				return;
+			}
+			const auto rule = undodgeable && HasKeyword(a, undodgeable) ? Rule::Undodgeable :
+			                  perfectOnly && HasKeyword(a, perfectOnly) ? Rule::PerfectOnly :
+			                                                              Rule::Normal;
+			rules.emplace_back(a->GetHandle().native_handle(), rule);
+		};
+		if (auto* lists = RE::ProcessLists::GetSingleton()) {
+			for (auto& handle : lists->highActorHandles) {
+				classify(handle.get().get());
+			}
+		}
+		classify(RE::PlayerCharacter::GetSingleton());
+		effects::UpdateAttackerRules(rules);
 	}
 
 	bool DrawDuringDodge(RE::Actor* actor)

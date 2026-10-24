@@ -45,7 +45,8 @@ namespace rdf::game::graph
 	// 1 RDF_CastOnPerfectDodge, 2 RDF_CastOnClip (the clip places its own moments); tag = the annotation's payload.
 	void DrainCastOn(RE::Actor* actor, const std::function<void(int kind, std::string_view tag)>& sink);
 	// The clip's own settings seen since the last call, in order: kind 0 RDF_Motion, 1 RDF_ClipLength, 2 RDF_Speed,
-	// 3 RDF_ExitBlend, 4 RDF_ArmStance, 5 RDF_Steer; payload = the numbers after the first '.'.
+	// 3 RDF_ExitBlend, 4 RDF_ArmStance, 5 RDF_Steer, 6 RDF_Warp, 7 RDF_RunSpeed, 8 RDF_YawRate, 9 RDF_Commit; payload = the
+	// numbers after the first '.'.
 	void DrainClipMotion(RE::Actor* actor, const std::function<void(int kind, std::string_view payload)>& sink);
 	// RDF_DodgeSpeed (bound to every dodge clip's playback speed): the running clip follows at once.
 	void SetPlaybackSpeed(RE::Actor* actor, float speed);

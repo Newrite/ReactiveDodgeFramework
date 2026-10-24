@@ -50,6 +50,9 @@ namespace rdf
 		void          Replan(const Timing& timing, float distance);
 		// The clip's own steering (RDF_Steer): rates per phase and, if given, the max deviation. Until the next Begin.
 		void          SetSteering(const ClipSteering& steering);
+		// The clip's own warp limit, run speed, yaw rates and commit time (each one when set). The run speed replans the
+		// curve's exit speed (before an exit); until the next Begin.
+		void          SetDriving(const ClipDriving& driving);
 
 		float Speed() const { return speed_; }
 		float Heading() const { return steering_.Heading(); }
@@ -62,7 +65,7 @@ namespace rdf
 		float Peak() const { return profile_.Peak(); }
 
 	private:
-		float ExitSpeed(bool moveHeld) const { return moveHeld ? cfg_.motion.runSpeed : 0.0f; }
+		float ExitSpeed(bool moveHeld) const { return moveHeld ? runSpeed_ : 0.0f; }
 		float YawRate(DodgePhase phase) const;
 		float WarpWeight(float t) const;
 		bool  ResolveSteering(const DriverInput& in, float& desired, float& magnitude);
@@ -72,6 +75,14 @@ namespace rdf
 		float         carrySpeed_{ 0.0f };
 		float         exitSpeed_{ 0.0f };   // the one planned at the start (RetargetExit may change it later)
 		float         maxDeviation_{ 180.0f };  // deg: the ini's, or the clip's (SetSteering)
+		// the ini's, or the clip's (SetDriving)
+		float         runSpeed_{ 300.0f };
+		float         faceYawRate_{ 720.0f };     // deg/s
+		float         startupYawRate_{ 3600.0f }; // deg/s
+		float         commitTime_{ 0.06f };
+		float         warpMax_{ 22.5f };          // deg
+		bool          warpWanted_{ false };       // keep facing with warp asked for: warp_ once warpMax_ > 0
+		float         distance_{ 300.0f };        // what the curve is planned to cover
 		Steering      steering_;
 		MotionProfile profile_;
 		float         facing_{ 0.0f };

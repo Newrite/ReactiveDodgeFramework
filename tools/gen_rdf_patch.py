@@ -36,7 +36,8 @@ EVENTS += CASTON_EVENTS
 # "RDF_ClipLength.<seconds>", "RDF_Speed.<multiplier>", "RDF_ExitBlend.<run>,<block>,<attack>", "RDF_ArmStance.<share>",
 # "RDF_Steer.<startup>,<active>,<recovery>[,<maxDeviation>]", split at the first '.' like the CastOn ones (the numbers
 # arrive as the payload).
-MOTION_EVENTS = ["RDF_Motion", "RDF_ClipLength", "RDF_Speed", "RDF_ExitBlend", "RDF_ArmStance", "RDF_Steer"]
+MOTION_EVENTS = ["RDF_Motion", "RDF_ClipLength", "RDF_Speed", "RDF_ExitBlend", "RDF_ArmStance", "RDF_Steer", "RDF_Warp",
+                 "RDF_RunSpeed", "RDF_YawRate", "RDF_Commit"]
 EVENTS += MOTION_EVENTS
 # Sent by the plugin on a perfect dodge (to the player and to the attacker); registered so behaviors, OAR and other
 # plugins' graph-event sinks receive them (NotifyAnimationGraph drops a name the graph does not know).

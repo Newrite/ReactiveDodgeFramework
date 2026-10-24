@@ -162,6 +162,8 @@ namespace rdf::game::schema
 				Float(Page::Rules, "Perfect", "fPerfectSlowMotionEaseOut", RDF_F(perfect.slowMotionEaseOut), 0.0f, 1.0f, "%.2f s"),
 				Float(Page::Rules, "Perfect", "fPerfectSlowMotionCooldown", RDF_F(perfect.slowMotionCooldown), 0.0f, 10.0f, "%.1f s"),
 				Form(Page::Rules, "Rules", "sNoDodgeKeyword", RDF_S(attackCancel.noDodgeKeyword), RE::FormType::Keyword),
+				Form(Page::Rules, "Rules", "sPerfectOnlyKeyword", RDF_S(attackCancel.perfectOnlyKeyword), RE::FormType::Keyword),
+				Form(Page::Rules, "Rules", "sUndodgeableKeyword", RDF_S(attackCancel.undodgeableKeyword), RE::FormType::Keyword),
 				Bool(Page::Rules, "AttackCancel", "bDodgeInRecovery", RDF_B(core.policy.cancelInRecovery)),
 				Form(Page::Rules, "AttackCancel", "sAnyTimeKeyword", RDF_S(attackCancel.anyTimeKeyword), RE::FormType::Keyword),
 				Form(Page::Rules, "AttackCancel", "sAnyTimePowerKeyword", RDF_S(attackCancel.anyTimePowerKeyword), RE::FormType::Keyword),

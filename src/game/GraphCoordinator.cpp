@@ -60,7 +60,7 @@ namespace rdf::game::graph
 		// The clip's own settings (ANIMATION_CONTRACT.md 5): "RDF_Motion.<numbers>", "RDF_ClipLength.<seconds>" ..., split the
 		// same way; the index is the kind DrainClipMotion reports.
 		constexpr std::array kMotionNames{ "RDF_Motion"sv, "RDF_ClipLength"sv, "RDF_Speed"sv, "RDF_ExitBlend"sv, "RDF_ArmStance"sv,
-			"RDF_Steer"sv };
+			"RDF_Steer"sv, "RDF_Warp"sv, "RDF_RunSpeed"sv, "RDF_YawRate"sv, "RDF_Commit"sv };
 
 		template <std::size_t N>
 		bool PayloadEvent(const std::array<std::string_view, N>& names, std::string_view tag, std::string_view payload, int& kind,

@@ -25,7 +25,8 @@ fClipLength with them for this clip's dodge, ANIMATION_CONTRACT.md 5):
     RDF_Speed.<multiplier>     only with --speed: the clip's own fAnimSpeed (playback x this, the timeline unchanged)
 
 and, when given (the same for every clip of the run; not measured): --exitBlend "<run>,<block>,<attack>" (RDF_ExitBlend),
---armStance <share> (RDF_ArmStance), --steer "<startup>,<active>,<recovery>[,<maxDeviation>]" (RDF_Steer), and
+--armStance <share> (RDF_ArmStance), --steer "<startup>,<active>,<recovery>[,<maxDeviation>]" (RDF_Steer), --warp <deg>
+(RDF_Warp), --runSpeed <u/s> (RDF_RunSpeed), --yawRate "<face>[,<startup>]" (RDF_YawRate), --commit <s> (RDF_Commit), and
 --jumpOpen <seconds> or "exit" (RDF_JumpOpen at that time, or at the clip's RDF_ExitOpen).
 
 Existing RDF_* annotations are replaced, so re-running is idempotent; other annotations
@@ -130,7 +131,8 @@ def render(notes):
 
 
 # Constant per-clip settings: option -> annotation name (the value is written after the '.').
-SETTINGS = {"exitBlend": "RDF_ExitBlend", "armStance": "RDF_ArmStance", "steer": "RDF_Steer"}
+SETTINGS = {"exitBlend": "RDF_ExitBlend", "armStance": "RDF_ArmStance", "steer": "RDF_Steer", "warp": "RDF_Warp",
+            "runSpeed": "RDF_RunSpeed", "yawRate": "RDF_YawRate", "commit": "RDF_Commit"}
 
 
 def annotate(clip, rule, drop=(), with_motion=True, distance_scale=1.0, speed=None, settings=None, jump_open=None):
@@ -222,6 +224,10 @@ def main(argv):
     ap.add_argument("--exitBlend", default=None, help='RDF_ExitBlend: "<run>,<block>,<attack>" or one value')
     ap.add_argument("--armStance", default=None, help="RDF_ArmStance: the stance share 0..1")
     ap.add_argument("--steer", default=None, help='RDF_Steer: "<startup>,<active>,<recovery>[,<maxDeviation>]"')
+    ap.add_argument("--warp", default=None, help="RDF_Warp: the clips' own fOrientationWarpMax (deg)")
+    ap.add_argument("--runSpeed", default=None, help="RDF_RunSpeed: the clips' own fRunSpeed")
+    ap.add_argument("--yawRate", default=None, help='RDF_YawRate: "<face>[,<startup>]" deg/s')
+    ap.add_argument("--commit", default=None, help="RDF_Commit: the clips' own fDirectionCommitTime (s)")
     ap.add_argument("--jumpOpen", default=None, help='RDF_JumpOpen at this clip time, or "exit" (= RDF_ExitOpen)')
     args = ap.parse_args(argv)
 

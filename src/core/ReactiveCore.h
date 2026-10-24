@@ -103,6 +103,8 @@ namespace rdf
 		bool       OnClipExitBlends(const std::array<float, 3>& blends);
 		// RDF_Steer: the current dodge's steering rates (and max deviation).
 		bool       OnClipSteering(const ClipSteering& steering);
+		// RDF_Warp / RDF_RunSpeed / RDF_YawRate / RDF_Commit: the current dodge's driving (each one when set).
+		bool       OnClipDriving(const ClipDriving& driving);
 		// The current dodge's phases and blend-outs: the ini's, or the clip's own.
 		const Timing& DodgeTiming() const { return timing_; }
 		// The jump may cut the dodge: the clip's RDF_JumpOpen once it fired, else the exit window.

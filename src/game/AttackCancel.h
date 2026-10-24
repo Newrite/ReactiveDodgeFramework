@@ -23,6 +23,10 @@ namespace rdf::game::attack
 	// `inactiveEffects`: also effects their spell's conditions switched off, and dispelled ones (the engine's way).
 	bool ActorHasKeyword(RE::Actor* actor, RE::BGSKeyword* keyword, bool inactiveEffects = false);
 
+	// [Rules] sPerfectOnlyKeyword / sUndodgeableKeyword: the rules of the actors that may hit `dodger` now (every actor in
+	// high process, and the player), handed to the i-frame hooks. Main thread, when the dodger's i-frames begin.
+	void RefreshAttackerRules(RE::Actor* dodger);
+
 	// [Casting] keywords (same sources): a dodge keeps the actor's bow draw / its cast going.
 	bool DrawDuringDodge(RE::Actor* actor);
 	bool CastDuringDodge(RE::Actor* actor);

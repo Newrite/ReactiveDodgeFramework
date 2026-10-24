@@ -14,11 +14,26 @@ namespace rdf
 	//   RDF_ExitBlend.<run>,<block>,<attack> (or one for all)  its own fExitBlend / fActionExitBlend / fAttackExitBlend
 	//   RDF_ArmStance.<share>                                  its own fArmStance (fArmStanceFirstPerson)
 	//   RDF_Steer.<startup>,<active>,<recovery>[,<maxDeviation>]  its own [Steering] fRate* (deg/s) and fMaxDeviation
+	//   RDF_Warp.<degrees>                                     its own fOrientationWarpMax
+	//   RDF_RunSpeed.<units per second>                        its own [Motion] fRunSpeed
+	//   RDF_YawRate.<face>[,<startup>]                         its own fFaceYawRate (and fStartupYawRate), deg/s
+	//   RDF_Commit.<seconds>                                   its own fDirectionCommitTime
 	// The graph splits an annotation at its first '.', so the numbers arrive as the event's payload.
 	struct ClipMotion
 	{
 		std::optional<float>                distance;
 		std::optional<std::array<float, 3>> phases;  // startup, active, recovery
+	};
+
+	// How the dodge drives the actor besides its path (the clip's RDF_Warp / RunSpeed / YawRate / Commit): each one replaces
+	// the ini's value when set.
+	struct ClipDriving
+	{
+		std::optional<float> warpMax;         // deg
+		std::optional<float> runSpeed;        // units/s
+		std::optional<float> faceYawRate;     // deg/s
+		std::optional<float> startupYawRate;  // deg/s
+		std::optional<float> commitTime;      // s
 	};
 
 	struct ClipSteering
@@ -40,6 +55,9 @@ namespace rdf
 		inline constexpr float kMaxBlend = 1.0f;
 		inline constexpr float kMaxRate = 10000.0f;
 		inline constexpr float kMaxDeviation = 180.0f;
+		inline constexpr float kMaxWarp = 90.0f;     // the ini ranges
+		inline constexpr float kMaxRunSpeed = 1500.0f;
+		inline constexpr float kMaxCommit = 0.5f;
 
 		inline std::optional<float> Number(std::string_view& text)
 		{
@@ -170,5 +188,24 @@ namespace rdf
 		inline std::optional<float> ParseLength(std::string_view text) { return ParseInRange(text, kMinLength, kMaxLength); }
 		inline std::optional<float> ParseSpeed(std::string_view text) { return ParseInRange(text, kMinSpeed, kMaxSpeed); }
 		inline std::optional<float> ParseArmStance(std::string_view text) { return ParseInRange(text, 0.0f, 1.0f); }
+		inline std::optional<float> ParseWarp(std::string_view text) { return ParseInRange(text, 0.0f, kMaxWarp); }
+		inline std::optional<float> ParseRunSpeed(std::string_view text) { return ParseInRange(text, 0.0f, kMaxRunSpeed); }
+		inline std::optional<float> ParseCommit(std::string_view text) { return ParseInRange(text, 0.0f, kMaxCommit); }
+
+		// "<face>" or "<face>,<startup>"
+		inline std::optional<ClipDriving> ParseYawRates(std::string_view text)
+		{
+			std::array<float, 2> v{};
+			const auto           n = List(text, v);
+			if (!n || v[0] < 0.0f || v[0] > kMaxRate || (*n == 2 && (v[1] < 0.0f || v[1] > kMaxRate))) {
+				return std::nullopt;
+			}
+			ClipDriving d;
+			d.faceYawRate = v[0];
+			if (*n == 2) {
+				d.startupYawRate = v[1];
+			}
+			return d;
+		}
 	}
 }

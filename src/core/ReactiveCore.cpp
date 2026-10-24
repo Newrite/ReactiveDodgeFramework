@@ -227,6 +227,15 @@ namespace rdf
 		return true;
 	}
 
+	bool ReactiveCore::OnClipDriving(const ClipDriving& driving)
+	{
+		if (!action_.Running()) {
+			return false;
+		}
+		driver_.SetDriving(driving);
+		return true;
+	}
+
 	void ReactiveCore::Apply(const Decision& d, bool accepted)
 	{
 		if (!accepted) {

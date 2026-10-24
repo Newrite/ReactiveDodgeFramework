@@ -49,6 +49,14 @@
   <append path="#0087/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
   <append path="#0085/eventNames"><hkcstring>RDF_Steer</hkcstring></append>
   <append path="#0087/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
+  <append path="#0085/eventNames"><hkcstring>RDF_Warp</hkcstring></append>
+  <append path="#0087/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
+  <append path="#0085/eventNames"><hkcstring>RDF_RunSpeed</hkcstring></append>
+  <append path="#0087/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
+  <append path="#0085/eventNames"><hkcstring>RDF_YawRate</hkcstring></append>
+  <append path="#0087/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
+  <append path="#0085/eventNames"><hkcstring>RDF_Commit</hkcstring></append>
+  <append path="#0087/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
   <append path="#0085/eventNames"><hkcstring>RDF_PerfectDodge</hkcstring></append>
   <append path="#0087/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
   <append path="#0085/eventNames"><hkcstring>RDF_PerfectDodged</hkcstring></append>

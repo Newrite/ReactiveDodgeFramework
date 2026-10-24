@@ -123,6 +123,10 @@
 				<hkcstring>RDF_ExitBlend</hkcstring>
 				<hkcstring>RDF_ArmStance</hkcstring>
 				<hkcstring>RDF_Steer</hkcstring>
+				<hkcstring>RDF_Warp</hkcstring>
+				<hkcstring>RDF_RunSpeed</hkcstring>
+				<hkcstring>RDF_YawRate</hkcstring>
+				<hkcstring>RDF_Commit</hkcstring>
 				<hkcstring>RDF_PerfectDodge</hkcstring>
 				<hkcstring>RDF_PerfectDodged</hkcstring>
 				<hkcstring>RDF_DodgeCancelOpen</hkcstring>
