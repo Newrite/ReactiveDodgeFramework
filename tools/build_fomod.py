@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 r"""Packs Reactive Dodge Framework as a FOMOD archive (MO2 / Vortex installer with choices).
 
-    python tools/build_fomod.py [--no-copy] [--no-greatsword]
+    python tools/build_fomod.py [--no-copy] [--no-greatsword] [--no-clips]
 
 Inputs (build and generate them first: xmake build, tools/gen_rdf_patch.py, tools/gen_rdf_nemesis.py):
   build/windows/x64/releasedbg/ReactiveDodgeFramework.dll/.pdb, dist/ReactiveDodgeFramework.ini (defaults),
@@ -140,7 +140,11 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--no-copy", action="store_true", help="do not copy the archive into MO2's downloads folder")
     ap.add_argument("--no-greatsword", action="store_true", help="leave the greatsword dodge set (and its installer option) out")
+    ap.add_argument("--no-clips", action="store_true",
+                    help="a public build: none of the placeholder clips (base set and greatsword set are not redistributable)")
     args = ap.parse_args()
+    if args.no_clips:
+        args.no_greatsword = True
     ver = version()
     if os.path.isdir(STAGE):
         shutil.rmtree(STAGE)
@@ -166,7 +170,8 @@ def main():
         if name.endswith(".html"):  # only the pages (an archive made from them may sit beside them)
             copy(os.path.join(ROOT, "docs", "ru", "html", name), os.path.join(docs, "html", name))
     clips = os.path.join("meshes", "actors", "character", "animations", "RDF")
-    copy(os.path.join(MODS, "AI - Reactive Dodge Framework", clips), os.path.join(core, clips))
+    if not args.no_clips:
+        copy(os.path.join(MODS, "AI - Reactive Dodge Framework", clips), os.path.join(core, clips))
 
     copy(os.path.join(ROOT, "behavior", "Pandora_Engine", "mod", "rdf"), os.path.join(STAGE, "10 Pandora", "Pandora_Engine", "mod", "rdf"))
     copy(os.path.join(ROOT, "behavior", "Nemesis_Engine", "mod", "rdfm"), os.path.join(STAGE, "11 Nemesis", "Nemesis_Engine", "mod", "rdfm"))
@@ -186,7 +191,7 @@ def main():
     with open(os.path.join(fomod, "ModuleConfig.xml"), "w", encoding="utf-8", newline="\r\n") as f:
         f.write(CONFIG.format(name=NAME, sets="" if args.no_greatsword else SETS_GROUP))
 
-    archive = os.path.join(ROOT, "_work", "fomod", "ReactiveDodgeFramework-%s.zip" % ver)
+    archive = os.path.join(ROOT, "_work", "fomod", "ReactiveDodgeFramework-%s%s.zip" % (ver, "-noclips" if args.no_clips else ""))
     if os.path.exists(archive):
         os.remove(archive)
     count = 0
