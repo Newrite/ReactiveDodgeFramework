@@ -24,6 +24,10 @@ fClipLength with them for this clip's dodge, ANIMATION_CONTRACT.md 5):
     RDF_ClipLength.<seconds>   the clip's duration (a clip still streaming in reports 0 to the game)
     RDF_Speed.<multiplier>     only with --speed: the clip's own fAnimSpeed (playback x this, the timeline unchanged)
 
+and, when given (the same for every clip of the run; not measured): --exitBlend "<run>,<block>,<attack>" (RDF_ExitBlend),
+--armStance <share> (RDF_ArmStance), --steer "<startup>,<active>,<recovery>[,<maxDeviation>]" (RDF_Steer), and
+--jumpOpen <seconds> or "exit" (RDF_JumpOpen at that time, or at the clip's RDF_ExitOpen).
+
 Existing RDF_* annotations are replaced, so re-running is idempotent; other annotations
 (animmotion, PIE, ...) are kept. A clip whose root motion is missing is reported and skipped.
 Times are clip-local seconds. Writes behavior/clip_windows.json as a record of what was written.
@@ -125,10 +129,16 @@ def render(notes):
                    f"{INDENT}\t<hkparam name=\"text\">{s}</hkparam>\n{INDENT}</hkobject>" for t, s in notes)
 
 
-def annotate(clip, rule, drop=(), with_motion=True, distance_scale=1.0, speed=None):
+# Constant per-clip settings: option -> annotation name (the value is written after the '.').
+SETTINGS = {"exitBlend": "RDF_ExitBlend", "armStance": "RDF_ArmStance", "steer": "RDF_Steer"}
+
+
+def annotate(clip, rule, drop=(), with_motion=True, distance_scale=1.0, speed=None, settings=None, jump_open=None):
     """drop: prefixes of the clip's own annotations to remove (another framework's events, see build_clip_set).
     with_motion: also write RDF_Motion / RDF_ClipLength; distance_scale multiplies the measured distance.
-    speed: write RDF_Speed.<speed> (the clip's own fAnimSpeed); None = none."""
+    speed: write RDF_Speed.<speed> (the clip's own fAnimSpeed); None = none.
+    settings: {"exitBlend": "0.2,0.15,0", "armStance": 0, "steer": "900,260,600,90"} (any subset) written as they are.
+    jump_open: RDF_JumpOpen at this clip time, or "exit" = at the clip's RDF_ExitOpen; None = none."""
     xml = WORK / (clip.stem + ".xml")
     hkxc(clip, xml, "xml")
     text = xml.read_text(encoding="utf-8")
@@ -155,6 +165,15 @@ def annotate(clip, rule, drop=(), with_motion=True, distance_scale=1.0, speed=No
         if not 0.1 <= speed <= 5.0:
             sys.exit(f"--speed {speed}: the plugin takes 0.1 .. 5")
         extra.append((0.0, f"RDF_Speed.{speed:g}"))
+    for key, value in (settings or {}).items():
+        if key not in SETTINGS:
+            sys.exit(f"unknown clip setting '{key}' (known: {', '.join(SETTINGS)})")
+        numbers = str(value).replace(" ", "")
+        if not re.fullmatch(r"[0-9.]+(,[0-9.]+)*", numbers):
+            sys.exit(f"{key} '{value}': numbers separated by commas")
+        extra.append((0.0, f"{SETTINGS[key]}.{numbers}"))
+    if jump_open is not None:
+        extra.append((marks["RDF_ExitOpen"] if jump_open == "exit" else float(jump_open), "RDF_JumpOpen"))
     kept = [(t, s) for t, s in notes if not s.startswith(("RDF_",) + tuple(drop))]
     merged = sorted(kept + [(t, s) for s, t in marks.items()] + extra, key=lambda n: n[0])
     body = f'<hkparam name="annotations" numelements="{len(merged)}">{render(merged)}\n\t\t\t\t\t</hkparam>'
@@ -177,6 +196,10 @@ def annotate(clip, rule, drop=(), with_motion=True, distance_scale=1.0, speed=No
         result["clipLength"] = round(duration, 4)
     if speed is not None:
         result["speed"] = speed
+    if settings:
+        result["settings"] = dict(settings)
+    if jump_open is not None:
+        result["RDF_JumpOpen"] = round(marks["RDF_ExitOpen"] if jump_open == "exit" else float(jump_open), 4)
     return result, None
 
 
@@ -196,6 +219,10 @@ def main(argv):
     ap.add_argument("--no-motion", action="store_true", help="do not write RDF_Motion / RDF_ClipLength")
     ap.add_argument("--distanceScale", type=float, default=1.0, help="multiplies the measured root-motion distance")
     ap.add_argument("--speed", type=float, default=None, help="write RDF_Speed.<x>: the clips' own fAnimSpeed")
+    ap.add_argument("--exitBlend", default=None, help='RDF_ExitBlend: "<run>,<block>,<attack>" or one value')
+    ap.add_argument("--armStance", default=None, help="RDF_ArmStance: the stance share 0..1")
+    ap.add_argument("--steer", default=None, help='RDF_Steer: "<startup>,<active>,<recovery>[,<maxDeviation>]"')
+    ap.add_argument("--jumpOpen", default=None, help='RDF_JumpOpen at this clip time, or "exit" (= RDF_ExitOpen)')
     args = ap.parse_args(argv)
 
     WORK.mkdir(parents=True, exist_ok=True)
@@ -204,8 +231,9 @@ def main(argv):
     if not args.no_motion:
         report["motionRule"] = {"plateau": PLATEAU, "distanceScale": args.distanceScale}
     for clip in sorted(args.dir.glob("*.hkx")):
+        settings = {k: getattr(args, k) for k in SETTINGS if getattr(args, k) is not None}
         marks, problem = annotate(clip, rule, with_motion=not args.no_motion, distance_scale=args.distanceScale,
-                                  speed=args.speed)
+                                  speed=args.speed, settings=settings, jump_open=args.jumpOpen)
         if problem:
             print(f"skip {clip.name}: {problem}")
             continue

@@ -207,6 +207,26 @@ namespace rdf
 		return true;
 	}
 
+	bool ReactiveCore::OnClipExitBlends(const std::array<float, 3>& blends)
+	{
+		if (!action_.Running() || action_.Exiting()) {
+			return false;
+		}
+		timing_.exitBlend = blends[0];
+		timing_.actionExitBlend = blends[1];
+		timing_.attackExitBlend = blends[2];
+		return true;
+	}
+
+	bool ReactiveCore::OnClipSteering(const ClipSteering& steering)
+	{
+		if (!action_.Running()) {
+			return false;
+		}
+		driver_.SetSteering(steering);
+		return true;
+	}
+
 	void ReactiveCore::Apply(const Decision& d, bool accepted)
 	{
 		if (!accepted) {
@@ -231,15 +251,15 @@ namespace rdf
 			Consume(d);
 			{
 				const bool  attack = d.kind != DecisionKind::Block;
-				const float blend = attack ? cfg_.timing.attackExitBlend : cfg_.timing.actionExitBlend;
+				const float blend = attack ? timing_.attackExitBlend : timing_.actionExitBlend;
 				action_.RequestExit(blend);
 				driver_.BeginStop(action_.Time(), blend, attack && MoveHeld());
 			}
 			intoAction_ = true;
 			break;
 		case DecisionKind::LocomotionExit:
-			action_.RequestExit(cfg_.timing.exitBlend);
-			driver_.BeginExit(action_.Time(), MoveHeld());
+			action_.RequestExit(timing_.exitBlend);
+			driver_.BeginExit(action_.Time(), MoveHeld(), timing_.exitBlend);
 			break;
 		}
 	}

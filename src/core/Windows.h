@@ -17,6 +17,7 @@ namespace rdf
 		ExitOpen,
 		PerfectStart,  // the clip's own perfect-dodge window (optional: without it the ini window counts)
 		PerfectEnd,
+		JumpOpen,  // the jump may cut the dodge from here (without it: the exit window)
 	};
 
 	struct OpenWindows
@@ -36,6 +37,10 @@ namespace rdf
 
 		void On(WindowEvent e)
 		{
+			if (e == WindowEvent::JumpOpen) {  // on its own: the clip's other windows stay as they are
+				jump_ = true;
+				return;
+			}
 			auto& w = marks_.emplace(marks_.value_or(OpenWindows{}));
 			switch (e) {
 			case WindowEvent::Marker: break;
@@ -47,6 +52,7 @@ namespace rdf
 			case WindowEvent::ExitOpen: w.exit = true; break;
 			case WindowEvent::PerfectStart: perfect_ = true; break;
 			case WindowEvent::PerfectEnd: perfect_ = false; break;
+			default: break;
 			}
 		}
 
@@ -54,10 +60,13 @@ namespace rdf
 		bool                              Invulnerable() const { return invulnerable_; }
 		// Set once the clip announced a perfect window: whether it is open now.
 		const std::optional<bool>&        Perfect() const { return perfect_; }
+		// Set once the clip announced RDF_JumpOpen.
+		bool                              JumpOpen() const { return jump_; }
 
 	private:
 		std::optional<OpenWindows> marks_;
 		bool                       invulnerable_{ false };
 		std::optional<bool>        perfect_;
+		bool                       jump_{ false };
 	};
 }

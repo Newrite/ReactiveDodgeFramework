@@ -987,3 +987,75 @@ TEST(clip_motion_is_ignored_after_the_startup_and_reset_by_a_chain)
 	CHECK(c.log.back().decision.kind == DecisionKind::ChainDodge);
 	CHECK(c.core.DodgeTiming().startup == Timing{}.startup);  // the chained clip announces its own
 }
+
+TEST(clip_settings_payloads_parse_and_reject)
+{
+	using namespace rdf::clip_motion;
+	const auto three = ParseExitBlends("0.3,0.1,0");
+	CHECK(three && (*three)[0] == 0.3f && (*three)[1] == 0.1f && (*three)[2] == 0.0f);
+	const auto one = ParseExitBlends("0.2");
+	CHECK(one && (*one)[0] == 0.2f && (*one)[1] == 0.2f && (*one)[2] == 0.2f);
+	CHECK(!ParseExitBlends("0.3,0.1") && !ParseExitBlends("0,0.1,0.1") && !ParseExitBlends("2"));
+	const auto steer = ParseSteering("900,0,600,45");
+	CHECK(steer && steer->rates[1] == 0.0f && steer->maxDeviation && *steer->maxDeviation == 45.0f);
+	CHECK(ParseSteering("900,260,600") && !ParseSteering("900,260,600")->maxDeviation);
+	CHECK(!ParseSteering("900") && !ParseSteering("1,2,3,200") && !ParseSteering("1,2,3,4,5"));
+	CHECK(ParseArmStance("0") && ParseArmStance("1") && !ParseArmStance("1.5"));
+}
+
+TEST(clip_exit_blend_sets_the_momentum_run_out)
+{
+	const auto exitTime = [](std::optional<std::array<float, 3>> blends) {
+		Sim s;
+		s.Frame(kDt64, Dir(0), { CommandKind::Dodge });
+		if (blends) {
+			CHECK(s.core.OnClipExitBlends(*blends));
+		}
+		int frames = 0;
+		while (!s.core.Exiting() && frames < 200) {  // held input: cancelled into running at the exit window
+			s.Frame(kDt64, Dir(0));
+			++frames;
+		}
+		const float from = s.core.ActionTime();
+		while (s.core.DodgeRunning() && frames < 400) {
+			s.Frame(kDt64, Dir(0));
+			++frames;
+		}
+		return s.core.ActionTime() - from;
+	};
+	CHECK(std::fabs(exitTime(std::nullopt) - Timing{}.exitBlend) < 2 * kDt64);
+	CHECK(std::fabs(exitTime(std::array<float, 3>{ 0.5f, 0.1f, 0.0f }) - 0.5f) < 2 * kDt64);
+}
+
+TEST(clip_steering_zero_rates_keep_the_start_direction)
+{
+	const auto endHeading = [](bool locked) {
+		Config c;
+		c.policy.exitFrom = 99.0f;
+		c.steering.commitTime = 0.0f;
+		Sim s(c);
+		s.Frame(kDt64, Dir(0), { CommandKind::Dodge });
+		if (locked) {
+			ClipSteering st;
+			st.rates = { 0.0f, 0.0f, 0.0f };
+			CHECK(s.core.OnClipSteering(st));
+		}
+		while (s.core.DodgeRunning()) {
+			s.Frame(kDt64, Dir(90));  // pull right all the way
+		}
+		return s.core.Heading() * kRadToDeg;
+	};
+	CHECK(std::fabs(endHeading(true)) < 0.01f);
+	CHECK(endHeading(false) > 30.0f);
+}
+
+TEST(clip_jump_open_opens_the_jump_before_the_exit_window)
+{
+	Sim s(ExactConfig());
+	s.Frame(kDt64, Dir(0), { CommandKind::Dodge });
+	s.Frame(kDt64, Dir(0));
+	CHECK(!s.core.JumpWindowOpen());  // exit window opens at 0.47 s
+	s.core.OnWindowEvent(WindowEvent::JumpOpen);
+	CHECK(s.core.JumpWindowOpen());
+	CHECK(!s.core.ClipAnnotated());  // the jump alone does not switch the clip's other windows to annotations
+}

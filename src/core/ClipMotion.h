@@ -11,11 +11,20 @@ namespace rdf
 	//   RDF_Motion.<distance>[,<startup>,<active>,<recovery>]  the distance it covers and its phases (clip seconds at speed 1)
 	//   RDF_ClipLength.<seconds>                               its real length (a clip still streaming in reports 0)
 	//   RDF_Speed.<multiplier>                                 its own [Graph] fAnimSpeed
+	//   RDF_ExitBlend.<run>,<block>,<attack> (or one for all)  its own fExitBlend / fActionExitBlend / fAttackExitBlend
+	//   RDF_ArmStance.<share>                                  its own fArmStance (fArmStanceFirstPerson)
+	//   RDF_Steer.<startup>,<active>,<recovery>[,<maxDeviation>]  its own [Steering] fRate* (deg/s) and fMaxDeviation
 	// The graph splits an annotation at its first '.', so the numbers arrive as the event's payload.
 	struct ClipMotion
 	{
 		std::optional<float>                distance;
 		std::optional<std::array<float, 3>> phases;  // startup, active, recovery
+	};
+
+	struct ClipSteering
+	{
+		std::array<float, 3> rates{};  // deg/s in startup, active, recovery
+		std::optional<float> maxDeviation;  // deg
 	};
 
 	namespace clip_motion
@@ -27,6 +36,10 @@ namespace rdf
 		inline constexpr float kMaxLength = 10.0f;
 		inline constexpr float kMinSpeed = 0.1f;  // fAnimSpeed's own range
 		inline constexpr float kMaxSpeed = 5.0f;
+		inline constexpr float kMinBlend = 0.02f;  // the ini's ranges ([Timing] f*ExitBlend)
+		inline constexpr float kMaxBlend = 1.0f;
+		inline constexpr float kMaxRate = 10000.0f;
+		inline constexpr float kMaxDeviation = 180.0f;
 
 		inline std::optional<float> Number(std::string_view& text)
 		{
@@ -84,6 +97,67 @@ namespace rdf
 			return m;
 		}
 
+		// Up to N comma-separated numbers: how many were read, or nullopt when malformed.
+		template <std::size_t N>
+		std::optional<std::size_t> List(std::string_view text, std::array<float, N>& out)
+		{
+			std::size_t n = 0;
+			while (n < N) {
+				const auto x = Number(text);
+				if (!x) {
+					return std::nullopt;
+				}
+				out[n++] = *x;
+				if (text.empty()) {
+					return n;
+				}
+				if (text.front() != ',') {
+					return std::nullopt;
+				}
+				text.remove_prefix(1);
+			}
+			return std::nullopt;  // more than N
+		}
+
+		// "<all>" or "<run>,<block>,<attack>" (attack may be 0: the attack's own root motion at once).
+		inline std::optional<std::array<float, 3>> ParseExitBlends(std::string_view text)
+		{
+			std::array<float, 3> v{};
+			const auto           n = List(text, v);
+			if (n == 1u) {
+				v[1] = v[2] = v[0];
+			} else if (n != 3u) {
+				return std::nullopt;
+			}
+			if (v[0] < kMinBlend || v[0] > kMaxBlend || v[1] < kMinBlend || v[1] > kMaxBlend || v[2] < 0.0f || v[2] > kMaxBlend) {
+				return std::nullopt;
+			}
+			return v;
+		}
+
+		inline std::optional<ClipSteering> ParseSteering(std::string_view text)
+		{
+			std::array<float, 4> v{};
+			const auto           n = List(text, v);
+			if (n != 3u && n != 4u) {
+				return std::nullopt;
+			}
+			ClipSteering s;
+			for (std::size_t i = 0; i < 3; ++i) {
+				if (v[i] < 0.0f || v[i] > kMaxRate) {
+					return std::nullopt;
+				}
+				s.rates[i] = v[i];
+			}
+			if (n == 4u) {
+				if (v[3] < 0.0f || v[3] > kMaxDeviation) {
+					return std::nullopt;
+				}
+				s.maxDeviation = v[3];
+			}
+			return s;
+		}
+
 		inline std::optional<float> ParseInRange(std::string_view text, float lo, float hi)
 		{
 			const auto v = Number(text);
@@ -95,5 +169,6 @@ namespace rdf
 
 		inline std::optional<float> ParseLength(std::string_view text) { return ParseInRange(text, kMinLength, kMaxLength); }
 		inline std::optional<float> ParseSpeed(std::string_view text) { return ParseInRange(text, kMinSpeed, kMaxSpeed); }
+		inline std::optional<float> ParseArmStance(std::string_view text) { return ParseInRange(text, 0.0f, 1.0f); }
 	}
 }

@@ -44,11 +44,13 @@ namespace rdf::game::graph
 	// CastOn clip annotations seen since the last call (docs/CASTON_DESIGN.md 5), in order: kind 0 RDF_CastOnDodge,
 	// 1 RDF_CastOnPerfectDodge, 2 RDF_CastOnClip (the clip places its own moments); tag = the annotation's payload.
 	void DrainCastOn(RE::Actor* actor, const std::function<void(int kind, std::string_view tag)>& sink);
-	// The clip's motion annotations seen since the last call, in order: kind 0 RDF_Motion, 1 RDF_ClipLength, 2 RDF_Speed;
-	// payload = the numbers after the first '.'.
+	// The clip's own settings seen since the last call, in order: kind 0 RDF_Motion, 1 RDF_ClipLength, 2 RDF_Speed,
+	// 3 RDF_ExitBlend, 4 RDF_ArmStance, 5 RDF_Steer; payload = the numbers after the first '.'.
 	void DrainClipMotion(RE::Actor* actor, const std::function<void(int kind, std::string_view payload)>& sink);
 	// RDF_DodgeSpeed (bound to every dodge clip's playback speed): the running clip follows at once.
 	void SetPlaybackSpeed(RE::Actor* actor, float speed);
+	// RDF_ArmBlend from a stance share (0..1), as SendStart sets it.
+	void SetArmStance(RE::Actor* actor, float armStance);
 	// [Stagger] the stagger framework's recovery window: an open event since the stagger started (and no close), or a
 	// recovery variable true.
 	bool StaggerRecoveryOpen(RE::Actor* actor);

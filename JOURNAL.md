@@ -615,3 +615,13 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   length and phases; the timeline stays. annotate_clips --speed / a set spec's "speed" write it. Registered in the patch:
   check_rdf_nemesis 105/105, staged validate_rdf 269/269. Deployed; Pandora must be run again. Partial RDF_Motion
   fields (one phase only) were left out: phases normally come from the tool, and hand tuning writes all four.
+* More per-clip settings (2026-10-24; ANIMATION_CONTRACT.md 5):
+  - `RDF_ExitBlend.<run>,<block>,<attack>` (or one value): the core's timing_ now carries the blend-outs.
+  - `RDF_ArmStance.<share>`: RDF_ArmBlend set again, only where a stance is kept.
+  - `RDF_Steer.<startup>,<active>,<recovery>[,<maxDeviation>]`: Steering rates and the driver's max deviation, per
+    dodge, reset at Begin.
+  - The `RDF_JumpOpen` window opens the jump lock earlier than the exit window, without making the clip "annotated".
+  - annotate_clips / build_clip_set write them as constants (--exitBlend, --armStance, --steer, --jumpOpen <s>|exit;
+    spec "clipSettings" / "jumpOpen").
+  - Checks: 105 tests; check_rdf_nemesis 105/105; staged validate_rdf 277/277.
+  - Deployed; Pandora must be run again. Cost and the graph's constant blends stay out, as the user asked.

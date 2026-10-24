@@ -33,7 +33,8 @@ namespace rdf::game::graph
 		constexpr auto kAttackStartBurst = std::chrono::milliseconds(150);
 
 		constexpr std::array kWindowEventNames{ "RDF_Windows"sv, "RDF_IFrameStart"sv, "RDF_IFrameEnd"sv,
-			"RDF_ChainOpen"sv, "RDF_AttackOpen"sv, "RDF_BlockOpen"sv, "RDF_ExitOpen"sv, "RDF_PerfectStart"sv, "RDF_PerfectEnd"sv };
+			"RDF_ChainOpen"sv, "RDF_AttackOpen"sv, "RDF_BlockOpen"sv, "RDF_ExitOpen"sv, "RDF_PerfectStart"sv, "RDF_PerfectEnd"sv,
+			"RDF_JumpOpen"sv };
 		std::array<RE::BSFixedString, kWindowEventNames.size()> g_windowNames;
 
 		struct ActorGraph
@@ -51,14 +52,15 @@ namespace rdf::game::graph
 			// Several graphs (the player's first / third person): only this one counts; null = every graph.
 			const RE::BSTEventSource<RE::BSAnimationGraphEvent>* activeSource{ nullptr };
 			std::vector<std::pair<int, std::string>>              castOn;  // CastOn annotations since the last drain
-			std::vector<std::pair<int, std::string>>              motion;  // RDF_Motion (0) / ClipLength (1) / Speed (2) payloads
+			std::vector<std::pair<int, std::string>>              motion;  // kMotionNames index, payload
 		};
 
 		// "RDF_CastOnDodge" with payload "tag", or the whole "RDF_CastOnDodge.tag" as the tag when the graph did not split it.
 		constexpr std::array kCastOnNames{ "RDF_CastOnDodge"sv, "RDF_CastOnPerfectDodge"sv, "RDF_CastOnClip"sv };
-		// The clip's motion (ANIMATION_CONTRACT.md 5): "RDF_Motion.<numbers>", "RDF_ClipLength.<seconds>", "RDF_Speed.<x>",
-		// split the same way.
-		constexpr std::array kMotionNames{ "RDF_Motion"sv, "RDF_ClipLength"sv, "RDF_Speed"sv };
+		// The clip's own settings (ANIMATION_CONTRACT.md 5): "RDF_Motion.<numbers>", "RDF_ClipLength.<seconds>" ..., split the
+		// same way; the index is the kind DrainClipMotion reports.
+		constexpr std::array kMotionNames{ "RDF_Motion"sv, "RDF_ClipLength"sv, "RDF_Speed"sv, "RDF_ExitBlend"sv, "RDF_ArmStance"sv,
+			"RDF_Steer"sv };
 
 		template <std::size_t N>
 		bool PayloadEvent(const std::array<std::string_view, N>& names, std::string_view tag, std::string_view payload, int& kind,
@@ -357,6 +359,11 @@ namespace rdf::game::graph
 	void SetPlaybackSpeed(RE::Actor* actor, float speed)
 	{
 		actor->SetGraphVariableFloat(g_names.speed, speed);
+	}
+
+	void SetArmStance(RE::Actor* actor, float armStance)
+	{
+		actor->SetGraphVariableFloat(g_names.armBlend, ArmBlendWeight(armStance));
 	}
 
 	void ClearEvents(RE::Actor* actor)

@@ -201,7 +201,7 @@ namespace rdf::game::update
 			});
 			const auto& core = agent_->Core();
 			jump::SetLocked(Settings::Get().blockJumpDuringDodge &&
-			                (agent_->AwaitingEnter() || (core.DodgeRunning() && !core.ExitWindowOpen())));
+			                (agent_->AwaitingEnter() || (core.DodgeRunning() && !core.JumpWindowOpen())));
 			slowmo::Update();
 			if (Settings::Get().devLog && agent_->Busy()) {
 				TracePose(player);

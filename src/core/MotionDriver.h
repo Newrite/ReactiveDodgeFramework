@@ -3,6 +3,7 @@
 #include "Config.h"
 #include "DodgeAction.h"
 #include "MotionCommand.h"
+#include "ClipMotion.h"
 #include "MotionProfile.h"
 #include "Steering.h"
 
@@ -40,13 +41,15 @@ namespace rdf
 		// Advance from action time t0 to t1 (dt of wall game time). Returns the command to publish;
 		// `velocity` is the average over the step so integrating it with the same dt is exact.
 		MotionCommand Step(float t0, float t1, float dt, DodgePhase phase, const DriverInput& in);
-		void          BeginExit(float t, bool moveHeld);
+		void          BeginExit(float t, bool moveHeld, float blend);
 		// Cancel into an action: decelerate over `blend` instead of stopping dead, to rest, or to running speed when the
 		// move input is held (an attack out of a running dodge is an attack out of running).
 		void          BeginStop(float t, float blend, bool toRun = false);
 		// The clip announced its own phases and distance (ClipMotion): the speed curve is planned again from the same
 		// carry-in and exit speeds. Only before an exit; the distance travelled so far is kept (Step integrates deltas).
 		void          Replan(const Timing& timing, float distance);
+		// The clip's own steering (RDF_Steer): rates per phase and, if given, the max deviation. Until the next Begin.
+		void          SetSteering(const ClipSteering& steering);
 
 		float Speed() const { return speed_; }
 		float Heading() const { return steering_.Heading(); }
@@ -68,6 +71,7 @@ namespace rdf
 		Timing        timing_;            // this dodge's phases: the ini's, or the clip's own (Replan)
 		float         carrySpeed_{ 0.0f };
 		float         exitSpeed_{ 0.0f };   // the one planned at the start (RetargetExit may change it later)
+		float         maxDeviation_{ 180.0f };  // deg: the ini's, or the clip's (SetSteering)
 		Steering      steering_;
 		MotionProfile profile_;
 		float         facing_{ 0.0f };

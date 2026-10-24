@@ -21,6 +21,14 @@ namespace rdf
 		// Stick strength in [0,1]: 0 inside the deadzone, then ((m - dz) / (1 - dz)) ^ exponent.
 		float Strength(float magnitude) const;
 		float MaxRate(DodgePhase phase) const;  // rad/s
+		// The clip's own rates (RDF_Steer), deg/s; Begin of the next dodge resets them (a fresh Steering per config).
+		void  SetRates(float startup, float active, float recovery)
+		{
+			cfg_.rateStartup = startup;
+			cfg_.rateActive = active;
+			cfg_.rateRecovery = recovery;
+		}
+		void  ResetRates(const SteeringConfig& cfg) { SetRates(cfg.rateStartup, cfg.rateActive, cfg.rateRecovery); }
 
 		// `hasDesired` false = no input: heading unchanged. Returns the new heading.
 		float Update(bool hasDesired, float desiredHeading, float magnitude, float dt, DodgePhase phase);

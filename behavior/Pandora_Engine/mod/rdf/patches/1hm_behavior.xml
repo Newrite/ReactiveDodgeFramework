@@ -29,6 +29,8 @@
   <append path="#0087/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
   <append path="#0085/eventNames"><hkcstring>RDF_PerfectEnd</hkcstring></append>
   <append path="#0087/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
+  <append path="#0085/eventNames"><hkcstring>RDF_JumpOpen</hkcstring></append>
+  <append path="#0087/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
   <append path="#0085/eventNames"><hkcstring>RDF_CastOnDodge</hkcstring></append>
   <append path="#0087/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
   <append path="#0085/eventNames"><hkcstring>RDF_CastOnPerfectDodge</hkcstring></append>
@@ -40,6 +42,12 @@
   <append path="#0085/eventNames"><hkcstring>RDF_ClipLength</hkcstring></append>
   <append path="#0087/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
   <append path="#0085/eventNames"><hkcstring>RDF_Speed</hkcstring></append>
+  <append path="#0087/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
+  <append path="#0085/eventNames"><hkcstring>RDF_ExitBlend</hkcstring></append>
+  <append path="#0087/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
+  <append path="#0085/eventNames"><hkcstring>RDF_ArmStance</hkcstring></append>
+  <append path="#0087/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
+  <append path="#0085/eventNames"><hkcstring>RDF_Steer</hkcstring></append>
   <append path="#0087/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
   <append path="#0085/eventNames"><hkcstring>RDF_PerfectDodge</hkcstring></append>
   <append path="#0087/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>

@@ -113,12 +113,16 @@
 				<hkcstring>RDF_ExitOpen</hkcstring>
 				<hkcstring>RDF_PerfectStart</hkcstring>
 				<hkcstring>RDF_PerfectEnd</hkcstring>
+				<hkcstring>RDF_JumpOpen</hkcstring>
 				<hkcstring>RDF_CastOnDodge</hkcstring>
 				<hkcstring>RDF_CastOnPerfectDodge</hkcstring>
 				<hkcstring>RDF_CastOnClip</hkcstring>
 				<hkcstring>RDF_Motion</hkcstring>
 				<hkcstring>RDF_ClipLength</hkcstring>
 				<hkcstring>RDF_Speed</hkcstring>
+				<hkcstring>RDF_ExitBlend</hkcstring>
+				<hkcstring>RDF_ArmStance</hkcstring>
+				<hkcstring>RDF_Steer</hkcstring>
 				<hkcstring>RDF_PerfectDodge</hkcstring>
 				<hkcstring>RDF_PerfectDodged</hkcstring>
 				<hkcstring>RDF_DodgeCancelOpen</hkcstring>

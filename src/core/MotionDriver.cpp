@@ -28,6 +28,8 @@ namespace rdf
 		exitBlend_ = 0.0f;
 		heldFacing_ = facing_;
 		timing_ = cfg_.timing;
+		steering_.ResetRates(cfg_.steering);
+		maxDeviation_ = cfg_.steering.maxDeviation;
 		carrySpeed_ = s.carrySpeed;
 		exitSpeed_ = ExitSpeed(s.moveHeld);
 		profile_.Plan(timing_, cfg_.motion, carrySpeed_, exitSpeed_);
@@ -43,7 +45,7 @@ namespace rdf
 			std::fabs(AngleDelta(steering_.Heading(), in.moveHeading)) <= st.inputCone * kDegToRad + 1e-5f) {
 			latched_ = false;
 			// Bend toward the input, but never past maxDeviation from where this dodge set off.
-			const float limit = st.maxDeviation * kDegToRad;
+			const float limit = maxDeviation_ * kDegToRad;
 			const float off = std::clamp(AngleDelta(origin_, in.moveHeading), -limit, limit);
 			desired = WrapAngle(origin_ + off);
 			magnitude = in.moveMagnitude;
@@ -166,13 +168,21 @@ namespace rdf
 		retargeted_ = false;  // the recovery may start later now: the exit speed is decided there again
 	}
 
-	void MotionDriver::BeginExit(float t, bool moveHeld)
+	void MotionDriver::SetSteering(const ClipSteering& steering)
 	{
-		profile_.BlendOut(t, ExitSpeed(moveHeld), cfg_.timing.exitBlend);
+		steering_.SetRates(steering.rates[0], steering.rates[1], steering.rates[2]);
+		if (steering.maxDeviation) {
+			maxDeviation_ = *steering.maxDeviation;
+		}
+	}
+
+	void MotionDriver::BeginExit(float t, bool moveHeld, float blend)
+	{
+		profile_.BlendOut(t, ExitSpeed(moveHeld), blend);
 		exiting_ = true;
 		if (exitFrom_ < 0.0f) {
 			exitFrom_ = t;
-			exitBlend_ = cfg_.timing.exitBlend;
+			exitBlend_ = blend;
 		}
 	}
 }

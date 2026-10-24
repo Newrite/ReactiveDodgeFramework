@@ -527,7 +527,8 @@ namespace rdf::game
 		const int   clip = ClipIndex(angle, core_->PreviewKeepsFacing(d), core_->PreviewNeutral(d));
 		const auto  entry = EntryFor(actor, chain);
 		const float stance = in.firstPerson ? settings.armStanceFirstPerson : settings.armStance;
-		const float armStance = HasStanceToKeep(actor) ? stance : 0.0f;
+		stanceKept_ = HasStanceToKeep(actor);
+		const float armStance = stanceKept_ ? stance : 0.0f;
 		const float clipLength = in.firstPerson ? settings.clipLengthFirstPerson : settings.clipLength;
 		// RDF_ChainIndex: 0 for a fresh dodge, the running dodge's index + 1 for a chain (ChainCount is 1-based).
 		const int   chainIndex = chain ? core_->ChainCount() : 0;
@@ -823,6 +824,35 @@ namespace rdf::game
 					retime = true;
 				} else {
 					DevLog("{:08X}: RDF_Speed '{}' is not a multiplier 0.1..5: ignored", formID_, payload);
+				}
+				return;
+			}
+			if (kind == 3) {
+				const auto blends = clip_motion::ParseExitBlends(payload);
+				if (!blends) {
+					DevLog("{:08X}: RDF_ExitBlend '{}' is not <all> or <run>,<block>,<attack> seconds: ignored", formID_, payload);
+				} else if (core_->OnClipExitBlends(*blends)) {
+					DevLog("{:08X}: clip exit blends {:.2f}/{:.2f}/{:.2f}", formID_, (*blends)[0], (*blends)[1], (*blends)[2]);
+				}
+				return;
+			}
+			if (kind == 4) {
+				if (const auto share = clip_motion::ParseArmStance(payload)) {
+					// A stance only where there is one to keep (a drawn weapon...), as at the start.
+					graph::SetArmStance(actor, stanceKept_ ? *share : 0.0f);
+					DevLog("{:08X}: clip arm stance {:.2f}{}", formID_, *share, stanceKept_ ? "" : " (no stance to keep)");
+				} else {
+					DevLog("{:08X}: RDF_ArmStance '{}' is not a share 0..1: ignored", formID_, payload);
+				}
+				return;
+			}
+			if (kind == 5) {
+				const auto steering = clip_motion::ParseSteering(payload);
+				if (!steering) {
+					DevLog("{:08X}: RDF_Steer '{}' is not <startup>,<active>,<recovery>[,<maxDeviation>]: ignored", formID_, payload);
+				} else if (core_->OnClipSteering(*steering)) {
+					DevLog("{:08X}: clip steering {:.0f}/{:.0f}/{:.0f} deg/s, max deviation {}", formID_, steering->rates[0],
+						steering->rates[1], steering->rates[2], steering->maxDeviation ? std::format("{:.0f}", *steering->maxDeviation) : "ini");
 				}
 				return;
 			}

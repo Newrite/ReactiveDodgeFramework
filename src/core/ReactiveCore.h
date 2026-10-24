@@ -99,8 +99,14 @@ namespace rdf
 		// the dodge is still in its startup and not exiting (the annotation sits at the clip's first frame); false when
 		// it was ignored. A clip without phases keeps the current ones and changes the distance only.
 		bool       OnClipMotion(const ClipMotion& motion);
-		// The current dodge's phases: the ini's, or the clip's own.
+		// RDF_ExitBlend: the current dodge's blend-outs into running, a block and an attack. False once it is exiting.
+		bool       OnClipExitBlends(const std::array<float, 3>& blends);
+		// RDF_Steer: the current dodge's steering rates (and max deviation).
+		bool       OnClipSteering(const ClipSteering& steering);
+		// The current dodge's phases and blend-outs: the ini's, or the clip's own.
 		const Timing& DodgeTiming() const { return timing_; }
+		// The jump may cut the dodge: the clip's RDF_JumpOpen once it fired, else the exit window.
+		bool       JumpWindowOpen() const { return !action_.Running() || windows_.JumpOpen() || ExitWindowOpen(); }
 		bool       ClipAnnotated() const { return windows_.Annotated().has_value(); }
 		double     Now() const { return clock_.Now(); }
 		const InputBuffer& Buffer() const { return buffer_; }
@@ -119,7 +125,7 @@ namespace rdf
 		MotionDriver  driver_;
 		FrameInput    frame_{};
 		float         startAngleDeg_{ 0.0f };
-		Timing        timing_;    // the current dodge's phases (blend lengths stay the ini's)
+		Timing        timing_;    // the current dodge's phases and blend-outs (the ini's until the clip says otherwise)
 		bool          intoAction_{ false };  // the current dodge was cancelled into an attack/block
 		WindowTracker windows_;
 	};

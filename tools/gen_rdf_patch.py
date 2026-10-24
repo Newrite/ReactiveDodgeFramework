@@ -26,16 +26,17 @@ EVENTS = ["RDF_DodgeStart", "RDF_DodgeStartB", "RDF_DodgeChain", "RDF_DodgeExit"
 # Clip annotations (ANIMATION_CONTRACT.md). An annotation only reaches the plugin as an animation
 # event when its text is a registered event name of the graph that plays the clip.
 ANNOTATION_EVENTS = ["RDF_Windows", "RDF_IFrameStart", "RDF_IFrameEnd", "RDF_ChainOpen",
-                     "RDF_AttackOpen", "RDF_BlockOpen", "RDF_ExitOpen", "RDF_PerfectStart", "RDF_PerfectEnd"]
+                     "RDF_AttackOpen", "RDF_BlockOpen", "RDF_ExitOpen", "RDF_PerfectStart", "RDF_PerfectEnd", "RDF_JumpOpen"]
 EVENTS += ANNOTATION_EVENTS
 # CastOn moments (docs/CASTON_DESIGN.md 5): "RDF_CastOnDodge.<tag>" arrives as RDF_CastOnDodge + payload <tag> (the graph
 # splits an annotation at its first '.', as PIE's "PIE.@..."); RDF_CastOnClip at 0.0 = the clip places its own moments.
 CASTON_EVENTS = ["RDF_CastOnDodge", "RDF_CastOnPerfectDodge", "RDF_CastOnClip"]
 EVENTS += CASTON_EVENTS
 # The clip's own motion (ANIMATION_CONTRACT.md 5), at its first frame: "RDF_Motion.<distance>,<startup>,<active>,<recovery>",
-# "RDF_ClipLength.<seconds>" and "RDF_Speed.<multiplier>", split at the first '.' like the CastOn ones (the numbers arrive
-# as the payload).
-MOTION_EVENTS = ["RDF_Motion", "RDF_ClipLength", "RDF_Speed"]
+# "RDF_ClipLength.<seconds>", "RDF_Speed.<multiplier>", "RDF_ExitBlend.<run>,<block>,<attack>", "RDF_ArmStance.<share>",
+# "RDF_Steer.<startup>,<active>,<recovery>[,<maxDeviation>]", split at the first '.' like the CastOn ones (the numbers
+# arrive as the payload).
+MOTION_EVENTS = ["RDF_Motion", "RDF_ClipLength", "RDF_Speed", "RDF_ExitBlend", "RDF_ArmStance", "RDF_Steer"]
 EVENTS += MOTION_EVENTS
 # Sent by the plugin on a perfect dodge (to the player and to the attacker); registered so behaviors, OAR and other
 # plugins' graph-event sinks receive them (NotifyAnimationGraph drops a name the graph does not know).
