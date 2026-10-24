@@ -4,6 +4,7 @@
 #include "AttackCancel.h"
 #include "Diagnostics.h"
 #include "Effects.h"
+#include "Forms.h"
 #include "GraphGate.h"
 #include "EngineState.h"
 #include "MotionHook.h"
@@ -165,6 +166,10 @@ namespace rdf::game
 			view.cancelAnyTime = true;
 		}
 		// [Cost] the dodge a press would start now: the next one of the chain while one runs.
+		// [Timing] sChainDodgesKeyword: while a dodge runs, the chain it may still grow by.
+		if (dodgeWaits && core_->DodgeRunning()) {
+			view.chainBonus = static_cast<int>(std::lround(attack::EffectAmount(actor, settings.chainDodgesKeyword)));
+		}
 		view.staminaOk = !settings.costResource || !dodgeWaits ||
 		                 CostAllows(settings.price, state.resource, CostOf(actor, core_->DodgeRunning() ? core_->ChainCount() : 0, escapeStagger_));
 		const Decision decision = core_->Evaluate(view);
@@ -412,11 +417,11 @@ namespace rdf::game
 	{
 		const auto  attacker = effects::TakeDodgedHit(actor);
 		const auto& p = Settings::Get().perfect;
-		if (!attacker || !p.enabled || perfectFired_ || !core_->DodgeRunning()) {
+		if (!attacker || !perfectAllowed_ || perfectFired_ || !core_->DodgeRunning()) {
 			return;
 		}
 		const float t = core_->ActionTime();
-		if (!core_->PerfectWindow(p.windowStart, p.windowEnd)) {
+		if (!core_->PerfectWindow(p.windowStart, p.windowEnd, perfectDelta_)) {
 			DevLog("{:08X}: dodged a hit at t={:.3f}, outside the perfect window (RDF_PerfectStart/End of the clip, else [{:.2f}, {:.2f}])",
 				formID_, t, p.windowStart, p.windowEnd);
 			return;
@@ -460,6 +465,17 @@ namespace rdf::game
 		return ((octant % 8) + 8) % 8;  // F, FR, R, BR, B, BL, L, FL
 	}
 
+	// [Perfect] sPerfectDodgeKeyword: with one set, only an actor with it dodges perfectly.
+	bool DodgeAgent::PerfectKeywordHeld(RE::Actor* actor) const
+	{
+		const auto& keyword = Settings::Get().perfect.keyword;
+		if (keyword.empty()) {
+			return true;
+		}
+		auto* kw = forms::Get<RE::BGSKeyword>(keyword);
+		return kw && attack::ActorHasKeyword(actor, kw);
+	}
+
 	// [Cost] what a dodge costs `actor` now (DodgeCost): the chain index of that dodge, and whether it cuts a stagger short.
 	float DodgeAgent::CostOf(RE::Actor* actor, int chainIndex, bool escape) const
 	{
@@ -481,6 +497,12 @@ namespace rdf::game
 		in.escape = escape;
 		if (escape) {
 			in.escapeBonus = attack::StaggerEscapeCostBonus(actor);
+			in.escapePercent = attack::EffectAmount(actor, settings.stagger.escapeCostMultKeyword);
+		}
+		in.costBonus = attack::EffectAmount(actor, settings.costKeyword);
+		in.costPercent = attack::EffectAmount(actor, settings.costMultKeyword);
+		if (chainIndex > 0) {
+			in.chainPercent = attack::EffectAmount(actor, settings.chainCostKeyword);
 		}
 		return DodgeCost(settings.price, in);
 	}
@@ -607,6 +629,10 @@ namespace rdf::game
 		layer_ = layer;
 		inStateB_ = sent == graph::DodgeEntry::Chain ? !inStateB_ : sent == graph::DodgeEntry::StartB;
 		perfectFired_ = false;
+		// This dodge's own windows: the keyword amounts are read once, as it starts (ms -> s).
+		iframeDelta_ = attack::EffectAmount(actor, settings.iFrameKeyword) * 0.001f;
+		perfectDelta_ = attack::EffectAmount(actor, settings.perfect.windowKeyword) * 0.001f;
+		perfectAllowed_ = settings.perfect.enabled && PerfectKeywordHeld(actor);
 		lastClip_ = clip;
 		ClearAttackFromDodge(actor);
 		intoAttack_ = false;
@@ -1072,9 +1098,9 @@ namespace rdf::game
 		requestedDistance_ = step.command.speed * dt;
 		requestedHeading_ = core_->Heading();
 
-		effects::SetInvulnerable(actor, settings.iFrames && core_->Invulnerable(settings.iFrameStart, settings.iFrameEnd));
-		effects::SetPerfectOpen(actor, settings.perfect.enabled && core_->DodgeRunning() &&
-		                                   core_->PerfectWindow(settings.perfect.windowStart, settings.perfect.windowEnd));
+		effects::SetInvulnerable(actor, settings.iFrames && core_->Invulnerable(settings.iFrameStart, settings.iFrameEnd, iframeDelta_));
+		effects::SetPerfectOpen(actor, perfectAllowed_ && core_->DodgeRunning() &&
+		                                   core_->PerfectWindow(settings.perfect.windowStart, settings.perfect.windowEnd, perfectDelta_));
 
 		if (step.completed && !exitSent_) {
 			graph::SendExit(actor, layer_);

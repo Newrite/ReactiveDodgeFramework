@@ -65,6 +65,14 @@ namespace rdf::game
 		// Resource a dodge costs; nullopt = free.
 		std::optional<RE::ActorValue> costResource{ RE::ActorValue::kStamina };
 		CostConfig                    price;  // [Cost] the formula (and [Stagger] fEscapeCost / fEscapeCostMult)
+		// Keywords on magic effects whose summed magnitudes (Detrimental ones negative; inactive and dispelled effects
+		// left out; see MagicEffects.h) feed the formula: added to the base, a percent on the cost, a percent on
+		// fChainCostStep.
+		std::string                   costKeyword;
+		std::string                   costMultKeyword;
+		std::string                   chainCostKeyword;
+		// [Timing] sChainDodgesKeyword: its effects' summed magnitudes (rounded) add chained dodges to iChainDodges.
+		std::string                   chainDodgesKeyword;
 		// After a dodge hands over into running, the engine re-accelerates from below the dodge's exit
 		// speed; its speed may not drop under the exit speed decaying at this rate (u/s^2, 0 = off).
 		float carryDecay{ 1200.0f };
@@ -115,6 +123,7 @@ namespace rdf::game
 			// The price: fEscapeCost on top of [Cost] fCost (same resource), plus the magnitudes of the active magic effects
 			// carrying sEscapeCostKeyword (negative ones make it cheaper; the total never goes below 0).
 			std::string escapeCostKeyword;
+			std::string escapeCostMultKeyword;  // its effects: a percent on fEscapeCostMult
 		} stagger;
 
 		// [Casting] an actor with these keywords (actor, race, worn items, active effects) dodges without dropping a bow
@@ -136,6 +145,9 @@ namespace rdf::game
 		bool  explosionIFrames{ true };   // explosions skip the player during i-frames
 		float iFrameStart{ 0.05f };
 		float iFrameEnd{ 0.35f };
+		// Its effects' summed magnitudes, in milliseconds: more lengthens the i-frames at the end, less shortens them
+		// from the start.
+		std::string iFrameKeyword;
 
 		bool suppressLegacyDodge{ true };
 		bool useTrueDirectionalMovement{ true };
@@ -179,6 +191,10 @@ namespace rdf::game
 			bool        enabled{ true };
 			float       windowStart{ 0.0f };
 			float       windowEnd{ 0.15f };
+			// With a keyword set, only an actor with it (on it, a worn item or an active effect) dodges perfectly.
+			std::string keyword;
+			// Its effects' summed magnitudes, in milliseconds, change the perfect window as sIFrameKeyword the i-frames.
+			std::string windowKeyword;
 			// slow motion (player only), real seconds
 			float       slowMotion{ 1.0f };          // world speed during it; 1 = no slow motion
 			float       slowMotionPlayer{ 1.0f };    // the player's speed during it; 1 = unaffected, = slowMotion: slowed alike

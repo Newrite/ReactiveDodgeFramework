@@ -33,6 +33,7 @@ namespace rdf
 		bool         cancelAnyTime{ false };
 		bool         dodgeForbidden{ false };
 		bool         staminaOk{ true };
+		int          chainBonus{ 0 };  // chained dodges the actor's keyword adds (or takes away)
 	};
 
 	struct StepResult
@@ -89,10 +90,13 @@ namespace rdf
 		void  Consume(const Decision& d);
 		// Heading of the current dodge relative to the actor's yaw when it began, degrees, +right.
 		float      StartAngleDeg() const { return startAngleDeg_; }
-		// An annotated clip's own i-frame window, else [from, to) of the ini timers.
-		bool       Invulnerable(float from, float to) const;
-		// The clip's own perfect window (RDF_PerfectStart / End) if it has one, else [from, to] of the ini.
-		bool       PerfectWindow(float from, float to) const;
+		// An annotated clip's own i-frame window, else [from, to) of the ini timers. `delta` (seconds, from the actor's
+		// keyword) lengthens it at the end when positive, and shortens it from the start when negative (an annotated
+		// window's end is not known in advance).
+		bool       Invulnerable(float from, float to, float delta = 0.0f) const;
+		// The clip's own perfect window (RDF_PerfectStart / End) if it has one, else [from, to] of the ini; `delta` as
+		// for Invulnerable.
+		bool       PerfectWindow(float from, float to, float delta = 0.0f) const;
 		// RDF_* annotation events of the clip playing the current dodge.
 		void       OnWindowEvent(WindowEvent e);
 		// RDF_Motion of the clip playing the current dodge: its distance and phases replace the ini's. Taken only while

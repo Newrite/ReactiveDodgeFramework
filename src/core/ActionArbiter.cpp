@@ -1,5 +1,7 @@
 #include "ActionArbiter.h"
 
+#include <algorithm>
+
 namespace rdf
 {
 	namespace
@@ -94,7 +96,7 @@ namespace rdf
 				NoteReject(d, RejectReason::Forbidden, dodge->kind);
 			} else if (!open.chain) {
 				NoteReject(d, RejectReason::TooEarly, dodge->kind);
-			} else if (policy_.maxChain > 0 && state.chainCount >= policy_.maxChain) {
+			} else if (policy_.chainDodges >= 0 && state.chainCount > std::max(policy_.chainDodges + state.chainBonus, 0)) {
 				NoteReject(d, RejectReason::ChainLimit, dodge->kind);
 			} else if (!state.staminaOk) {
 				NoteReject(d, RejectReason::StaminaLow, dodge->kind);

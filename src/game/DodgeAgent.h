@@ -86,6 +86,7 @@ namespace rdf::game
 		void              DrainCastOnAnnotations(RE::Actor* actor);
 		void              ApplyClipMotion(RE::Actor* actor);
 		float             CostOf(RE::Actor* actor, int chainIndex, bool escape) const;
+		bool              PerfectKeywordHeld(RE::Actor* actor) const;
 		graph::Layer      CastingLayer(RE::Actor* actor, std::uint8_t attackState) const;
 		bool              StaggerEscape(RE::Actor* actor);
 		void              RetryDeferred(RE::Actor* actor);
@@ -144,7 +145,11 @@ namespace rdf::game
 		float           staggerAge_{ 0.0f };      // seconds the actor has been staggered
 		float           clipLength_{ 0.667f };    // the dodge clip's length: fClipLength*, or its RDF_ClipLength
 		float           clipSpeed_{ 1.0f };       // its playback multiplier: fAnimSpeed, or its RDF_Speed
-		bool            stanceKept_{ false };     // the dodge keeps a weapon stance on the arms (RDF_ArmStance applies)
+		bool            stanceKept_{ false };
+		// this dodge's keyword amounts, read as it starts: window changes (s) and whether it may be perfect
+		float           iframeDelta_{ 0.0f };
+		float           perfectDelta_{ 0.0f };
+		bool            perfectAllowed_{ true };     // the dodge keeps a weapon stance on the arms (RDF_ArmStance applies)
 		bool            escapeStagger_{ false };  // this tick a dodge may cut the stagger short
 		const char*     lastStaggerRule_{ nullptr };  // dev log: the [Stagger] rule last reported
 		bool            perfectFired_{ false };   // the current dodge already counted a perfect dodge

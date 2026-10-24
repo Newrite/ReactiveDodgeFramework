@@ -1143,3 +1143,59 @@ TEST(dodge_cost_shortfall_modes)
 	c.shortfall = CostShortfall::Always;
 	CHECK(CostAllows(c, 0.0f, 30.0f));
 }
+
+TEST(dodge_cost_keyword_inputs)
+{
+	CostConfig c;  // fCost 20
+	CostInputs in;
+	in.costBonus = 10.0f;
+	CHECK(DodgeCost(c, in) == 30.0f);
+	in.costPercent = -50.0f;
+	CHECK(DodgeCost(c, in) == 15.0f);
+	in.costPercent = -150.0f;  // never a negative factor
+	CHECK(DodgeCost(c, in) == 0.0f);
+	in = {};
+	c.chainStep = 0.5f;
+	in.chainIndex = 1;
+	in.chainPercent = 50.0f;  // the step becomes 1.0
+	CHECK(DodgeCost(c, in) == 40.0f);
+	in = {};
+	in.escape = true;
+	c.escapeFlat = 10.0f;
+	in.escapePercent = 100.0f;  // x2
+	CHECK(DodgeCost(c, in) == 60.0f);
+}
+
+TEST(window_deltas_lengthen_at_the_end_and_shorten_from_the_start)
+{
+	Sim s;
+	s.Frame(kDt64, Dir(0), { CommandKind::Dodge });
+	// ini window [0.10, 0.20)
+	const auto at = [&](float t) {
+		while (s.core.ActionTime() + 1e-6f < t) {
+			s.Frame(kDt64, Dir(0));
+		}
+	};
+	at(0.20f);
+	CHECK(!s.core.Invulnerable(0.10f, 0.20f));
+	CHECK(s.core.Invulnerable(0.10f, 0.20f, 0.05f));  // +50 ms at the end
+	CHECK(!s.core.Invulnerable(0.10f, 0.12f, -0.05f)); // -50 ms from the start: [0.15, 0.12) never opens
+	at(0.16f);
+
+	Sim a;
+	a.Frame(kDt64, Dir(0), { CommandKind::Dodge });
+	a.core.OnWindowEvent(WindowEvent::IFrameStart);
+	CHECK(a.core.Invulnerable(0.0f, 0.0f));
+	CHECK(!a.core.Invulnerable(0.0f, 0.0f, -0.05f));  // the clip's start moved 50 ms later
+	for (int i = 0; i < 4; ++i) {
+		a.Frame(kDt64, Dir(0));
+	}
+	CHECK(a.core.Invulnerable(0.0f, 0.0f, -0.05f));
+	a.core.OnWindowEvent(WindowEvent::IFrameEnd);
+	CHECK(!a.core.Invulnerable(0.0f, 0.0f));
+	CHECK(a.core.Invulnerable(0.0f, 0.0f, 0.03f));    // still 30 ms after the clip's end
+	for (int i = 0; i < 3; ++i) {
+		a.Frame(kDt64, Dir(0));
+	}
+	CHECK(!a.core.Invulnerable(0.0f, 0.0f, 0.03f));
+}

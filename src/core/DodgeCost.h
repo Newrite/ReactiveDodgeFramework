@@ -38,21 +38,30 @@ namespace rdf
 		bool  overencumbered{ false };
 		bool  escape{ false };          // the dodge cuts a stagger short
 		float escapeBonus{ 0.0f };      // the magnitudes of the effects with sEscapeCostKeyword
+		// The actor's effects with the cost keywords (summed magnitudes, Detrimental ones negative):
+		float costBonus{ 0.0f };        // sCostKeyword: added to the base
+		float costPercent{ 0.0f };      // sCostMultKeyword: x (1 + this / 100)
+		float chainPercent{ 0.0f };     // sChainCostKeyword: added to fChainCostStep, in percent
+		float escapePercent{ 0.0f };    // [Stagger] sEscapeCostMultKeyword: x (1 + this / 100) on fEscapeCostMult
 	};
 
-	//   (fCost + fCostMaxPercent% x max + fCostWeightMult x equipped weight)
-	//   x (1 + fChainCostStep x chain index) x fOverencumberedMult (over-encumbered)
-	//   escaping a stagger: (+ max(0, fEscapeCost + the escape keyword's magnitudes)) x fEscapeCostMult
+	//   (fCost + fCostMaxPercent% x max + fCostWeightMult x equipped weight + sCostKeyword)
+	//   x (1 + (fChainCostStep + sChainCostKeyword %) x chain index) x fOverencumberedMult (over-encumbered)
+	//   x (1 + sCostMultKeyword %)
+	//   escaping a stagger: (+ max(0, fEscapeCost + sEscapeCostKeyword)) x fEscapeCostMult x (1 + sEscapeCostMultKeyword %)
 	//   clamped to [fCostMin, fCostMax] (fCostMax 0 = no cap), never below 0
 	inline float DodgeCost(const CostConfig& c, const CostInputs& in)
 	{
-		float cost = c.flat + c.maxPercent * 0.01f * in.resourceMax + c.weightMult * in.equippedWeight;
-		cost *= 1.0f + c.chainStep * static_cast<float>(std::max(in.chainIndex, 0));
+		const auto  factor = [](float percent) { return std::max(1.0f + percent * 0.01f, 0.0f); };
+		float       cost = c.flat + c.maxPercent * 0.01f * in.resourceMax + c.weightMult * in.equippedWeight + in.costBonus;
+		const float step = std::max(c.chainStep + in.chainPercent * 0.01f, 0.0f);
+		cost *= 1.0f + step * static_cast<float>(std::max(in.chainIndex, 0));
 		if (in.overencumbered) {
 			cost *= c.overencumberedMult;
 		}
+		cost *= factor(in.costPercent);
 		if (in.escape) {
-			cost = (cost + std::max(0.0f, c.escapeFlat + in.escapeBonus)) * c.escapeMult;
+			cost = (cost + std::max(0.0f, c.escapeFlat + in.escapeBonus)) * c.escapeMult * factor(in.escapePercent);
 		}
 		cost = std::max(cost, c.min);
 		if (c.max > 0.0f) {

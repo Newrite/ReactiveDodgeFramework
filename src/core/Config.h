@@ -29,7 +29,7 @@ namespace rdf
 		float         chainFrom{ 0.34f };
 		float         blockFrom{ 0.30f };
 		float         exitFrom{ 0.34f };
-		int           maxChain{ 3 };  // 0 = unlimited
+		int           chainDodges{ 2 };  // chained dodges allowed after the first; -1 = unlimited
 		std::uint32_t attackStateMask{ attack_state::Bit(attack_state::kFollowThrough) | attack_state::Bit(attack_state::kNextAttack) |
 			                           attack_state::Bit(attack_state::kBowDrawn) | attack_state::Bit(attack_state::kBowReleased) |
 			                           attack_state::Bit(attack_state::kBowFollowThrough) };

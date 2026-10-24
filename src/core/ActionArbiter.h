@@ -73,6 +73,7 @@ namespace rdf
 		std::optional<bool> attackClipCancel;    // RDF_DodgeCancelOpen / Close of the attack's clip, once it announced one
 		bool          cancelAnyTime{ false };    // the actor's keyword lets it cancel this attack at any moment
 		bool          dodgeForbidden{ false };   // the actor's keyword forbids dodging (no start, no chain)
+		int           chainBonus{ 0 };           // chained dodges the actor's keyword adds (or takes away)
 		bool          staminaOk{ true };
 		bool          moveHeld{ false };
 		std::optional<OpenWindows> annotated;  // windows announced by the clip; empty = ini timers

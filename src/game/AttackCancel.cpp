@@ -4,6 +4,9 @@
 #include "MagicEffects.h"
 #include "Settings.h"
 
+#include <utility>
+#include <vector>
+
 namespace rdf::game::attack
 {
 	namespace
@@ -78,7 +81,7 @@ namespace rdf::game::attack
 		return keyword && actor && HasKeyword(actor, keyword);
 	}
 
-	// Both carry a number: read as the spell gives it (Authored), so a detrimental effect does not flip its sign.
+	// The delay is a time (the lowest one wins): read as the spell gives it (Authored).
 	std::optional<float> StaggerDelayOverride(RE::Actor* actor)
 	{
 		const auto sum = magic::Query(actor, { .keyword = forms::Get<RE::BGSKeyword>(Settings::Get().stagger.delayKeyword) }, magic::Reading::Authored);
@@ -87,7 +90,44 @@ namespace rdf::game::attack
 
 	float StaggerEscapeCostBonus(RE::Actor* actor)
 	{
-		return magic::Query(actor, { .keyword = forms::Get<RE::BGSKeyword>(Settings::Get().stagger.escapeCostKeyword) }, magic::Reading::Authored).total;
+		return EffectAmount(actor, Settings::Get().stagger.escapeCostKeyword);
+	}
+
+	void WarnDispellingEffects()
+	{
+		const auto& s = Settings::Get();
+		std::vector<std::pair<const char*, RE::BGSKeyword*>> keywords;
+		for (const auto& [key, text] : { std::pair{ "[Cost] sCostKeyword", &s.costKeyword }, { "[Cost] sCostMultKeyword", &s.costMultKeyword },
+				 { "[Cost] sChainCostKeyword", &s.chainCostKeyword }, { "[Timing] sChainDodgesKeyword", &s.chainDodgesKeyword },
+				 { "[IFrames] sIFrameKeyword", &s.iFrameKeyword }, { "[Perfect] sPerfectWindowKeyword", &s.perfect.windowKeyword },
+				 { "[Stagger] sEscapeCostKeyword", &s.stagger.escapeCostKeyword },
+				 { "[Stagger] sEscapeCostMultKeyword", &s.stagger.escapeCostMultKeyword }, { "[Stagger] sDelayKeyword", &s.stagger.delayKeyword } }) {
+			if (auto* kw = text->empty() ? nullptr : forms::Get<RE::BGSKeyword>(*text)) {
+				keywords.emplace_back(key, kw);
+			}
+		}
+		auto* data = RE::TESDataHandler::GetSingleton();
+		if (keywords.empty() || !data) {
+			return;
+		}
+		for (auto* effect : data->GetFormArray<RE::EffectSetting>()) {
+			if (!effect || effect->data.flags.none(RE::EffectSetting::EffectSettingData::Flag::kDispelWithKeywords)) {
+				continue;
+			}
+			for (const auto& [key, kw] : keywords) {
+				if (effect->HasKeyword(kw)) {
+					logger::warn("magic effect {} ({:08X}) has {} and 'Dispel Effects with these Keywords': each new one dispels "
+					             "the others from other spells, so their magnitudes never add up",
+						effect->GetFullName(), effect->GetFormID(), key);
+				}
+			}
+		}
+	}
+
+	float EffectAmount(RE::Actor* actor, const std::string& keyword)
+	{
+		auto* kw = keyword.empty() ? nullptr : forms::Get<RE::BGSKeyword>(keyword);
+		return kw ? magic::Query(actor, { .keyword = kw }, magic::Reading::Applied).total : 0.0f;
 	}
 
 	AttackerRule RuleOf(RE::Actor* attacker)

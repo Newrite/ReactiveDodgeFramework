@@ -35,7 +35,7 @@ namespace rdf
 	public:
 		void Reset() { *this = {}; }
 
-		void On(WindowEvent e)
+		void On(WindowEvent e, float t = 0.0f)
 		{
 			if (e == WindowEvent::JumpOpen) {  // on its own: the clip's other windows stay as they are
 				jump_ = true;
@@ -44,14 +44,32 @@ namespace rdf
 			auto& w = marks_.emplace(marks_.value_or(OpenWindows{}));
 			switch (e) {
 			case WindowEvent::Marker: break;
-			case WindowEvent::IFrameStart: invulnerable_ = true; break;
-			case WindowEvent::IFrameEnd: invulnerable_ = false; break;
+			case WindowEvent::IFrameStart:
+				invulnerable_ = true;
+				iframeStart_ = t;
+				iframeEnd_.reset();
+				break;
+			case WindowEvent::IFrameEnd:
+				invulnerable_ = false;
+				if (iframeStart_) {
+					iframeEnd_ = t;
+				}
+				break;
 			case WindowEvent::ChainOpen: w.chain = true; break;
 			case WindowEvent::AttackOpen: w.attack = true; break;
 			case WindowEvent::BlockOpen: w.block = true; break;
 			case WindowEvent::ExitOpen: w.exit = true; break;
-			case WindowEvent::PerfectStart: perfect_ = true; break;
-			case WindowEvent::PerfectEnd: perfect_ = false; break;
+			case WindowEvent::PerfectStart:
+				perfect_ = true;
+				perfectStart_ = t;
+				perfectEnd_.reset();
+				break;
+			case WindowEvent::PerfectEnd:
+				perfect_ = false;
+				if (perfectStart_) {
+					perfectEnd_ = t;
+				}
+				break;
 			default: break;
 			}
 		}
@@ -60,6 +78,11 @@ namespace rdf
 		bool                              Invulnerable() const { return invulnerable_; }
 		// Set once the clip announced a perfect window: whether it is open now.
 		const std::optional<bool>&        Perfect() const { return perfect_; }
+		// When the clip's windows opened / closed (action time); empty until they did.
+		const std::optional<float>&       IFrameStart() const { return iframeStart_; }
+		const std::optional<float>&       IFrameEnd() const { return iframeEnd_; }
+		const std::optional<float>&       PerfectStart() const { return perfectStart_; }
+		const std::optional<float>&       PerfectEnd() const { return perfectEnd_; }
 		// Set once the clip announced RDF_JumpOpen.
 		bool                              JumpOpen() const { return jump_; }
 
@@ -68,5 +91,6 @@ namespace rdf
 		bool                       invulnerable_{ false };
 		std::optional<bool>        perfect_;
 		bool                       jump_{ false };
+		std::optional<float>       iframeStart_, iframeEnd_, perfectStart_, perfectEnd_;
 	};
 }

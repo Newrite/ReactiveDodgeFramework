@@ -62,6 +62,7 @@ namespace rdf
 		s.cancelAnyTime = engine.cancelAnyTime;
 		s.dodgeForbidden = engine.dodgeForbidden;
 		s.staminaOk = engine.staminaOk;
+		s.chainBonus = engine.chainBonus;
 		s.annotated = windows_.Annotated();
 		s.moveHeld = MoveHeld();
 		return arbiter_.Arbitrate(s, buffer_, clock_.Now());
@@ -163,32 +164,52 @@ namespace rdf
 		startAngleDeg_ = AngleDelta(frame_.actorYaw, start.heading) * kRadToDeg;
 	}
 
-	bool ReactiveCore::Invulnerable(float from, float to) const
+	namespace
+	{
+		// [start, end) at `t`, `delta` applied: > 0 the end moves later, < 0 the start moves later. No start: closed;
+		// no end: open from the start on.
+		bool InWindow(std::optional<float> start, std::optional<float> end, float t, float delta)
+		{
+			if (!start) {
+				return false;
+			}
+			float from = *start;
+			if (delta < 0.0f) {
+				from -= delta;
+			}
+			if (t < from) {
+				return false;
+			}
+			return !end || t < *end + std::max(delta, 0.0f);
+		}
+	}
+
+	bool ReactiveCore::Invulnerable(float from, float to, float delta) const
 	{
 		if (!action_.Running()) {
 			return false;
 		}
 		if (windows_.Annotated()) {
-			return windows_.Invulnerable();
+			return InWindow(windows_.IFrameStart(), windows_.IFrameEnd(), action_.Time(), delta);
 		}
-		return action_.Time() >= from && action_.Time() < to;
+		return InWindow(from, to, action_.Time(), delta);
 	}
 
-	bool ReactiveCore::PerfectWindow(float from, float to) const
+	bool ReactiveCore::PerfectWindow(float from, float to, float delta) const
 	{
 		if (!action_.Running()) {
 			return false;
 		}
-		if (const auto& clip = windows_.Perfect()) {
-			return *clip;
+		if (windows_.Perfect()) {
+			return InWindow(windows_.PerfectStart(), windows_.PerfectEnd(), action_.Time(), delta);
 		}
-		return action_.Time() >= from && action_.Time() <= to;
+		return InWindow(from, to + 1e-6f, action_.Time(), delta);  // the ini window includes its end
 	}
 
 	void ReactiveCore::OnWindowEvent(WindowEvent e)
 	{
 		if (action_.Running()) {
-			windows_.On(e);
+			windows_.On(e, action_.Time());
 		}
 	}
 

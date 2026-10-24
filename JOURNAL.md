@@ -654,3 +654,26 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   - fPerfectRefund gives back a percent of the dodge's charge on a perfect dodge.
   - core/DodgeCost.h is engine-free, with tests (109). Settings.price holds it, and the menu has every key.
   - Defaults keep the old price. Deployed; not tried in game. Keyword-driven cost from magic effects is the next step.
+* Magic-effect keywords for cost, chains, windows and the perfect dodge (2026-10-24):
+  - The amounts are read one way (attack::EffectAmount = magic::Query Applied): summed magnitudes, a Detrimental one
+    negative, inactive and dispelled effects left out, a non-recovering one as it tapers now.
+  - Cost:
+    - `sCostKeyword` adds to the base, `sCostMultKeyword` multiplies by x(1 + m/100), `sChainCostKeyword` adds m/100 to
+      fChainCostStep.
+    - [Stagger] `sEscapeCostMultKeyword` multiplies by x(1 + m/100) on top of fEscapeCostMult.
+    - `sEscapeCostKeyword` now reads Applied too. `sDelayKeyword` stays Authored (a time, the lowest wins).
+  - Chain:
+    - `iChainDodges` counts the chained dodges after the first (0 = none, -1 = unlimited) and replaces iMaxChain. An
+      ini without it keeps iMaxChain - 1. The shipped ini says 0.
+    - `sChainDodgesKeyword` adds round(m), checked while a press waits.
+  - Windows:
+    - `[IFrames] sIFrameKeyword` and `[Perfect] sPerfectWindowKeyword` change the window in milliseconds: + delays the
+      end, - delays the start.
+    - Clip windows keep their open/close times (WindowTracker) so the change applies to them too.
+    - Both are read once per dodge, as it starts.
+  - Perfect dodge: `[Perfect] sPerfectDodgeKeyword` gates it on the actor having the keyword (any source).
+  - At kDataLoaded the log warns of magic effects with these keywords that also have "Dispel Effects with these
+    Keywords" (IDA: KeywordDispelFunctor dispels same-keyword effects of other spells when one is added, which is why
+    such effects never add up). A Script archetype without that flag stacks across different spells and items; the
+    same spell from the same source replaces itself (DispelFromBoundObject).
+  - Checks: 111 tests. Deployed; not tried in game.

@@ -150,7 +150,22 @@ TEST(arbiter_windows_and_limits)
 	limited.chainCount = 3;
 	CHECK(arb.Arbitrate(limited, b, 1.0).reject == RejectReason::ChainLimit);
 
-	p.maxChain = 0;  // unlimited
+	limited.chainBonus = 1;  // the actor's keyword: one more
+	CHECK(arb.Arbitrate(limited, b, 1.0).kind == DecisionKind::ChainDodge);
+	limited.chainBonus = -5;  // never below none
+	limited.chainCount = 1;
+	CHECK(arb.Arbitrate(limited, b, 1.0).reject == RejectReason::ChainLimit);
+	limited.chainBonus = 0;
+
+	p.chainDodges = 0;  // no chained dodges at all
+	ActionArbiter none{ p };
+	limited.chainCount = 1;
+	CHECK(none.Arbitrate(limited, b, 1.0).reject == RejectReason::ChainLimit);
+	limited.chainBonus = 2;
+	CHECK(none.Arbitrate(limited, b, 1.0).kind == DecisionKind::ChainDodge);
+	limited.chainBonus = 0;
+
+	p.chainDodges = -1;  // unlimited
 	ActionArbiter unlimited{ p };
 	limited.chainCount = 50;
 	CHECK(unlimited.Arbitrate(limited, b, 1.0).kind == DecisionKind::ChainDodge);

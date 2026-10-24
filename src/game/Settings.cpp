@@ -207,7 +207,10 @@ namespace rdf::game
 			p.chainFrom = ReadFloat("Timing", "fChainFrom", p.chainFrom, 0.0f, 5.0f);
 			p.blockFrom = ReadFloat("Timing", "fBlockFrom", p.blockFrom, 0.0f, 5.0f);
 			p.exitFrom = ReadFloat("Timing", "fExitFrom", p.exitFrom, 0.0f, 5.0f);
-			p.maxChain = ReadInt("Timing", "iMaxChain", p.maxChain, 0, 100);
+			// iChainDodges: chained dodges after the first (-1 = unlimited). An ini without it still has the old
+			// iMaxChain (dodges in a row, 0 = unlimited).
+			const int legacy = ReadInt("Timing", "iMaxChain", p.chainDodges + 1, 0, 100);
+			p.chainDodges = ReadInt("Timing", "iChainDodges", legacy == 0 ? -1 : legacy - 1, -1, 100);
 			p.attackStateMask = ParseAttackStates(ReadString("Timing", "sAttackStates", AttackStatesToString(p.attackStateMask)));
 		}
 
@@ -266,6 +269,10 @@ namespace rdf::game
 			c.shortfall = ParseShortfall(ReadString("Cost", "sShortfall", "Minimum"));
 			c.minimum = ReadFloat("Cost", "fMinimum", c.minimum, 0.0f, 1000.0f);
 			c.perfectRefund = ReadFloat("Cost", "fPerfectRefund", c.perfectRefund, 0.0f, 100.0f);
+			s.costKeyword = ReadString("Cost", "sCostKeyword", s.costKeyword);
+			s.costMultKeyword = ReadString("Cost", "sCostMultKeyword", s.costMultKeyword);
+			s.chainCostKeyword = ReadString("Cost", "sChainCostKeyword", s.chainCostKeyword);
+			s.chainDodgesKeyword = ReadString("Timing", "sChainDodgesKeyword", s.chainDodgesKeyword);
 
 			auto& g = s.graph;
 			g.start = ReadString("Graph", "sEventStart", g.start);
@@ -351,6 +358,7 @@ namespace rdf::game
 		s.explosionIFrames = ReadBool("IFrames", "bExplosionIFrames", s.explosionIFrames);
 		s.iFrameStart = ReadFloat("IFrames", "fIFrameStart", s.iFrameStart, 0.0f, 5.0f);
 		s.iFrameEnd = ReadFloat("IFrames", "fIFrameEnd", s.iFrameEnd, 0.0f, 5.0f);
+		s.iFrameKeyword = ReadString("IFrames", "sIFrameKeyword", s.iFrameKeyword);
 		s.allowFirstPerson = ReadBool("Compat", "bAllowFirstPerson", s.allowFirstPerson);
 		s.blockJumpDuringDodge = ReadBool("Jump", "bBlockDuringDodge", s.blockJumpDuringDodge);
 		s.dodgeFromStagger = ReadBool("Stagger", "bDodgeFromStagger", s.dodgeFromStagger);
@@ -367,6 +375,7 @@ namespace rdf::game
 			s.price.escapeFlat = ReadFloat("Stagger", "fEscapeCost", s.price.escapeFlat, 0.0f, 1000.0f);
 			s.price.escapeMult = ReadFloat("Stagger", "fEscapeCostMult", s.price.escapeMult, 0.0f, 10.0f);
 			st.escapeCostKeyword = ReadString("Stagger", "sEscapeCostKeyword", st.escapeCostKeyword);
+			st.escapeCostMultKeyword = ReadString("Stagger", "sEscapeCostMultKeyword", st.escapeCostMultKeyword);
 		}
 		s.casting.drawKeyword = ReadString("Casting", "sDrawDuringDodgeKeyword", s.casting.drawKeyword);
 		s.casting.castKeyword = ReadString("Casting", "sCastDuringDodgeKeyword", s.casting.castKeyword);
@@ -390,6 +399,8 @@ namespace rdf::game
 		pf.enabled = ReadBool("Perfect", "bPerfectDodge", pf.enabled);
 		pf.windowStart = ReadFloat("Perfect", "fPerfectWindowStart", pf.windowStart, 0.0f, 3.0f);
 		pf.windowEnd = ReadFloat("Perfect", "fPerfectWindowEnd", pf.windowEnd, 0.0f, 3.0f);
+		pf.keyword = ReadString("Perfect", "sPerfectDodgeKeyword", pf.keyword);
+		pf.windowKeyword = ReadString("Perfect", "sPerfectWindowKeyword", pf.windowKeyword);
 		pf.slowMotion = ReadFloat("Perfect", "fPerfectSlowMotion", pf.slowMotion, 0.05f, 1.0f);
 		pf.slowMotionPlayer = ReadFloat("Perfect", "fPerfectSlowMotionPlayer", pf.slowMotionPlayer, 0.05f, 1.0f);
 		pf.slowMotionDuration = ReadFloat("Perfect", "fPerfectSlowMotionDuration", pf.slowMotionDuration, 0.0f, 5.0f);
@@ -402,8 +413,8 @@ namespace rdf::game
 		s.devLog = ReadBool("Dev", "bDevLog", s.devLog);
 		Commit(s);
 
-		logger::info("settings: dodge keys kb={} mouse={} pad={} total={:.3f}s distance={:.0f} maxChain={} iframes={} devLog={}",
+		logger::info("settings: dodge keys kb={} mouse={} pad={} total={:.3f}s distance={:.0f} chainDodges={} iframes={} devLog={}",
 			g_settings.dodgeKeyboard, g_settings.dodgeMouse, g_settings.dodgeGamepad, g_settings.core.timing.Total(),
-			g_settings.core.motion.distance, g_settings.core.policy.maxChain, g_settings.iFrames, g_settings.devLog);
+			g_settings.core.motion.distance, g_settings.core.policy.chainDodges, g_settings.iFrames, g_settings.devLog);
 	}
 }
