@@ -6,7 +6,8 @@ r"""Packs Reactive Dodge Framework as a FOMOD archive (MO2 / Vortex installer wi
 Inputs (build and generate them first: xmake build, tools/gen_rdf_patch.py, tools/gen_rdf_nemesis.py):
   build/windows/x64/releasedbg/ReactiveDodgeFramework.dll/.pdb, dist/ReactiveDodgeFramework.ini (defaults),
   dist/Interface/Translations, dist/Scripts (ReactiveDodge.pex + source), dist/CastOn (example rules + schema),
-  docs/ru (the designer / animator guides, regenerate Settings.md with tools/gen_settings_reference.py),
+  docs/ru (the designer / animator guides; regenerate Settings.md with tools/gen_settings_reference.py and the HTML
+  pages with tools/gen_docs_html.py),
   behavior/Pandora_Engine/mod/rdf,
   behavior/Nemesis_Engine/mod/rdfm,
   the dodge clips and the greatsword set from the MO2 mods (local fixtures, not in git).
@@ -156,9 +157,12 @@ def main():
     # CastOn: the example rules (all disabled) and the JSON schema editors use
     copy(os.path.join(ROOT, "dist", "CastOn"), os.path.join(core, "SKSE", "Plugins", "ReactiveDodgeFramework", "CastOn"))
     # the designer / animator documentation (Russian for now), beside the plugin's own folder
+    # (Markdown, and the same pages as HTML a browser opens: tools/gen_docs_html.py)
+    docs = os.path.join(core, "SKSE", "Plugins", "ReactiveDodgeFramework", "Docs", "ru")
     for name in sorted(os.listdir(os.path.join(ROOT, "docs", "ru"))):
         if name.endswith(".md"):
-            copy(os.path.join(ROOT, "docs", "ru", name), os.path.join(core, "SKSE", "Plugins", "ReactiveDodgeFramework", "Docs", "ru", name))
+            copy(os.path.join(ROOT, "docs", "ru", name), os.path.join(docs, name))
+    copy(os.path.join(ROOT, "docs", "ru", "html"), os.path.join(docs, "html"))
     clips = os.path.join("meshes", "actors", "character", "animations", "RDF")
     copy(os.path.join(MODS, "AI - Reactive Dodge Framework", clips), os.path.join(core, clips))
 

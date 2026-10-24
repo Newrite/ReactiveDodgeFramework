@@ -730,3 +730,7 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
     SKSE/Plugins/ReactiveDodgeFramework/Docs/ru.
   - Built ReactiveDodgeFramework-0.1.0.zip (1339 files, 11.6 MB, copied to F:\downloads). Its DLL, ini and patch match
     the current build. 113 tests.
+* HTML docs (2026-10-24): tools/gen_docs_html.py turns docs/ru/*.md into self-contained pages (docs/ru/html,
+  index.html = README) with a shared navigation, links between documents pointing at the .html pages, and
+  light/dark themes. It needs no dependencies: a small converter for the Markdown the docs use. Checked in the browser
+  (lists, tables, code, links). The FOMOD ships them under Docs/ru/html; rebuilt the archive (1344 files, 11.7 MB).

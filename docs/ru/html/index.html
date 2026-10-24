@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Reactive Dodge Framework: документация (русский)</title><style>
+:root { --bg: #ffffff; --fg: #1d1f23; --muted: #5b6270; --line: #d9dde3; --code: #f2f4f7; --accent: #2f6fd6; --head: #f6f7f9; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #16181c; --fg: #e3e6eb; --muted: #9aa3b2; --line: #2e333b; --code: #22262d; --accent: #7aa7ff; --head: #1d2026; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.55 "Segoe UI", system-ui, sans-serif; }
+nav { position: sticky; top: 0; background: var(--head); border-bottom: 1px solid var(--line); padding: 10px 16px;
+      display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; z-index: 1; }
+nav .title { font-weight: 600; margin-right: 8px; }
+nav a { color: var(--accent); text-decoration: none; }
+nav a.here { color: var(--fg); font-weight: 600; }
+main { max-width: 1100px; margin: 0 auto; padding: 8px 16px 48px; }
+h1 { font-size: 1.7em; margin: 0.8em 0 0.4em; }
+h2 { font-size: 1.3em; margin: 1.6em 0 0.5em; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
+h3 { font-size: 1.1em; margin: 1.3em 0 0.4em; }
+a { color: var(--accent); }
+code { background: var(--code); padding: 1px 5px; border-radius: 4px; font: 0.9em Consolas, "Cascadia Mono", monospace; }
+pre { background: var(--code); padding: 12px 14px; border-radius: 6px; overflow-x: auto; }
+pre code { padding: 0; background: none; }
+.table { overflow-x: auto; margin: 0.8em 0; }
+table { border-collapse: collapse; width: 100%; font-size: 0.95em; }
+th, td { border: 1px solid var(--line); padding: 6px 9px; text-align: left; vertical-align: top; }
+th { background: var(--head); }
+li { margin: 3px 0; }
+li > ul, li > ol { margin: 3px 0; }
+footer { color: var(--muted); font-size: 0.85em; margin-top: 3em; }
+</style></head><body><nav><span class="title">Reactive Dodge Framework</span><a href="index.html" class="here">Обзор</a><a href="Annotations.html">Аннотации</a><a href="Keywords.html">Кейворды</a><a href="CastOn.html">CastOn</a><a href="Settings.html">Настройки</a></nav><main><h1 id="reactive-dodge-framework-документация-русский">Reactive Dodge Framework: документация (русский)</h1>
+<ul><li><a href="Annotations.html">Annotations.html</a> — для аниматора. Какие аннотации ставить в клипы доджа, атак и стаггера и какую настройку каждая заменяет.</li><li><a href="Keywords.html">Keywords.html</a> — для дизайнера. Кейворды на акторах, вещах и маг-эффектах: стоимость, цепочки, окна неуязвимости и идеального доджа, ресурс, атакующие.</li><li><a href="CastOn.html">CastOn.html</a> — правила заклинаний на додж и идеальный додж: условия, касты, стоимость, момент.</li><li><a href="Settings.html">Settings.html</a> — все настройки: ключ в ini, подпись в меню F7 и описание. Файл собирается автоматически из тех же текстов, что показывает меню.</li></ul>
+<p>Настройки лежат в <code>SKSE/Plugins/ReactiveDodgeFramework.ini</code>. В игре с установленным FLICK их можно менять в меню (F7 → группа «Reactive Dodge»): кнопка «Сохранить в ini» записывает их в файл. Правила CastOn лежат в <code>SKSE/Plugins/ReactiveDodgeFramework/CastOn/</code>.</p><footer>Собрано из README.md (tools/gen_docs_html.py).</footer></main></body></html>
