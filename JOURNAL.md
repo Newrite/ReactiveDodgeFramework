@@ -677,3 +677,6 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
     such effects never add up). A Script archetype without that flag stacks across different spells and items; the
     same spell from the same source replaces itself (DispelFromBoundObject).
   - Checks: 111 tests. Deployed; not tried in game.
+* Keyword amounts count only effects whose base effect has Recover (2026-10-24, the user's call). This covers
+  EffectAmount and the stagger delay: magic::Filter::recoverOnly. An effect without Recover keeps changing a value
+  instead of holding an amount. The kDataLoaded scan also warns of keyword effects without Recover.

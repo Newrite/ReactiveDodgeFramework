@@ -84,7 +84,8 @@ namespace rdf::game::attack
 	// The delay is a time (the lowest one wins): read as the spell gives it (Authored).
 	std::optional<float> StaggerDelayOverride(RE::Actor* actor)
 	{
-		const auto sum = magic::Query(actor, { .keyword = forms::Get<RE::BGSKeyword>(Settings::Get().stagger.delayKeyword) }, magic::Reading::Authored);
+		const auto sum = magic::Query(actor, { .keyword = forms::Get<RE::BGSKeyword>(Settings::Get().stagger.delayKeyword), .recoverOnly = true },
+			magic::Reading::Authored);
 		return sum.count ? std::optional<float>(sum.lowest) : std::nullopt;
 	}
 
@@ -110,12 +111,20 @@ namespace rdf::game::attack
 		if (keywords.empty() || !data) {
 			return;
 		}
+		using Flag = RE::EffectSetting::EffectSettingData::Flag;
 		for (auto* effect : data->GetFormArray<RE::EffectSetting>()) {
-			if (!effect || effect->data.flags.none(RE::EffectSetting::EffectSettingData::Flag::kDispelWithKeywords)) {
+			if (!effect) {
 				continue;
 			}
 			for (const auto& [key, kw] : keywords) {
-				if (effect->HasKeyword(kw)) {
+				if (!effect->HasKeyword(kw)) {
+					continue;
+				}
+				if (effect->data.flags.none(Flag::kRecover)) {
+					logger::warn("magic effect {} ({:08X}) has {} but not Recover: its magnitude is not counted",
+						effect->GetFullName(), effect->GetFormID(), key);
+				}
+				if (effect->data.flags.any(Flag::kDispelWithKeywords)) {
 					logger::warn("magic effect {} ({:08X}) has {} and 'Dispel Effects with these Keywords': each new one dispels "
 					             "the others from other spells, so their magnitudes never add up",
 						effect->GetFullName(), effect->GetFormID(), key);
@@ -127,7 +136,7 @@ namespace rdf::game::attack
 	float EffectAmount(RE::Actor* actor, const std::string& keyword)
 	{
 		auto* kw = keyword.empty() ? nullptr : forms::Get<RE::BGSKeyword>(keyword);
-		return kw ? magic::Query(actor, { .keyword = kw }, magic::Reading::Applied).total : 0.0f;
+		return kw ? magic::Query(actor, { .keyword = kw, .recoverOnly = true }, magic::Reading::Applied).total : 0.0f;
 	}
 
 	AttackerRule RuleOf(RE::Actor* attacker)

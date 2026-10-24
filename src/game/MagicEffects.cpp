@@ -10,7 +10,8 @@ namespace rdf::game::magic
 		bool Matches(RE::ActiveEffect* effect, const Filter& filter)
 		{
 			const auto* base = effect->GetBaseObject();
-			return (!filter.effect || base == filter.effect) && (!filter.keyword || base->HasKeyword(filter.keyword));
+			return (!filter.effect || base == filter.effect) && (!filter.keyword || base->HasKeyword(filter.keyword)) &&
+			       (!filter.recoverOnly || base->data.flags.all(RE::EffectSetting::EffectSettingData::Flag::kRecover));
 		}
 
 		// Every effect of the actor that counts and matches, until `f` returns false.

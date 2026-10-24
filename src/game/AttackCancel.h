@@ -26,12 +26,13 @@ namespace rdf::game::attack
 	// `inactiveEffects`: also effects their spell's conditions switched off, and dispelled ones (the engine's way).
 	bool ActorHasKeyword(RE::Actor* actor, RE::BGSKeyword* keyword, bool inactiveEffects = false);
 	// The summed magnitudes of the actor's effects with the keyword (ini text; empty or unknown = 0), as an amount:
-	// a Detrimental effect counts negative, inactive and dispelled ones not at all, a non-recovering one as it tapers
-	// now (magic::Reading::Applied). The cost, chain, i-frame and perfect-window keywords all read this way.
+	// only effects whose base effect has Recover count (one without it keeps changing a value rather than holding an
+	// amount), a Detrimental effect counts negative, inactive and dispelled ones not at all (magic::Reading::Applied).
+	// The cost, chain, i-frame and perfect-window keywords all read this way; sDelayKeyword too, as Authored.
 	float EffectAmount(RE::Actor* actor, const std::string& keyword);
-	// kDataLoaded: warns in the log of every magic effect that carries one of the amount keywords and has "Dispel
-	// Effects with these Keywords" (0x100): adding it dispels the other effects with that keyword from other spells
-	// (KeywordDispelFunctor, 0x140555910 in IDA), so they never add up.
+	// kDataLoaded: warns in the log of every magic effect that carries one of the amount keywords but lacks Recover (it
+	// is not counted), or has "Dispel Effects with these Keywords" (0x100): adding it dispels the other effects with that
+	// keyword from other spells (KeywordDispelFunctor, 0x140555910 in IDA), so they never add up.
 	void WarnDispellingEffects();
 
 	// [Rules] what the i-frames may do against an attacker (sUndodgeableKeyword first, then sPerfectOnlyKeyword), read by

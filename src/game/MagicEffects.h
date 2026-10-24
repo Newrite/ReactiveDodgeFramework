@@ -25,12 +25,14 @@ namespace rdf::game::magic
 	};
 
 	// Which effects: with this keyword on the base effect, and/or of this base effect. `inactive`: also the effects
-	// their spell's conditions switched off and the dispelled ones (the engine's own view).
+	// their spell's conditions switched off and the dispelled ones (the engine's own view). `recoverOnly`: only those
+	// whose base effect has Recover (an amount that holds while the effect lasts, not one that keeps changing a value).
 	struct Filter
 	{
 		const RE::BGSKeyword*    keyword{ nullptr };
 		const RE::EffectSetting* effect{ nullptr };
 		bool                     inactive{ false };
+		bool                     recoverOnly{ false };
 	};
 
 	struct Sum

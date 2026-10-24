@@ -108,7 +108,7 @@ T = {
     "iChainDodges": ("Chained dodges", "Додж-цепочка"),
     "iChainDodges_Desc": ("Chained dodges allowed after the first. 0 = none, -1 = unlimited.", "Сколько доджей можно сделать цепочкой после первого. 0 = ни одного, -1 = без ограничений."),
     "sChainDodgesKeyword": ("Chained dodges keyword", "Кейворд цепочки"),
-    "sChainDodgesKeyword_Desc": ("Magic effects with it add their summed magnitude (rounded) to the chained dodges; a Detrimental one takes away.", "Маг-эффекты с ним прибавляют сумму магнитуд (округлённую) к доджам в цепочке; Detrimental отнимает."),
+    "sChainDodgesKeyword_Desc": ("Magic effects (with Recover) with it add their summed magnitude (rounded) to the chained dodges; a Detrimental one takes away.", "Маг-эффекты (с Recover) с ним прибавляют сумму магнитуд (округлённую) к доджам в цепочке; Detrimental отнимает."),
     "sIFrameKeyword": ("I-frame keyword", "Кейворд i-frames"),
     "sIFrameKeyword_Desc": ("Magic effects with it change the i-frames by their summed magnitude in milliseconds: more lengthens them at the end, a Detrimental effect shortens them from the start.", "Маг-эффекты с ним меняют i-frames на сумму магнитуд в миллисекундах: больше удлиняет в конце, Detrimental укорачивает с начала."),
     "sCostKeyword": ("Cost keyword", "Кейворд стоимости"),
