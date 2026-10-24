@@ -641,6 +641,6 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   - Deployed; Pandora must be run again. Not tried in game.
 * Attacker rules read in the hooks (2026-10-24, the user's call): the high-process scan and the rule cache are gone.
   effects::Dodges resolves the attacker's handle and asks attack::RuleOf as the hit meets the i-frames. The keywords
-  come through forms::Peek, and the walk is the usual one over actor, worn items and effects. Reflyem read keywords in
-  such hooks without races. The keyword walk no longer checks the race separately: the actor's own HasKeyword already
+  come through forms::Peek, and the walk is the usual one over actor, worn items and effects. The user never hit a data race reading keywords in
+  such hooks in Reflyem. The keyword walk no longer checks the race separately: the actor's own HasKeyword already
   includes its race's keywords.
