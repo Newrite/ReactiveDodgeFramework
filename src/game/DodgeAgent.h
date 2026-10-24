@@ -113,7 +113,7 @@ namespace rdf::game
 		void              OnStopped(RE::Actor* actor);
 		void              Trace(RE::Actor* actor);
 		void              LogRejection(const Decision& d);
-		void              LogCost(RE::Actor* actor) const;
+		void              LogCost(RE::Actor* actor);
 		static int        ClipIndex(float angleDeg, bool keepFacing, bool neutral);
 
 		std::unique_ptr<ReactiveCore> core_;
@@ -158,6 +158,7 @@ namespace rdf::game
 		float           clipSpeed_{ 1.0f };       // its playback multiplier: fAnimSpeed, or its RDF_Speed
 		bool            stanceKept_{ false };
 		CostResources   chargedFrom_{};  // what charged_ was taken from (refunds go back there)
+		std::uint64_t   flashedPress_{ 0 };  // the refused dodge press whose meters already flashed
 		// this dodge's keyword amounts, read as it starts: window changes (s) and whether it may be perfect
 		float           iframeDelta_{ 0.0f };
 		float           perfectDelta_{ 0.0f };

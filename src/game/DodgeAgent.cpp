@@ -510,9 +510,17 @@ namespace rdf::game
 
 	void DodgeAgent::Charge(RE::Actor* actor, float cost)
 	{
+		const auto& settings = Settings::Get();
 		chargedFrom_ = ResourcesOf(actor);
 		for (int i = 0; i < chargedFrom_.count; ++i) {
-			effects::ChargeCost(actor, chargedFrom_.values[i], cost / static_cast<float>(chargedFrom_.count));
+			const auto av = chargedFrom_.values[i];
+			effects::ChargeCost(actor, av, cost / static_cast<float>(chargedFrom_.count));
+			// [Cost] the regeneration waits (longer when the dodge emptied it), and the player's meter flashes then
+			const bool empty = cost > 0.0f && actor->AsActorValueOwner()->GetActorValue(av) <= 0.0f;
+			effects::DelayRegen(actor, av, empty && settings.regenDelayEmpty > 0.0f ? settings.regenDelayEmpty : settings.regenDelay);
+			if (empty && settings.flashMeter && actor->IsPlayerRef()) {
+				effects::FlashMeter(av);
+			}
 		}
 		charged_ = chargedFrom_.count > 0 ? cost : 0.0f;
 	}
@@ -558,12 +566,22 @@ namespace rdf::game
 		return DodgeCost(settings.price, in);
 	}
 
-	void DodgeAgent::LogCost(RE::Actor* actor) const
+	void DodgeAgent::LogCost(RE::Actor* actor)
 	{
 		const auto& settings = Settings::Get();
 		auto*       owner = actor->AsActorValueOwner();
 		const auto  r = ResourcesOf(actor);
 		const float cost = CostOf(actor, core_->DodgeRunning() ? core_->ChainCount() : 0, escapeStagger_);
+		// [Cost] bFlashMeter: the refused press flashes the meters that fell short, once per press
+		const auto* press = core_->Buffer().Peek(CommandKind::Dodge, core_->Now());
+		if (settings.flashMeter && actor->IsPlayerRef() && press && press->seq != flashedPress_) {
+			flashedPress_ = press->seq;
+			for (int i = 0; i < r.count; ++i) {
+				if (!CostAllows(settings.price, owner->GetActorValue(r.values[i]), cost / static_cast<float>(r.count))) {
+					effects::FlashMeter(r.values[i]);
+				}
+			}
+		}
 		for (int i = 0; i < r.count; ++i) {
 			DevLog("{:08X}: cost resource {} current={:.1f} permanent={:.1f} share={:.1f} of {:.1f} minimum={:.1f}", formID_,
 				static_cast<int>(r.values[i]), owner->GetActorValue(r.values[i]), owner->GetPermanentActorValue(r.values[i]),

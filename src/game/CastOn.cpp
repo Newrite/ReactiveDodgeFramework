@@ -2,6 +2,7 @@
 
 #include "AttackCancel.h"
 #include "Diagnostics.h"
+#include "Effects.h"
 #include "Forms.h"
 #include "MagicEffects.h"
 #include "Settings.h"
@@ -51,12 +52,7 @@ namespace rdf::game::caston
 			func(actor, keepArchetype);
 		}
 
-		void FlashMeter(RE::ActorValue value)
-		{
-			using func_t = void (*)(RE::ActorValue);
-			static REL::Relocation<func_t> func{ REL::ID(51907) };  // 0x1408D53D0: the HUD meter flash
-			func(value);
-		}
+		void FlashMeter(RE::ActorValue value) { effects::FlashMeter(value); }  // 51907 = 0x1408D53D0
 
 		float GameSetting(const char* name, float fallback)
 		{

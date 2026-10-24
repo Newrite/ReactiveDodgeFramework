@@ -85,6 +85,15 @@ namespace rdf::game
 		// fChainCostStep.
 		// An actor with one of these keywords (on it, a worn item or an active effect) pays its dodges with that resource
 		// instead of sResource (even a free dodge); with both, half from each.
+		// After a dodge, the paying resources' regeneration waits this long (s; the engine's AIProcess::SetRegenerationDelay:
+		// it only lengthens a delay and caps it at fStaminaRegenDelayMax / fMagickaRegenDelayMax). fRegenDelayEmpty instead
+		// when the dodge left one at 0 or less. 0 = none.
+		float                         regenDelay{ 0.0f };
+		float                         regenDelayEmpty{ 0.0f };
+		// The player's HUD meter flashes when a dodge is refused for lack of the resource, or empties it.
+		bool                          flashMeter{ true };
+		// [Rules] no dodge while the game has turned the player's movement or looking controls off.
+		bool                          respectDisabledControls{ true };
 		std::string                   staminaCostKeyword;
 		std::string                   magickaCostKeyword;
 		std::string                   costKeyword;

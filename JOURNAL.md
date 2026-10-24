@@ -706,3 +706,12 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
       (AIProcess::SetRegenerationDelay, 38526 = 0x14065A940, IDA);
     - interrupting a cast on dodge;
     - refusing while ControlMap movement / looking controls are disabled.
+* From Reflyem's checks (2026-10-24):
+  - `[Rules] bRespectDisabledControls`: EngineBlock::ControlsDisabled while the player's ControlMap movement or looking
+    controls are off. enabledControls is at +0x118, verified in IDA (GetControlsState 67248, ToggleControls 67245).
+  - `[Cost] fRegenDelay` / `fRegenDelayEmpty`: the paying resources' regen delay after a dodge, through the engine's
+    AIProcess::SetRegenerationDelay (38526 = 0x14065A940; lengthens only, capped by f*RegenDelayMax).
+  - `bFlashMeter`: the HUD meter (51907) flashes on a refused press, once per press, and when a dodge empties a
+    resource. The flash is now effects::FlashMeter, shared with CastOn.
+  - Cast interruption stays as it is: without the cast keyword the dodge does not keep the cast going.
+  - Deployed; not tried in game.

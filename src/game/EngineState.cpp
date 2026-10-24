@@ -34,6 +34,14 @@ namespace rdf::game::engine
 			if (p->GetGraphVariableBool("bInJumpState"sv, jumping) && jumping) {
 				return EngineBlock::Jumping;
 			}
+			// The game's own lock on the player (ControlMap::enabledControls +0x118, verified in IDA through GetControlsState
+			// 67248 / ToggleControls 67245): a scene or a script that took movement or looking away also takes the dodge.
+			if (p->IsPlayerRef() && Settings::Get().respectDisabledControls) {
+				const auto* map = RE::ControlMap::GetSingleton();
+				if (map && (!map->IsMovementControlsEnabled() || !map->IsLookingControlsEnabled())) {
+					return EngineBlock::ControlsDisabled;
+				}
+			}
 			const auto* camera = RE::PlayerCamera::GetSingleton();
 			if (p->IsPlayerRef() && !Settings::Get().allowFirstPerson && camera && camera->IsInFirstPerson()) {
 				return EngineBlock::FirstPerson;  // no first-person graph support yet

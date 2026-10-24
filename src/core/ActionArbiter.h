@@ -20,6 +20,7 @@ namespace rdf
 		Sitting,
 		FirstPerson,
 		Jumping,
+		ControlsDisabled,  // the game turned the player's movement or looking controls off (a scene, a script)
 	};
 
 	constexpr bool IsForcedInterruption(EngineBlock b)

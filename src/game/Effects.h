@@ -7,6 +7,11 @@ namespace rdf::game::effects
 	// Spend / give back `amount` of a dodge's cost resource.
 	void ChargeCost(RE::Actor* actor, RE::ActorValue resource, float amount);
 	void RefundCost(RE::Actor* actor, RE::ActorValue resource, float amount);
+	// The HUD meter of a value flashes (51907 = 0x1408D53D0, the engine's "not enough" flash; the player's HUD).
+	void FlashMeter(RE::ActorValue value);
+	// The engine's AIProcess::SetRegenerationDelay (38526 = 0x14065A940, IDA): only lengthens the actor's delay for Health
+	// / Magicka / Stamina, capped at fHealth / fMagicka / fStaminaRegenDelayMax. Needs a high process.
+	void DelayRegen(RE::Actor* actor, RE::ActorValue value, float seconds);
 
 	// Melee hit hook (ID 37673 + 0x3C0): while invulnerable, hits on the player are dropped.
 	bool InstallIFrames();

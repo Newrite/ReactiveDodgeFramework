@@ -279,6 +279,10 @@ namespace rdf::game
 			c.shortfall = ParseShortfall(ReadString("Cost", "sShortfall", "Minimum"));
 			c.minimum = ReadFloat("Cost", "fMinimum", c.minimum, 0.0f, 1000.0f);
 			c.perfectRefund = ReadFloat("Cost", "fPerfectRefund", c.perfectRefund, 0.0f, 100.0f);
+			s.regenDelay = ReadFloat("Cost", "fRegenDelay", s.regenDelay, 0.0f, 30.0f);
+			s.regenDelayEmpty = ReadFloat("Cost", "fRegenDelayEmpty", s.regenDelayEmpty, 0.0f, 30.0f);
+			s.flashMeter = ReadBool("Cost", "bFlashMeter", s.flashMeter);
+			s.respectDisabledControls = ReadBool("Rules", "bRespectDisabledControls", s.respectDisabledControls);
 			s.staminaCostKeyword = ReadString("Cost", "sStaminaKeyword", s.staminaCostKeyword);
 			s.magickaCostKeyword = ReadString("Cost", "sMagickaKeyword", s.magickaCostKeyword);
 			s.costKeyword = ReadString("Cost", "sCostKeyword", s.costKeyword);

@@ -281,6 +281,24 @@ namespace rdf::game::effects
 		}
 	}
 
+	void FlashMeter(RE::ActorValue value)
+	{
+		using func_t = void (*)(RE::ActorValue);
+		static REL::Relocation<func_t> func{ REL::ID(51907) };
+		func(value);
+	}
+
+	void DelayRegen(RE::Actor* actor, RE::ActorValue value, float seconds)
+	{
+		auto* process = actor ? actor->GetActorRuntimeData().currentProcess : nullptr;
+		if (!process || !process->high || !(seconds > 0.0f)) {
+			return;
+		}
+		using func_t = void (*)(RE::AIProcess*, RE::ActorValue, float);
+		static REL::Relocation<func_t> func{ REL::ID(38526) };
+		func(process, value, seconds);
+	}
+
 	void RefundCost(RE::Actor* actor, RE::ActorValue resource, float amount)
 	{
 		if (amount > 0.0f) {
