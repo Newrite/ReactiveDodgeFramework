@@ -333,3 +333,19 @@ TEST(caston_effect_reading_round_trips)
 	CHECK(again.rules.size() == 1 && again.rules[0].conditions[0].reading == Reading::Applied);
 	CHECK(ParseRules(R"({ "rules": [ { "name": "r", "casts": [ { "spell": "X" } ], "conditions": [ { "kind": "InCombat" } ] } ] })").rules[0].conditions[0].reading == Reading::Authored);
 }
+
+TEST(caston_the_russian_guide_example_parses)
+{
+	const auto path = std::filesystem::path(__FILE__).parent_path().parent_path() / "docs" / "ru" / "CastOn.md";
+	std::ifstream in(path, std::ios::binary);
+	CHECK(static_cast<bool>(in));
+	const std::string text((std::istreambuf_iterator<char>(in)), {});
+	const auto        from = text.find("```json\n");
+	const auto        to = from == std::string::npos ? std::string::npos : text.find("```", from + 8);
+	CHECK(from != std::string::npos && to != std::string::npos);
+	const auto r = ParseRules(std::string_view(text).substr(from + 8, to - from - 8));
+	for (const auto& e : r.errors) {
+		std::printf("    %s\n", e.c_str());
+	}
+	CHECK(r.errors.empty() && r.rules.size() == 1 && r.presets.size() == 1);
+}

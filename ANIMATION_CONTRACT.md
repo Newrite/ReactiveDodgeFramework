@@ -172,7 +172,7 @@ whose submod mirrors those 9 paths under its conditions, so it can be added, rem
 regenerating behaviours:
 
 1. Write a spec in `behavior/sets/<name>.json`: target MO2 mod name, OAR mod/submod names, priority, the OAR
-   conditions, and one source clip per direction (`f fr r br b bl l fl`). Roll and step slots get the same clip.
+   conditions, and one source clip per direction (`f fr r br b bl l fl`, optional `n` = neutral).
 2. Extract the source archive into a new folder under `_work/` and run
    `python tools/build_clip_set.py behavior/sets/<name>.json --src _work/<folder>`. It writes the mod, copies
    the clips, adds the `RDF_*` windows (keeping the clips' own annotations) and records the times in
