@@ -4,8 +4,8 @@ The window times come from each clip's own root-motion speed curve (its `animmot
 every direction gets windows that match how that particular animation moves (speeds are measured
 across +-2 keys, so a single jerky key cannot become the peak):
 
-    RDF_Windows      0                         the clip carries windows (switches the plugin from ini timers)
-    RDF_IFrameStart  speed first >= 30 % of the peak
+    RDF_Windows      0                         the clip carries cancel windows (protection retains INI duration)
+    RDF_IFrameStart.<seconds> at frame 0: start when speed first >= 30 % of peak
     RDF_IFrameEnd    after the peak, speed <= 60 % of the peak     (--iframeEnd)
     RDF_AttackOpen   after the peak, speed <= 90 %                  (--attack)
     RDF_BlockOpen    after the peak, speed <= 90 %                  (--block)
@@ -153,7 +153,7 @@ def annotate(clip, rule, drop=(), with_motion=True, distance_scale=1.0, speed=No
         return None, "no animmotion root motion"
 
     marks, peak_t, peak = windows(curve, rule)
-    extra = []  # annotations with a payload: (time, full text)
+    extra = [(0.0, f"RDF_IFrameStart.{marks['RDF_IFrameStart']:.6f}")]  # start metadata on frame zero
     moves = None
     if with_motion:
         found = DURATION.search(text)
@@ -161,7 +161,7 @@ def annotate(clip, rule, drop=(), with_motion=True, distance_scale=1.0, speed=No
         if duration <= MIN_RECOVERY:
             return None, "no duration"
         moves = motion(curve, duration, path_length(notes) * distance_scale)
-        extra = [(0.0, "RDF_Motion.{distance:.1f},{startup:.3f},{active:.3f},{recovery:.3f}".format(**moves)),
+        extra += [(0.0, "RDF_Motion.{distance:.1f},{startup:.3f},{active:.3f},{recovery:.3f}".format(**moves)),
                  (0.0, f"RDF_ClipLength.{duration:.4f}")]
     if speed is not None:
         if not 0.1 <= speed <= 5.0:
@@ -177,7 +177,7 @@ def annotate(clip, rule, drop=(), with_motion=True, distance_scale=1.0, speed=No
     if jump_open is not None:
         extra.append((marks["RDF_ExitOpen"] if jump_open == "exit" else float(jump_open), "RDF_JumpOpen"))
     kept = [(t, s) for t, s in notes if not s.startswith(("RDF_",) + tuple(drop))]
-    merged = sorted(kept + [(t, s) for s, t in marks.items()] + extra, key=lambda n: n[0])
+    merged = sorted(kept + [(t, s) for s, t in marks.items() if s != "RDF_IFrameStart"] + extra, key=lambda n: n[0])
     body = f'<hkparam name="annotations" numelements="{len(merged)}">{render(merged)}\n\t\t\t\t\t</hkparam>'
     text = text[:m.start()] + m.group(1) + body + m.group(4) + text[m.end():]
     xml.write_text(text, encoding="utf-8")
@@ -186,13 +186,13 @@ def annotate(clip, rule, drop=(), with_motion=True, distance_scale=1.0, speed=No
     check = WORK / (clip.stem + ".check.xml")
     hkxc(clip, check, "xml")
     found = {s for _, s in NOTE.findall(TRACK0.search(check.read_text(encoding="utf-8")).group(3))}
-    missing = [s for s in marks if s not in found] + [s for _, s in extra if s not in found]
+    missing = [s for s in marks if s != "RDF_IFrameStart" and s not in found] + [s for _, s in extra if s not in found]
     if missing:
         sys.exit(f"{clip.name}: annotations missing after repack: {missing}")
     leftover = [s for s in found if drop and s.startswith(tuple(drop))]
     if leftover:
         sys.exit(f"{clip.name}: dropped annotations still there after repack: {leftover}")
-    result = {"peakTime": round(peak_t, 4), "peakSpeed": round(peak, 1), **{k: round(v, 4) for k, v in marks.items()}}
+    result = {"protectionContract": "start-duration-v2", "peakTime": round(peak_t, 4), "peakSpeed": round(peak, 1), **{k: round(v, 4) for k, v in marks.items()}}
     if moves:
         result["motion"] = {k: round(v, 4) for k, v in moves.items()}
         result["clipLength"] = round(duration, 4)

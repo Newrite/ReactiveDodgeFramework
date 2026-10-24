@@ -310,11 +310,19 @@ namespace rdf::game
 
 	void DodgeAgent::HandleGraphEvents(RE::Actor* actor)
 	{
+		ApplyClipMotion(actor); // establishes the playback speed before converting clip-local start times
+		graph::DrainProtectionStarts(actor, [this](WindowEvent e, std::string_view payload) {
+			const auto start = clip_motion::ParseWindowStart(payload);
+			const float speed = core_->DodgeTiming().PlaybackSpeed(clipLength_, clipSpeed_);
+			if (!start || !core_->OnClipWindowStart(e, *start / speed)) {
+				DevLog("{:08X}: protection start {} '{}' invalid, duplicate or outside startup: ignored",
+					formID_, static_cast<int>(e), payload);
+			}
+		});
 		graph::DrainClipWindows(actor, [this](WindowEvent e) {
 			core_->OnWindowEvent(e);
 			DevLog("{:08X}: clip window event {} at t={:.3f}", formID_, static_cast<int>(e), core_->ActionTime());
 		});
-		ApplyClipMotion(actor);
 		const bool entered = graph::TakeEntered(actor);
 		const int  depth = graph::Depth(actor);
 		const int  previousDepth = prevDepth_;
@@ -411,8 +419,8 @@ namespace rdf::game
 		}
 	}
 
-	// Perfect dodge: a hit the i-frames dodged (melee, Precision, projectile, explosion) inside [fPerfectWindowStart,
-	// fPerfectWindowEnd] of the dodge, once per dodge. It tells both graphs and Papyrus; the driver may add more.
+	// Perfect dodge: a hit prevented by i-frames inside the configured start + duration, capped by the clip End.
+	// Once per dodge; tells both graphs and Papyrus, then the driver and CastOn.
 	void DodgeAgent::HandleDodgedHits(RE::Actor* actor)
 	{
 		const auto  attacker = effects::TakeDodgedHit(actor);
@@ -421,9 +429,9 @@ namespace rdf::game
 			return;
 		}
 		const float t = core_->ActionTime();
-		if (!core_->PerfectWindow(p.windowStart, p.windowEnd, perfectDelta_)) {
-			DevLog("{:08X}: dodged a hit at t={:.3f}, outside the perfect window (RDF_PerfectStart/End of the clip, else [{:.2f}, {:.2f}])",
-				formID_, t, p.windowStart, p.windowEnd);
+		if (!core_->PerfectWindow(p.windowStart, p.windowDuration, perfectDelta_)) {
+			DevLog("{:08X}: dodged a hit at t={:.3f}, outside the perfect window (ini start {:.2f}, duration {:.2f}; clip start/End may cap it)",
+				formID_, t, p.windowStart, p.windowDuration);
 			return;
 		}
 		perfectFired_ = true;
@@ -1173,9 +1181,9 @@ namespace rdf::game
 		requestedDistance_ = step.command.speed * dt;
 		requestedHeading_ = core_->Heading();
 
-		effects::SetInvulnerable(actor, settings.iFrames && core_->Invulnerable(settings.iFrameStart, settings.iFrameEnd, iframeDelta_));
+		effects::SetInvulnerable(actor, settings.iFrames && core_->Invulnerable(settings.iFrameStart, settings.iFrameDuration, iframeDelta_));
 		effects::SetPerfectOpen(actor, perfectAllowed_ && core_->DodgeRunning() &&
-		                                   core_->PerfectWindow(settings.perfect.windowStart, settings.perfect.windowEnd, perfectDelta_));
+		                                   core_->PerfectWindow(settings.perfect.windowStart, settings.perfect.windowDuration, perfectDelta_));
 
 		if (step.completed && !exitSent_) {
 			graph::SendExit(actor, layer_);

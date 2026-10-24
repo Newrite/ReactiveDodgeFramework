@@ -173,9 +173,8 @@ namespace rdf::game
 		bool  projectileIFrames{ true };  // every projectile type passes through during i-frames
 		bool  explosionIFrames{ true };   // explosions skip the player during i-frames
 		float iFrameStart{ 0.05f };
-		float iFrameEnd{ 0.35f };
-		// Its effects' summed magnitudes, in milliseconds: more lengthens the i-frames at the end, less shortens them
-		// from the start.
+		float iFrameDuration{ 0.30f };
+		// Active Recover effects add milliseconds to the INI duration; Detrimental subtracts, minimum zero.
 		std::string iFrameKeyword;
 
 		bool suppressLegacyDodge{ true };
@@ -219,7 +218,7 @@ namespace rdf::game
 		{
 			bool        enabled{ true };
 			float       windowStart{ 0.0f };
-			float       windowEnd{ 0.15f };
+			float       windowDuration{ 0.15f };
 			// With a keyword set, only an actor with it (on it, a worn item or an active effect) dodges perfectly.
 			std::string keyword;
 			// Its effects' summed magnitudes, in milliseconds, change the perfect window as sIFrameKeyword the i-frames.

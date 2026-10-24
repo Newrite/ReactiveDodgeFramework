@@ -29,6 +29,8 @@ namespace rdf::game::graph
 	void LogEvents(bool on);
 	bool DodgeWindowOpen(RE::Actor* actor);
 	// RDF_* clip annotations seen since the last call, in WindowEvent order.
+	// Numeric start metadata, kept separate from cancel events and bClipMotion.
+	void DrainProtectionStarts(RE::Actor* actor, const std::function<void(WindowEvent, std::string_view)>& sink);
 	void DrainClipWindows(RE::Actor* actor, const std::function<void(WindowEvent)>& sink);
 	void ClearEvents(RE::Actor* actor);
 

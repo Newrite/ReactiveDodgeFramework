@@ -52,10 +52,12 @@ namespace rdf::game::graph
 			// Several graphs (the player's first / third person): only this one counts; null = every graph.
 			const RE::BSTEventSource<RE::BSAnimationGraphEvent>* activeSource{ nullptr };
 			std::vector<std::pair<int, std::string>>              castOn;  // CastOn annotations since the last drain
+			std::vector<std::pair<int, std::string>>              windowStarts; // numeric start metadata
 			std::vector<std::pair<int, std::string>>              motion;  // kMotionNames index, payload
 		};
 
 		// "RDF_CastOnDodge" with payload "tag", or the whole "RDF_CastOnDodge.tag" as the tag when the graph did not split it.
+		constexpr std::array kProtectionStartNames{ "RDF_IFrameStart"sv, "RDF_PerfectStart"sv };
 		constexpr std::array kCastOnNames{ "RDF_CastOnDodge"sv, "RDF_CastOnPerfectDodge"sv, "RDF_CastOnClip"sv };
 		// The clip's own settings (ANIMATION_CONTRACT.md 5): "RDF_Motion.<numbers>", "RDF_ClipLength.<seconds>" ..., split the
 		// same way; the index is the kind DrainClipMotion reports.
@@ -158,7 +160,9 @@ namespace rdf::game::graph
 				}
 				int         castOnKind = 0;
 				std::string castOnTag;
-				if (PayloadEvent(kCastOnNames, event->tag.c_str(), event->payload.c_str(), castOnKind, castOnTag)) {
+				if (PayloadEvent(kProtectionStartNames, event->tag.c_str(), event->payload.c_str(), castOnKind, castOnTag)) {
+					g.windowStarts.emplace_back(castOnKind, std::move(castOnTag));
+				} else if (PayloadEvent(kCastOnNames, event->tag.c_str(), event->payload.c_str(), castOnKind, castOnTag)) {
 					g.castOn.emplace_back(castOnKind, std::move(castOnTag));
 				} else if (PayloadEvent(kMotionNames, event->tag.c_str(), event->payload.c_str(), castOnKind, castOnTag)) {
 					g.motion.emplace_back(castOnKind, std::move(castOnTag));
@@ -328,6 +332,14 @@ namespace rdf::game::graph
 	bool DodgeWindowOpen(RE::Actor* actor)
 	{
 		return WithActor(actor, [](ActorGraph& g) { return g.window; });
+	}
+
+	void DrainProtectionStarts(RE::Actor* actor, const std::function<void(WindowEvent, std::string_view)>& sink)
+	{
+		const auto events = WithActor(actor, [](ActorGraph& g) { return std::exchange(g.windowStarts, {}); });
+		for (const auto& [kind, payload] : events) {
+			sink(kind == 0 ? WindowEvent::IFrameStart : WindowEvent::PerfectStart, payload);
+		}
 	}
 
 	void DrainClipWindows(RE::Actor* actor, const std::function<void(WindowEvent)>& sink)

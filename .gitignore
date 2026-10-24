@@ -2,6 +2,7 @@ _work/
 _ext/
 build/
 .xmake/
+__pycache__/
 behavior/**/*.hkx
 behavior/fixtures/
 *.hkx

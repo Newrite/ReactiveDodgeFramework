@@ -645,7 +645,7 @@ TEST(annotation_events_drive_windows_and_iframes_per_dodge)
 	CHECK(!s.core.ClipAnnotated());
 
 	s.core.OnWindowEvent(WindowEvent::Marker);
-	s.core.OnWindowEvent(WindowEvent::IFrameStart);
+	CHECK(s.core.OnClipWindowStart(WindowEvent::IFrameStart, 0.0f));
 	CHECK(s.core.ClipAnnotated());
 	CHECK(s.core.Invulnerable(10.0f, 11.0f));  // the clip's window, not the ini one
 
@@ -702,9 +702,9 @@ TEST(perfect_window_from_the_clip_or_the_ini)
 	s.core.OnWindowEvent(WindowEvent::Marker);
 	CHECK(!s.core.PerfectWindow(0.0f, 0.15f));
 	CHECK(s.core.PerfectWindow(0.0f, 10.0f));
-	// ... one with them uses its own.
+	// A late/bare Start no longer reopens the window; metadata belongs on frame zero.
 	s.core.OnWindowEvent(WindowEvent::PerfectStart);
-	CHECK(s.core.PerfectWindow(0.0f, 0.15f));
+	CHECK(!s.core.PerfectWindow(0.0f, 0.15f));
 	s.core.OnWindowEvent(WindowEvent::PerfectEnd);
 	CHECK(!s.core.PerfectWindow(0.0f, 10.0f));
 }
@@ -1164,40 +1164,6 @@ TEST(dodge_cost_keyword_inputs)
 	c.escapeFlat = 10.0f;
 	in.escapePercent = 100.0f;  // x2
 	CHECK(DodgeCost(c, in) == 60.0f);
-}
-
-TEST(window_deltas_lengthen_at_the_end_and_shorten_from_the_start)
-{
-	Sim s;
-	s.Frame(kDt64, Dir(0), { CommandKind::Dodge });
-	// ini window [0.10, 0.20)
-	const auto at = [&](float t) {
-		while (s.core.ActionTime() + 1e-6f < t) {
-			s.Frame(kDt64, Dir(0));
-		}
-	};
-	at(0.20f);
-	CHECK(!s.core.Invulnerable(0.10f, 0.20f));
-	CHECK(s.core.Invulnerable(0.10f, 0.20f, 0.05f));  // +50 ms at the end
-	CHECK(!s.core.Invulnerable(0.10f, 0.12f, -0.05f)); // -50 ms from the start: [0.15, 0.12) never opens
-	at(0.16f);
-
-	Sim a;
-	a.Frame(kDt64, Dir(0), { CommandKind::Dodge });
-	a.core.OnWindowEvent(WindowEvent::IFrameStart);
-	CHECK(a.core.Invulnerable(0.0f, 0.0f));
-	CHECK(!a.core.Invulnerable(0.0f, 0.0f, -0.05f));  // the clip's start moved 50 ms later
-	for (int i = 0; i < 4; ++i) {
-		a.Frame(kDt64, Dir(0));
-	}
-	CHECK(a.core.Invulnerable(0.0f, 0.0f, -0.05f));
-	a.core.OnWindowEvent(WindowEvent::IFrameEnd);
-	CHECK(!a.core.Invulnerable(0.0f, 0.0f));
-	CHECK(a.core.Invulnerable(0.0f, 0.0f, 0.03f));    // still 30 ms after the clip's end
-	for (int i = 0; i < 3; ++i) {
-		a.Frame(kDt64, Dir(0));
-	}
-	CHECK(!a.core.Invulnerable(0.0f, 0.0f, 0.03f));
 }
 
 TEST(chain_press_from_drops_early_presses)

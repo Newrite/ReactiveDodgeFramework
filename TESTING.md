@@ -62,3 +62,17 @@ what is still waiting.
   released mid-dodge flies after it: `replayed the release held by the dodge`), while charging a fire-and-forget spell and
   during a concentration spell; a chain inside the layer; dodge -> attack / block from a layer dodge; `dodge start ... (bow)`
   / `(magic)` in the log, and no `did not enter` warning.
+
+## Protection window contract update — 2026-10-24
+
+120 C++ cases pass: start + duration, independence from cancel annotations, signed modifiers, zero duration,
+hard End before/after Start, independent windows, chain reset, interruption/lifetime, malformed/late metadata,
+and frame-zero motion shortening startup before protection metadata.
+The replaced test expected negative modifiers to delay start and positive modifiers to outlive End;
+those expectations were deliberately removed because the new contract forbids both.
+
+`python tools/test_protection_clips.py`: 3 tests pass (frame-zero conversion, preservation, idempotence,
+invalid/ambiguous metadata rejection). All 54 migrated clips passed full XML round-trip comparison, including
+End, root motion and other annotation preservation. The updated generator also passed a real HKX round trip.
+Deployed DLLs and clips match build/staging outputs; FOMOD CRC, DLL, INI and base clips were verified.
+This revision still needs an in-game dodge/perfect test.

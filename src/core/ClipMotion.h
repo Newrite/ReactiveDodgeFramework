@@ -76,6 +76,13 @@ namespace rdf
 			return v;
 		}
 
+		// Clip-local seconds at speed 1; delivered on the first frame, then divided by playback speed.
+		inline std::optional<float> ParseWindowStart(std::string_view text)
+		{
+			const auto value = Number(text);
+			return value && text.empty() && *value >= 0.0f && *value <= kMaxLength ? value : std::nullopt;
+		}
+
 		// "<distance>" or "<distance>,<startup>,<active>,<recovery>"; nullopt when malformed or out of range.
 		inline std::optional<ClipMotion> ParseMotion(std::string_view text)
 		{

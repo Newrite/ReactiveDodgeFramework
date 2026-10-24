@@ -168,7 +168,7 @@ namespace rdf::game::schema
 				Float(Page::Timing, "Timing", "fChainPressFrom", RDF_F(core.policy.chainPressFrom), 0.0f, 1.0f, "%.2f s"),
 				Form(Page::Timing, "Timing", "sChainDodgesKeyword", RDF_S(chainDodgesKeyword), RE::FormType::Keyword),
 				Float(Page::Timing, "IFrames", "fIFrameStart", RDF_F(iFrameStart), 0.0f, 1.0f, "%.2f s"),
-				Float(Page::Timing, "IFrames", "fIFrameEnd", RDF_F(iFrameEnd), 0.0f, 1.5f, "%.2f s"),
+				Float(Page::Timing, "IFrames", "fIFrameDuration", RDF_F(iFrameDuration), 0.0f, 1.5f, "%.2f s"),
 				Form(Page::Timing, "IFrames", "sIFrameKeyword", RDF_S(iFrameKeyword), RE::FormType::Keyword),
 				// --- motion
 				Float(Page::Motion, "Motion", "fDistance", RDF_F(core.motion.distance), 50.0f, 1000.0f, "%.0f"),
@@ -223,7 +223,7 @@ namespace rdf::game::schema
 				Form(Page::Rules, "Cost", "sChainCostKeyword", RDF_S(chainCostKeyword), RE::FormType::Keyword),
 				Bool(Page::Rules, "Perfect", "bPerfectDodge", RDF_B(perfect.enabled)),
 				Float(Page::Rules, "Perfect", "fPerfectWindowStart", RDF_F(perfect.windowStart), 0.0f, 1.0f, "%.2f s"),
-				Float(Page::Rules, "Perfect", "fPerfectWindowEnd", RDF_F(perfect.windowEnd), 0.0f, 1.0f, "%.2f s"),
+				Float(Page::Rules, "Perfect", "fPerfectWindowDuration", RDF_F(perfect.windowDuration), 0.0f, 1.0f, "%.2f s"),
 				Form(Page::Rules, "Perfect", "sPerfectDodgeKeyword", RDF_S(perfect.keyword), RE::FormType::Keyword),
 				Form(Page::Rules, "Perfect", "sPerfectWindowKeyword", RDF_S(perfect.windowKeyword), RE::FormType::Keyword),
 				Bool(Page::Rules, "Perfect", "bPerfectGhost", RDF_B(perfect.ghost)),

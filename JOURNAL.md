@@ -746,3 +746,20 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
     fPerfectGhostIntensity, fPerfectGhostRimPower, fPerfectGhostLifetime, iPerfectGhostCount, fPerfectGhostInterval.
   - The menu gained a Color field kind (FUCK ColorEdit4), written to the ini as "r,g,b,a".
   - GhostTrails.dll is installed in VanillaLike only. Built and deployed; not tried in game.
+
+* Protection windows v2 (2026-10-24): i-frames and perfect use INI start + duration, independent of cancel
+  annotations. New keys fIFrameDuration (default .30) and fPerfectWindowDuration (.15); legacy End keys migrate to
+  max(0, end-start) only if Duration is absent. Active Recover effect magnitudes sum once at dodge start;
+  Detrimental subtracts from duration, clamped at zero, never moves the start.
+  - RDF_IFrameStart.<seconds> / RDF_PerfectStart.<seconds> on frame 0 override only the start. Clip-local payload
+    is converted with playback speed after motion metadata. End closes until the next dodge, even before the
+    scheduled opening or with a positive bonus. Bare legacy Start events no longer open windows.
+  - Fixed frame-zero ordering when RDF_Motion shortens startup below the current time: protection metadata in
+    the same update retains startup admission. Existing lifetime, interruption, switches and attacker rules preserved.
+  - Generator emits the new format; migration tool stages legacy clips and verifies full XML equality after repack.
+    54 clips migrated: STB base/Greatsword, VanillaLike installed base/three Infinity submods.
+  - DLL/translations/docs deployed to both installations; both INIs and STB committed preset migrated with other
+    setting values verified unchanged. Backups/readback: _work/protection-v2.
+  - Updated menu/docs/contract; rebuilt 1344-file FOMOD (11.7 MB), copied to F:/downloads and verified.
+  - Validation: 120 C++ tests, 3 migration tests, generator HKX round trip and DLL build pass. NOT tested in game.
+    Event names are unchanged, so this change needs no behavior regeneration.

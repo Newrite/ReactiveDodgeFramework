@@ -47,6 +47,20 @@ namespace rdf::game
 			return clamped;
 		}
 
+		// Old INIs stored an end timestamp. Preserve their baseline length until a new duration is saved.
+		float ReadDuration(const char* section, const char* key, const char* legacyEnd, float start, float def, float max)
+		{
+			if (!ReadString(section, key, "").empty()) {
+				return ReadFloat(section, key, def, 0.0f, max);
+			}
+			if (!ReadString(section, legacyEnd, "").empty()) {
+				const float duration = std::max(0.0f, ReadFloat(section, legacyEnd, start + def, 0.0f, max) - start);
+				logger::info("[{}] migrated {} to {}={} seconds", section, legacyEnd, key, duration);
+				return duration;
+			}
+			return def;
+		}
+
 		// Accepts decimal or 0x hex.
 		// "r,g,b,a", each 0..1 (the menu's colour picker writes it this way); anything else keeps `def`.
 		std::array<float, 4> ReadColor(const char* section, const char* key, std::array<float, 4> def);
@@ -406,7 +420,7 @@ namespace rdf::game
 		s.projectileIFrames = ReadBool("IFrames", "bProjectileIFrames", s.projectileIFrames);
 		s.explosionIFrames = ReadBool("IFrames", "bExplosionIFrames", s.explosionIFrames);
 		s.iFrameStart = ReadFloat("IFrames", "fIFrameStart", s.iFrameStart, 0.0f, 5.0f);
-		s.iFrameEnd = ReadFloat("IFrames", "fIFrameEnd", s.iFrameEnd, 0.0f, 5.0f);
+		s.iFrameDuration = ReadDuration("IFrames", "fIFrameDuration", "fIFrameEnd", s.iFrameStart, s.iFrameDuration, 5.0f);
 		s.iFrameKeyword = ReadString("IFrames", "sIFrameKeyword", s.iFrameKeyword);
 		s.allowFirstPerson = ReadBool("Compat", "bAllowFirstPerson", s.allowFirstPerson);
 		s.blockJumpDuringDodge = ReadBool("Jump", "bBlockDuringDodge", s.blockJumpDuringDodge);
@@ -447,7 +461,7 @@ namespace rdf::game
 		auto& pf = s.perfect;
 		pf.enabled = ReadBool("Perfect", "bPerfectDodge", pf.enabled);
 		pf.windowStart = ReadFloat("Perfect", "fPerfectWindowStart", pf.windowStart, 0.0f, 3.0f);
-		pf.windowEnd = ReadFloat("Perfect", "fPerfectWindowEnd", pf.windowEnd, 0.0f, 3.0f);
+		pf.windowDuration = ReadDuration("Perfect", "fPerfectWindowDuration", "fPerfectWindowEnd", pf.windowStart, pf.windowDuration, 3.0f);
 		pf.keyword = ReadString("Perfect", "sPerfectDodgeKeyword", pf.keyword);
 		pf.ghost = ReadBool("Perfect", "bPerfectGhost", pf.ghost);
 		pf.ghostNPC = ReadBool("Perfect", "bPerfectGhostNPC", pf.ghostNPC);

@@ -25,6 +25,7 @@ namespace rdf
 
 	void ReactiveCore::BeginFrame(const FrameInput& frame)
 	{
+		clipMotionAppliedThisFrame_ = false;
 		frame_ = frame;
 		clock_.Advance(frame.dt);
 		buffer_.Expire(clock_.Now());
@@ -160,6 +161,7 @@ namespace rdf
 		start.warp = !frame_.cameraIsYaw;
 
 		windows_.Reset();  // the new clip announces its own windows
+		clipMotionAppliedThisFrame_ = false;
 		intoAction_ = false;
 		const int chainCount = chain ? action_.ChainCount() + 1 : 1;
 		timing_ = cfg_.timing;
@@ -168,53 +170,30 @@ namespace rdf
 		startAngleDeg_ = AngleDelta(frame_.actorYaw, start.heading) * kRadToDeg;
 	}
 
-	namespace
+	bool ReactiveCore::Invulnerable(float start, float duration, float delta) const
 	{
-		// [start, end) at `t`, `delta` applied: > 0 the end moves later, < 0 the start moves later. No start: closed;
-		// no end: open from the start on.
-		bool InWindow(std::optional<float> start, std::optional<float> end, float t, float delta)
-		{
-			if (!start) {
-				return false;
-			}
-			float from = *start;
-			if (delta < 0.0f) {
-				from -= delta;
-			}
-			if (t < from) {
-				return false;
-			}
-			return !end || t < *end + std::max(delta, 0.0f);
-		}
+		return action_.Running() && windows_.IFrames().Open(action_.Time(), start, duration, delta);
 	}
 
-	bool ReactiveCore::Invulnerable(float from, float to, float delta) const
+	bool ReactiveCore::PerfectWindow(float start, float duration, float delta) const
 	{
-		if (!action_.Running()) {
-			return false;
-		}
-		if (windows_.Annotated()) {
-			return InWindow(windows_.IFrameStart(), windows_.IFrameEnd(), action_.Time(), delta);
-		}
-		return InWindow(from, to, action_.Time(), delta);
-	}
-
-	bool ReactiveCore::PerfectWindow(float from, float to, float delta) const
-	{
-		if (!action_.Running()) {
-			return false;
-		}
-		if (windows_.Perfect()) {
-			return InWindow(windows_.PerfectStart(), windows_.PerfectEnd(), action_.Time(), delta);
-		}
-		return InWindow(from, to + 1e-6f, action_.Time(), delta);  // the ini window includes its end
+		return action_.Running() && windows_.Perfect().Open(action_.Time(), start, duration, delta);
 	}
 
 	void ReactiveCore::OnWindowEvent(WindowEvent e)
 	{
 		if (action_.Running()) {
-			windows_.On(e, action_.Time());
+			windows_.On(e);
 		}
+	}
+
+	bool ReactiveCore::OnClipWindowStart(WindowEvent e, float start)
+	{
+		if (!action_.Running() || action_.Exiting() ||
+			(action_.Phase() != DodgePhase::Startup && !clipMotionAppliedThisFrame_)) {
+			return false;
+		}
+		return windows_.SetProtectionStart(e, start);
 	}
 
 	bool ReactiveCore::OnClipMotion(const ClipMotion& motion)
@@ -229,6 +208,7 @@ namespace rdf
 		}
 		action_.Retime(timing_);
 		driver_.Replan(timing_, motion.distance.value_or(cfg_.motion.distance));
+		clipMotionAppliedThisFrame_ = true;
 		return true;
 	}
 

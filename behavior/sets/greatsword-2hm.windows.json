@@ -108,5 +108,7 @@
             "RDF_BlockOpen": 0.35,
             "RDF_ExitOpen": 0.4
         }
-    }
+    },
+    "protectionContract": "start-duration-v2",
+    "startAnnotations": "Start values above are clip-second payloads on frame 0; End values remain event times"
 }

@@ -3,7 +3,7 @@ set_xmakever("3.0.8")
 includes("S:/Programming/CommonLibSSE-NG")
 
 set_project("ReactiveDodgeFramework")
-set_version("0.1.0")
+set_version("0.2.0")
 
 add_rules("mode.debug", "mode.releasedbg")
 set_defaultplat("windows")

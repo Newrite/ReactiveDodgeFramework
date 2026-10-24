@@ -90,15 +90,12 @@ namespace rdf
 		void  Consume(const Decision& d);
 		// Heading of the current dodge relative to the actor's yaw when it began, degrees, +right.
 		float      StartAngleDeg() const { return startAngleDeg_; }
-		// An annotated clip's own i-frame window, else [from, to) of the ini timers. `delta` (seconds, from the actor's
-		// keyword) lengthens it at the end when positive, and shortens it from the start when negative (an annotated
-		// window's end is not known in advance).
-		bool       Invulnerable(float from, float to, float delta = 0.0f) const;
-		// The clip's own perfect window (RDF_PerfectStart / End) if it has one, else [from, to] of the ini; `delta` as
-		// for Invulnerable.
-		bool       PerfectWindow(float from, float to, float delta = 0.0f) const;
-		// RDF_* annotation events of the clip playing the current dodge.
+		// INI start + max(0, duration + delta). Clip metadata replaces only start; End closes unconditionally.
+		bool       Invulnerable(float start, float duration, float delta = 0.0f) const;
+		bool       PerfectWindow(float start, float duration, float delta = 0.0f) const;
 		void       OnWindowEvent(WindowEvent e);
+		// Numeric start metadata at the first clip frame (startup only), in action seconds. Once per window/dodge.
+		bool       OnClipWindowStart(WindowEvent e, float start);
 		// RDF_Motion of the clip playing the current dodge: its distance and phases replace the ini's. Taken only while
 		// the dodge is still in its startup and not exiting (the annotation sits at the clip's first frame); false when
 		// it was ignored. A clip without phases keeps the current ones and changes the distance only.
@@ -133,6 +130,7 @@ namespace rdf
 		float         startAngleDeg_{ 0.0f };
 		Timing        timing_;    // the current dodge's phases and blend-outs (the ini's until the clip says otherwise)
 		bool          intoAction_{ false };  // the current dodge was cancelled into an attack/block
+		bool          clipMotionAppliedThisFrame_{ false }; // frame-zero metadata shares the pre-retime startup gate
 		WindowTracker windows_;
 	};
 }

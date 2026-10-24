@@ -100,13 +100,15 @@ is NOT a wildcard in vanilla (each vanilla root state carries its own copy), so 
 A clip may announce its own cancel windows with annotations on its first track (`NPC Root [Root]`). The names are
 registered as events in `0_master` by the `rdf` Pandora patch, which is what lets the engine forward them to the plugin.
 When a dodge's clip sends `RDF_Windows`, that dodge ignores the ini timers (`fChainFrom`, `fAttackFrom`, `fBlockFrom`,
-`fExitFrom`, `fIFrameStart/End`) and opens each window when its annotation fires; a clip without them keeps the timers.
+`fExitFrom`) and opens each window when its annotation fires; a clip without them keeps the timers.
 
 | Annotation | Meaning |
 |---|---|
 | `RDF_Windows` | at 0: this clip carries windows |
-| `RDF_IFrameStart` / `RDF_IFrameEnd` | invulnerability window (when `bIFrames=1`) |
-| `RDF_PerfectStart` / `RDF_PerfectEnd` | optional perfect-dodge window; a clip without them keeps `fPerfectWindowStart/End` even when its other windows are annotated |
+| `RDF_IFrameStart.<seconds>` | frame 0 metadata: override only the INI start, in clip-local seconds at speed 1 |
+| `RDF_IFrameEnd` | hard close of i-frames, even with a duration bonus |
+| `RDF_PerfectStart.<seconds>` | frame 0 metadata: override only the perfect start |
+| `RDF_PerfectEnd` | hard close of perfect, even with a duration bonus |
 | `RDF_ChainOpen` | a buffered dodge may chain from here |
 | `RDF_AttackOpen` | a buffered attack may cancel the dodge from here |
 | `RDF_BlockOpen` | a buffered block may cancel the dodge from here |
@@ -140,7 +142,7 @@ chain, so the incoming clip announces its own.
 keeps `animmotion`, PIE and others). It places them from the clip's root-motion speed curve, as the first key after the
 speed peak where the speed has fallen to a fraction of the peak: attack and block at 90 % (right after the peak, and
 never later than 0.35 s), chain and exit to running at 75 % (still moving, so the blend lands in running instead of a
-planted stance); i-frames run from the first key at 30 % of peak until 60 % after the peak. Every fraction is a
+planted stance); i-frames start at the first key at 30 % of peak (announced on frame 0), use the INI duration, and are capped at 60 % after the peak. Every fraction is a
 command-line option (`--attack`, `--block`, `--chain`, `--exit`, `--iframeEnd`).
 It also writes `RDF_Motion` and `RDF_ClipLength` unless `--no-motion` is given:
 - the distance is the root motion's horizontal path length, times `--distanceScale`;
@@ -289,3 +291,21 @@ opens the escape for that part of the clip, but an annotation reaches the plugin
 the clip registers it as an event: the RDF patch does not add them to the stagger behaviors (MSL's own behavior file is
 prebuilt), so a clip author who wants them registers them in that behavior. The dodge out of a stagger costs `[Cost]
 fCost + fEscapeCost` plus the magnitudes of active effects with `sEscapeCostKeyword`.
+
+## Protection windows: start + duration (v2)
+
+I-frames and perfect are independent of `RDF_Windows` and all cancel events. Without start metadata they always
+use their INI start. Duration is always `max(0, INI duration + active-effect magnitude sum / 1000)`; Detrimental
+subtracts from duration, never delays the start. Keys: `fIFrameStart` / `fIFrameDuration` and
+`fPerfectWindowStart` / `fPerfectWindowDuration`. Legacy INI End keys are read as `max(0, end - start)` only
+when the new Duration key is absent. Saving settings writes Duration.
+
+On frame **0**, `RDF_IFrameStart.0.12` announces an opening at clip time 0.12, rather than firing an open event
+at that time. The plugin divides that number by playback speed after applying the clip's motion metadata.
+Each start override is accepted once during startup, independently of `bClipMotion`. Bare legacy Start events
+are ignored. End closes the corresponding window until the next dodge, even before the scheduled start;
+no start metadata or bonus can reopen it. Both windows are half-open and cannot outlive the dodge.
+Perfect still requires a prevented hit, active i-frames, permission, and the attacker's rule.
+
+`tools/migrate_protection_windows.py --dir <clips> --out <staging>` converts legacy Start events to frame-zero
+metadata and verifies a round trip, preserving End timestamps, root motion and all other annotations.
