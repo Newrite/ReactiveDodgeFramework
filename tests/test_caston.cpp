@@ -340,10 +340,11 @@ TEST(caston_the_russian_guide_example_parses)
 	std::ifstream in(path, std::ios::binary);
 	CHECK(static_cast<bool>(in));
 	const std::string text((std::istreambuf_iterator<char>(in)), {});
-	const auto        from = text.find("```json\n");
-	const auto        to = from == std::string::npos ? std::string::npos : text.find("```", from + 8);
+	const auto        fence = text.find("```json");
+	const auto        from = fence == std::string::npos ? std::string::npos : text.find('\n', fence);  // LF or CRLF checkout
+	const auto        to = from == std::string::npos ? std::string::npos : text.find("```", from);
 	CHECK(from != std::string::npos && to != std::string::npos);
-	const auto r = ParseRules(std::string_view(text).substr(from + 8, to - from - 8));
+	const auto r = ParseRules(std::string_view(text).substr(from + 1, to - from - 1));
 	for (const auto& e : r.errors) {
 		std::printf("    %s\n", e.c_str());
 	}
