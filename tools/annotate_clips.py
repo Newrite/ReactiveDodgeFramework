@@ -22,6 +22,7 @@ fClipLength with them for this clip's dodge, ANIMATION_CONTRACT.md 5):
                      active:   from there until it falls below 85 % again after the peak
                      recovery: the rest of the clip, so the phases add up to its length
     RDF_ClipLength.<seconds>   the clip's duration (a clip still streaming in reports 0 to the game)
+    RDF_Speed.<multiplier>     only with --speed: the clip's own fAnimSpeed (playback x this, the timeline unchanged)
 
 Existing RDF_* annotations are replaced, so re-running is idempotent; other annotations
 (animmotion, PIE, ...) are kept. A clip whose root motion is missing is reported and skipped.
@@ -124,9 +125,10 @@ def render(notes):
                    f"{INDENT}\t<hkparam name=\"text\">{s}</hkparam>\n{INDENT}</hkobject>" for t, s in notes)
 
 
-def annotate(clip, rule, drop=(), with_motion=True, distance_scale=1.0):
+def annotate(clip, rule, drop=(), with_motion=True, distance_scale=1.0, speed=None):
     """drop: prefixes of the clip's own annotations to remove (another framework's events, see build_clip_set).
-    with_motion: also write RDF_Motion / RDF_ClipLength; distance_scale multiplies the measured distance."""
+    with_motion: also write RDF_Motion / RDF_ClipLength; distance_scale multiplies the measured distance.
+    speed: write RDF_Speed.<speed> (the clip's own fAnimSpeed); None = none."""
     xml = WORK / (clip.stem + ".xml")
     hkxc(clip, xml, "xml")
     text = xml.read_text(encoding="utf-8")
@@ -149,6 +151,10 @@ def annotate(clip, rule, drop=(), with_motion=True, distance_scale=1.0):
         moves = motion(curve, duration, path_length(notes) * distance_scale)
         extra = [(0.0, "RDF_Motion.{distance:.1f},{startup:.3f},{active:.3f},{recovery:.3f}".format(**moves)),
                  (0.0, f"RDF_ClipLength.{duration:.4f}")]
+    if speed is not None:
+        if not 0.1 <= speed <= 5.0:
+            sys.exit(f"--speed {speed}: the plugin takes 0.1 .. 5")
+        extra.append((0.0, f"RDF_Speed.{speed:g}"))
     kept = [(t, s) for t, s in notes if not s.startswith(("RDF_",) + tuple(drop))]
     merged = sorted(kept + [(t, s) for s, t in marks.items()] + extra, key=lambda n: n[0])
     body = f'<hkparam name="annotations" numelements="{len(merged)}">{render(merged)}\n\t\t\t\t\t</hkparam>'
@@ -169,6 +175,8 @@ def annotate(clip, rule, drop=(), with_motion=True, distance_scale=1.0):
     if moves:
         result["motion"] = {k: round(v, 4) for k, v in moves.items()}
         result["clipLength"] = round(duration, 4)
+    if speed is not None:
+        result["speed"] = speed
     return result, None
 
 
@@ -177,7 +185,7 @@ def describe_motion(marks):
     if not m:
         return ""
     return (f"  motion {m['distance']:.0f} u {m['startup']:.3f}/{m['active']:.3f}/{m['recovery']:.3f}"
-            f"  length {marks['clipLength']:.3f}")
+            f"  length {marks['clipLength']:.3f}" + (f"  speed x{marks['speed']:g}" if "speed" in marks else ""))
 
 
 def main(argv):
@@ -187,6 +195,7 @@ def main(argv):
         ap.add_argument("--" + key, type=float, default=value, help="speed fraction after the peak that opens this window")
     ap.add_argument("--no-motion", action="store_true", help="do not write RDF_Motion / RDF_ClipLength")
     ap.add_argument("--distanceScale", type=float, default=1.0, help="multiplies the measured root-motion distance")
+    ap.add_argument("--speed", type=float, default=None, help="write RDF_Speed.<x>: the clips' own fAnimSpeed")
     args = ap.parse_args(argv)
 
     WORK.mkdir(parents=True, exist_ok=True)
@@ -195,7 +204,8 @@ def main(argv):
     if not args.no_motion:
         report["motionRule"] = {"plateau": PLATEAU, "distanceScale": args.distanceScale}
     for clip in sorted(args.dir.glob("*.hkx")):
-        marks, problem = annotate(clip, rule, with_motion=not args.no_motion, distance_scale=args.distanceScale)
+        marks, problem = annotate(clip, rule, with_motion=not args.no_motion, distance_scale=args.distanceScale,
+                                  speed=args.speed)
         if problem:
             print(f"skip {clip.name}: {problem}")
             continue

@@ -8,7 +8,8 @@ windows (tools/annotate_clips.py, the source clip's own annotations are kept, ex
 spec's "dropAnnotations" prefixes: another dodge framework's events, such as DMCO's stamina payload, its
 SpecialFrames i-frames or MCO's recovery / input-buffer events, which RDF would take for an attack's). Each clip also
 gets RDF_Motion / RDF_ClipLength from its root motion (its own distance, phases and length); the spec's optional
-"motion": false leaves them out, and "distanceScale" multiplies the measured distance.
+"motion": false leaves them out, "distanceScale" multiplies the measured distance, and "speed" adds RDF_Speed (the
+set's own fAnimSpeed).
 
     python tools/build_clip_set.py behavior/sets/greatsword-2hm.json --src <extracted archive folder>
 """
@@ -70,7 +71,7 @@ def build(spec_path, src, mods):
         report["motionRule"] = {"plateau": annotate_clips.PLATEAU, "distanceScale": distance_scale}
     for clip in sorted(clips.glob("*.hkx")):
         marks, problem = annotate_clips.annotate(clip, annotate_clips.DEFAULT_RULE, spec.get("dropAnnotations", []),
-                                                 with_motion, distance_scale)
+                                                 with_motion, distance_scale, spec.get("speed"))
         if problem:
             sys.exit(f"{clip.name}: {problem}")
         report["clips"][clip.stem] = marks

@@ -115,10 +115,12 @@ When a dodge's clip sends `RDF_Windows`, that dodge ignores the ini timers (`fCh
 | `RDF_CastOnDodge` / `RDF_CastOnDodge.<tag>` | the moment the CastOn rules of the Dodge trigger fire: untagged ones on the plain annotation, tagged ones on their tag (docs/CASTON_DESIGN.md) |
 | `RDF_CastOnPerfectDodge` / `RDF_CastOnPerfectDodge.<tag>` | the same for PerfectDodge rules; reached before the perfect hit, they fire at the hit |
 | `RDF_Motion.<distance>,<startup>,<active>,<recovery>` | at 0: how this clip moves. The distance it covers and its phases, in clip seconds at speed 1; they add up to the clip's length. They replace `[Motion] fDistance` and `[Timing] fStartup / fActive / fRecovery` for this dodge. `RDF_Motion.<distance>` alone changes the distance only. Taken while the dodge is still in its startup: the speed curve is planned again from the same carry-in speed, and the distance already covered is kept |
+| `RDF_Speed.<multiplier>` | at 0: this clip's own `[Graph] fAnimSpeed` (0.1 .. 5): `RDF_DodgeSpeed` = it x the clip's length / the phases. The dodge's timeline stays; above 1 the clip finishes early and holds its last frame until the exit, below 1 it is cut by the exit blend |
 | `RDF_ClipLength.<seconds>` | at 0: the clip's real length, replacing `[Graph] fClipLength` / `fClipLengthFirstPerson`, so `RDF_DodgeSpeed` makes it span its own timeline. The clip's length cannot be read from the game: a clip played for the first time is still streaming in and reports 0 |
 
-`RDF_Motion` and `RDF_ClipLength` carry their numbers after the first '.': the graph splits an annotation there, and the
-rest arrives as the event's payload, so the two names are registered once. `[Graph] bClipMotion=0` ignores both. A
+`RDF_Motion`, `RDF_ClipLength` and `RDF_Speed` carry their numbers after the first '.': the graph splits an annotation
+there, and the rest arrives as the event's payload, so each name is registered once. `[Graph] bClipMotion=0` ignores all
+three. A
 malformed or out-of-range one is ignored and logged with `bDevLog`. Limits: distance 0..5000, each phase 0..5 s with a
 total of at least 0.05 s, length 0.05..10 s.
 
@@ -138,7 +140,9 @@ It also writes `RDF_Motion` and `RDF_ClipLength` unless `--no-motion` is given:
 - the recovery is the rest of the clip;
 - the length is the clip's own duration.
 
-`build_clip_set.py` does the same for every set; a spec takes `"motion": false` and `"distanceScale"`.
+`--speed <x>` adds `RDF_Speed.<x>`, which is not measured.
+
+`build_clip_set.py` does the same for every set; a spec takes `"motion": false`, `"distanceScale"` and `"speed"`.
 
 `behavior/clip_windows.json` records the times written. `tools/clip_analyze.py` prints the per-frame speed and
 pelvis/head height of a clip for hand tuning. Note: the XML round trip keeps 6 decimals, so animation floats can move by

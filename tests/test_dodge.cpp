@@ -924,6 +924,8 @@ TEST(clip_motion_payloads_parse_and_reject)
 	CHECK(!ParseMotion("300;0.1"));
 	CHECK(ParseLength("0.72") && *ParseLength("0.72") == 0.72f);
 	CHECK(!ParseLength("0") && !ParseLength("abc") && !ParseLength("0.5s"));
+	CHECK(ParseSpeed("1.25") && *ParseSpeed("1.25") == 1.25f);
+	CHECK(!ParseSpeed("0.05") && !ParseSpeed("6") && !ParseSpeed("x2"));
 }
 
 TEST(clip_motion_replans_the_dodge_in_its_startup)

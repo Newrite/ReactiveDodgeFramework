@@ -482,6 +482,7 @@
 				<hkcstring>RDF_CastOnClip</hkcstring>
 				<hkcstring>RDF_Motion</hkcstring>
 				<hkcstring>RDF_ClipLength</hkcstring>
+				<hkcstring>RDF_Speed</hkcstring>
 				<hkcstring>RDF_PerfectDodge</hkcstring>
 				<hkcstring>RDF_PerfectDodged</hkcstring>
 				<hkcstring>RDF_DodgeStart1H</hkcstring>

@@ -7,9 +7,10 @@
 
 namespace rdf
 {
-	// How the clip playing a dodge says it moves (ANIMATION_CONTRACT.md 5), from two annotations at its first frame:
+	// How the clip playing a dodge says it moves (ANIMATION_CONTRACT.md 5), from annotations at its first frame:
 	//   RDF_Motion.<distance>[,<startup>,<active>,<recovery>]  the distance it covers and its phases (clip seconds at speed 1)
 	//   RDF_ClipLength.<seconds>                               its real length (a clip still streaming in reports 0)
+	//   RDF_Speed.<multiplier>                                 its own [Graph] fAnimSpeed
 	// The graph splits an annotation at its first '.', so the numbers arrive as the event's payload.
 	struct ClipMotion
 	{
@@ -24,6 +25,8 @@ namespace rdf
 		inline constexpr float kMinTotal = 0.05f;
 		inline constexpr float kMinLength = 0.05f;
 		inline constexpr float kMaxLength = 10.0f;
+		inline constexpr float kMinSpeed = 0.1f;  // fAnimSpeed's own range
+		inline constexpr float kMaxSpeed = 5.0f;
 
 		inline std::optional<float> Number(std::string_view& text)
 		{
@@ -81,13 +84,16 @@ namespace rdf
 			return m;
 		}
 
-		inline std::optional<float> ParseLength(std::string_view text)
+		inline std::optional<float> ParseInRange(std::string_view text, float lo, float hi)
 		{
 			const auto v = Number(text);
-			if (!v || !text.empty() || *v < kMinLength || *v > kMaxLength) {
+			if (!v || !text.empty() || *v < lo || *v > hi) {
 				return std::nullopt;
 			}
 			return v;
 		}
+
+		inline std::optional<float> ParseLength(std::string_view text) { return ParseInRange(text, kMinLength, kMaxLength); }
+		inline std::optional<float> ParseSpeed(std::string_view text) { return ParseInRange(text, kMinSpeed, kMaxSpeed); }
 	}
 }

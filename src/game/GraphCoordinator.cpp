@@ -51,13 +51,14 @@ namespace rdf::game::graph
 			// Several graphs (the player's first / third person): only this one counts; null = every graph.
 			const RE::BSTEventSource<RE::BSAnimationGraphEvent>* activeSource{ nullptr };
 			std::vector<std::pair<int, std::string>>              castOn;  // CastOn annotations since the last drain
-			std::vector<std::pair<int, std::string>>              motion;  // RDF_Motion (0) / RDF_ClipLength (1) payloads
+			std::vector<std::pair<int, std::string>>              motion;  // RDF_Motion (0) / ClipLength (1) / Speed (2) payloads
 		};
 
 		// "RDF_CastOnDodge" with payload "tag", or the whole "RDF_CastOnDodge.tag" as the tag when the graph did not split it.
 		constexpr std::array kCastOnNames{ "RDF_CastOnDodge"sv, "RDF_CastOnPerfectDodge"sv, "RDF_CastOnClip"sv };
-		// The clip's motion (ANIMATION_CONTRACT.md 5): "RDF_Motion.<numbers>", "RDF_ClipLength.<seconds>", split the same way.
-		constexpr std::array kMotionNames{ "RDF_Motion"sv, "RDF_ClipLength"sv };
+		// The clip's motion (ANIMATION_CONTRACT.md 5): "RDF_Motion.<numbers>", "RDF_ClipLength.<seconds>", "RDF_Speed.<x>",
+		// split the same way.
+		constexpr std::array kMotionNames{ "RDF_Motion"sv, "RDF_ClipLength"sv, "RDF_Speed"sv };
 
 		template <std::size_t N>
 		bool PayloadEvent(const std::array<std::string_view, N>& names, std::string_view tag, std::string_view payload, int& kind,

@@ -532,7 +532,8 @@ namespace rdf::game
 		// RDF_ChainIndex: 0 for a fresh dodge, the running dodge's index + 1 for a chain (ChainCount is 1-based).
 		const int   chainIndex = chain ? core_->ChainCount() : 0;
 		const float playback = settings.core.timing.PlaybackSpeed(clipLength, settings.animSpeed);
-		clipLength_ = clipLength;  // until the clip says otherwise (RDF_ClipLength)
+		clipLength_ = clipLength;  // until the clip says otherwise (RDF_ClipLength, RDF_Speed)
+		clipSpeed_ = settings.animSpeed;
 		// [Casting] the bow / magic layer first (the keyword, a draw / a cast running), then the 1hm dodge (a
 		// weapon out: 1hm_behavior runs, third or first person), else the root one. A chain stays in the layer of the dodge it
 		// continues; outside the root it is the start of the other state.
@@ -797,8 +798,9 @@ namespace rdf::game
 		castOn_.OnTrigger(trigger, ctx, core_->Now());
 	}
 
-	// The clip's RDF_Motion / RDF_ClipLength ([Graph] bClipMotion): its distance and phases replace the ini's (taken while the
-	// dodge is still in its startup), and its length sets the playback speed again so the clip spans the new timeline.
+	// The clip's RDF_Motion / RDF_ClipLength / RDF_Speed ([Graph] bClipMotion): its distance and phases replace the ini's
+	// (taken while the dodge is still in its startup); its length and its own fAnimSpeed set the playback speed again, so
+	// the clip spans the new timeline.
 	void DodgeAgent::ApplyClipMotion(RE::Actor* actor)
 	{
 		bool retime = false;
@@ -815,6 +817,15 @@ namespace rdf::game
 				}
 				return;
 			}
+			if (kind == 2) {
+				if (const auto speed = clip_motion::ParseSpeed(payload)) {
+					clipSpeed_ = *speed;
+					retime = true;
+				} else {
+					DevLog("{:08X}: RDF_Speed '{}' is not a multiplier 0.1..5: ignored", formID_, payload);
+				}
+				return;
+			}
 			const auto motion = clip_motion::ParseMotion(payload);
 			if (!motion) {
 				DevLog("{:08X}: RDF_Motion '{}' is not <distance>[,<startup>,<active>,<recovery>]: ignored", formID_, payload);
@@ -827,11 +838,11 @@ namespace rdf::game
 		if (!retime) {
 			return;
 		}
-		const float speed = core_->DodgeTiming().PlaybackSpeed(clipLength_, Settings::Get().animSpeed);
+		const float speed = core_->DodgeTiming().PlaybackSpeed(clipLength_, clipSpeed_);
 		graph::SetPlaybackSpeed(actor, speed);
 		const auto& t = core_->DodgeTiming();
-		DevLog("{:08X}: clip motion at t={:.3f}: phases {:.3f}/{:.3f}/{:.3f}, clip {:.3f} s, playback {:.3f}", formID_,
-			core_->ActionTime(), t.startup, t.active, t.recovery, clipLength_, speed);
+		DevLog("{:08X}: clip motion at t={:.3f}: phases {:.3f}/{:.3f}/{:.3f}, clip {:.3f} s x {:.2f}, playback {:.3f}", formID_,
+			core_->ActionTime(), t.startup, t.active, t.recovery, clipLength_, clipSpeed_, speed);
 	}
 
 	void DodgeAgent::DrainCastOnAnnotations(RE::Actor* actor)

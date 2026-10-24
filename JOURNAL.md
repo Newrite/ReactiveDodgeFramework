@@ -611,3 +611,7 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
     prototype is now the regular patch.
   - The default clips are not re-annotated yet: their root motion is ~250 u where fDistance is 300.
   - Deployed the DLL and patches to both mods. Pandora must be run again for the new events. Not tried in game.
+* RDF_Speed.<multiplier> (2026-10-24): the clip's own fAnimSpeed. The playback speed is recomputed from the clip's
+  length and phases; the timeline stays. annotate_clips --speed / a set spec's "speed" write it. Registered in the patch:
+  check_rdf_nemesis 105/105, staged validate_rdf 269/269. Deployed; Pandora must be run again. Partial RDF_Motion
+  fields (one phase only) were left out: phases normally come from the tool, and hand tuning writes all four.

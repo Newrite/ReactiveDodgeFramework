@@ -142,6 +142,7 @@ namespace rdf::game
 		float           orphanTime_{ 0.0f };      // graph in a dodge state we do not own, seconds
 		float           staggerAge_{ 0.0f };      // seconds the actor has been staggered
 		float           clipLength_{ 0.667f };    // the dodge clip's length: fClipLength*, or its RDF_ClipLength
+		float           clipSpeed_{ 1.0f };       // its playback multiplier: fAnimSpeed, or its RDF_Speed
 		bool            escapeStagger_{ false };  // this tick a dodge may cut the stagger short
 		const char*     lastStaggerRule_{ nullptr };  // dev log: the [Stagger] rule last reported
 		bool            perfectFired_{ false };   // the current dodge already counted a perfect dodge
