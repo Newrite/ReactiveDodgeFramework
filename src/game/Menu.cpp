@@ -149,6 +149,9 @@ namespace rdf::game::menu
 			case Kind::Form:
 				changed = DrawForm(f, label);
 				break;
+			case Kind::Color:
+				changed = FUCK::ColorEdit4(label, f.f(s), FUCK::ColorEditFlags::kAlphaPreviewHalf);
+				break;
 			case Kind::Choice:
 				{
 					std::array<const char*, 8> names{};

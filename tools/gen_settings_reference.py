@@ -28,7 +28,7 @@ def schema_fields():
     src = open(SCHEMA, encoding="utf-8").read()
     fields = []
     # Float / Int / Bool / Form (Page::X, "Section", "Key", ...), optionally wrapped in Named(..., "TextKey")
-    for m in re.finditer(r'(Named\()?(?:Custom\()?(?:Float|Int|Bool|Form)\(Page::(\w+), "(\w+)", "(\w+)"[^\n]*?(?:, "(\w+)"\))?,?\n', src):
+    for m in re.finditer(r'(Named\()?(?:Custom\()?(?:Float|Int|Bool|Form|Color)\(Page::(\w+), "(\w+)", "(\w+)"[^\n]*?(?:, "(\w+)"\))?,?\n', src):
         named, page, section, key, text = m.groups()
         fields.append((page, section, key, text if named and text else key, m.start()))
     # Choice fields: Field x{ Page::X, "Section", "Key", Kind::Choice } inside their helper; placed where the helper is called

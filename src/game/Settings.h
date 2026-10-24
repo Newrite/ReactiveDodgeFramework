@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <functional>
 
 #include "core/Config.h"
@@ -230,6 +231,15 @@ namespace rdf::game
 			float       slowMotionEaseIn{ 0.05f };
 			float       slowMotionEaseOut{ 0.2f };
 			float       slowMotionCooldown{ 0.0f };  // after one ends, before the next may start
+			// bPerfectGhost: a glowing silhouette of the dodger stays where the perfect dodge happened (GhostTrails.dll)
+			bool                 ghost{ true };
+			bool                 ghostNPC{ true };     // NPCs' perfect dodges too
+			int                  ghostCount{ 1 };      // silhouettes per perfect dodge (more: a short trail after it)
+			float                ghostInterval{ 0.05f };  // game seconds between them
+			float                ghostLifetime{ 0.8f };   // game seconds each one shows, its fade included
+			std::array<float, 4> ghostColor{ 0.85f, 0.9f, 1.0f, 0.6f };  // RGBA, 0..1
+			float                ghostIntensity{ 2.0f };
+			float                ghostRimPower{ 2.0f };   // 0 = no rim
 			std::string playerEvent{ "RDF_PerfectDodge" };     // graph event on the player
 			std::string attackerEvent{ "RDF_PerfectDodged" };  // graph event on the attacker
 			std::string modEvent{ "RDF_PerfectDodge" };        // SKSE mod event (Papyrus RegisterForModEvent)

@@ -11,6 +11,7 @@
 #include "JumpGate.h"
 #include "LockOn.h"
 #include "MotionHook.h"
+#include "PerfectGhost.h"
 #include "Settings.h"
 #include "SlowMotion.h"
 
@@ -429,6 +430,7 @@ namespace rdf::game::update
 				g_player.Tick(player, dt * slowmo::PlayerDtScale(), forPlayer);
 				g_npcs.Tick(dt);
 				caston::UpdateChannels(dt);
+				ghost::Update(dt);
 			}
 
 			static inline REL::Relocation<decltype(thunk)> func;

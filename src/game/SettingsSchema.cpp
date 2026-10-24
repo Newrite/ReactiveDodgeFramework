@@ -49,6 +49,13 @@ namespace rdf::game::schema
 			return x;
 		}
 
+		Field Color(Page page, const char* section, const char* key, float* (*rgba)(Settings&))
+		{
+			Field x{ page, section, key, Kind::Color };
+			x.f = rgba;  // four floats from here on
+			return x;
+		}
+
 		Field Named(Field f, const char* textKey)
 		{
 			f.textKey = textKey;
@@ -219,6 +226,14 @@ namespace rdf::game::schema
 				Float(Page::Rules, "Perfect", "fPerfectWindowEnd", RDF_F(perfect.windowEnd), 0.0f, 1.0f, "%.2f s"),
 				Form(Page::Rules, "Perfect", "sPerfectDodgeKeyword", RDF_S(perfect.keyword), RE::FormType::Keyword),
 				Form(Page::Rules, "Perfect", "sPerfectWindowKeyword", RDF_S(perfect.windowKeyword), RE::FormType::Keyword),
+				Bool(Page::Rules, "Perfect", "bPerfectGhost", RDF_B(perfect.ghost)),
+				Bool(Page::Rules, "Perfect", "bPerfectGhostNPC", RDF_B(perfect.ghostNPC)),
+				Color(Page::Rules, "Perfect", "sPerfectGhostColor", +[](Settings& s) -> float* { return s.perfect.ghostColor.data(); }),
+				Float(Page::Rules, "Perfect", "fPerfectGhostIntensity", RDF_F(perfect.ghostIntensity), 0.0f, 10.0f, "%.2f"),
+				Float(Page::Rules, "Perfect", "fPerfectGhostRimPower", RDF_F(perfect.ghostRimPower), 0.0f, 10.0f, "%.2f"),
+				Float(Page::Rules, "Perfect", "fPerfectGhostLifetime", RDF_F(perfect.ghostLifetime), 0.05f, 5.0f, "%.2f s"),
+				Int(Page::Rules, "Perfect", "iPerfectGhostCount", RDF_I(perfect.ghostCount), 1, 10),
+				Float(Page::Rules, "Perfect", "fPerfectGhostInterval", RDF_F(perfect.ghostInterval), 0.0f, 0.5f, "%.2f s"),
 				Float(Page::Rules, "Perfect", "fPerfectSlowMotion", RDF_F(perfect.slowMotion), 0.05f, 1.0f, "%.2f"),
 				Float(Page::Rules, "Perfect", "fPerfectSlowMotionPlayer", RDF_F(perfect.slowMotionPlayer), 0.05f, 1.0f, "%.2f"),
 				Float(Page::Rules, "Perfect", "fPerfectSlowMotionDuration", RDF_F(perfect.slowMotionDuration), 0.0f, 2.0f, "%.2f s"),
@@ -273,6 +288,12 @@ namespace rdf::game::schema
 					return v >= 0 && v < static_cast<int>(f.choices.size()) ? f.choices[v] : f.choices[0];
 				}
 			case Kind::Form: return *f.str(m);
+			case Kind::Color:
+				{
+					const float* c = f.f(m);
+					const auto   v = [](float x) { return std::round(x * 1000.0f) / 1000.0f; };
+					return std::format("{},{},{},{}", v(c[0]), v(c[1]), v(c[2]), v(c[3]));
+				}
 			}
 			return {};
 		}
@@ -296,6 +317,7 @@ namespace rdf::game::schema
 			case Kind::Bool: *f.b(to) = *f.b(src); break;
 			case Kind::Choice: f.setChoice(to, f.getChoice(from)); break;
 			case Kind::Form: *f.str(to) = *f.str(src); break;
+			case Kind::Color: std::copy_n(f.f(src), 4, f.f(to)); break;
 			}
 		}
 	}

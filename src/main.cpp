@@ -1,5 +1,6 @@
 #include "game/ActionCapture.h"
 #include "game/Api.h"
+#include "game/PerfectGhost.h"
 #include "game/AttackCancel.h"
 #include "game/CastOn.h"
 #include "game/Effects.h"
@@ -36,6 +37,7 @@ namespace
 	void OnNewSession()
 	{
 		rdf::game::update::Reset();
+		rdf::game::ghost::Reset();
 		rdf::game::graph::RegisterSink(RE::PlayerCharacter::GetSingleton());
 		rdf::game::legacy::Suppress();
 	}
@@ -45,6 +47,7 @@ namespace
 		switch (message->type) {
 		case SKSE::MessagingInterface::kPostPostLoad:
 			rdf::game::lockon::Init();
+			rdf::game::ghost::Init();
 			if (rdf::game::Settings::Get().iFrames && rdf::game::Settings::Get().usePrecision) {
 				rdf::game::effects::InstallPrecisionIFrames();
 			}

@@ -8,6 +8,7 @@
 #include "GraphGate.h"
 #include "EngineState.h"
 #include "MotionHook.h"
+#include "PerfectGhost.h"
 #include "Settings.h"
 
 #include <algorithm>
@@ -426,6 +427,7 @@ namespace rdf::game
 			return;
 		}
 		perfectFired_ = true;
+		ghost::OnPerfectDodge(actor);  // [Perfect] bPerfectGhost
 		if (const float refund = charged_ * Settings::Get().price.perfectRefund * 0.01f; refund > 0.0f) {
 			Refund(actor, refund);  // [Cost] fPerfectRefund
 			charged_ -= refund;
@@ -705,6 +707,9 @@ namespace rdf::game
 		iframeDelta_ = attack::EffectAmount(actor, settings.iFrameKeyword) * 0.001f;
 		perfectDelta_ = attack::EffectAmount(actor, settings.perfect.windowKeyword) * 0.001f;
 		perfectAllowed_ = settings.perfect.enabled && PerfectKeywordHeld(actor);
+		if (perfectAllowed_) {
+			ghost::OnDodgeStart(actor);  // [Perfect] bPerfectGhost: warm the silhouette pool now, not at the perfect dodge
+		}
 		lastClip_ = clip;
 		ClearAttackFromDodge(actor);
 		intoAttack_ = false;

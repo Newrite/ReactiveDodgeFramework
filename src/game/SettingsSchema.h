@@ -27,6 +27,7 @@ namespace rdf::game::schema
 		Bool,
 		Choice,  // an int index into `choices`, written to the ini as the choice's name
 		Form,    // a game form named by text (forms.h): an edit box with its resolution and a picker of `formType`
+		Color,   // RGBA, four floats from `f` on: the colour picker, written to the ini as "r,g,b,a"
 	};
 
 	struct Field

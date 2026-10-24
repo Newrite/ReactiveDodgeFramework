@@ -1,5 +1,7 @@
 #include "Settings.h"
 
+#include <charconv>
+
 #include <Windows.h>
 
 #include <algorithm>
@@ -46,6 +48,9 @@ namespace rdf::game
 		}
 
 		// Accepts decimal or 0x hex.
+		// "r,g,b,a", each 0..1 (the menu's colour picker writes it this way); anything else keeps `def`.
+		std::array<float, 4> ReadColor(const char* section, const char* key, std::array<float, 4> def);
+
 		int ReadInt(const char* section, const char* key, int def, int lo, int hi)
 		{
 			const auto text = ReadString(section, key, "");
@@ -167,6 +172,34 @@ namespace rdf::game
 				logger::warn("[Steering] sOrientation: unknown mode '{}', using Auto", text);
 			}
 			return OrientationMode::Auto;
+		}
+
+		std::array<float, 4> ReadColor(const char* section, const char* key, std::array<float, 4> def)
+		{
+			const auto           text = ReadString(section, key, "");
+			std::array<float, 4> out{};
+			std::size_t          n = 0;
+			const char*          p = text.c_str();
+			const char*          end = p + text.size();
+			while (n < 4 && p < end) {
+				while (p < end && (*p == ' ' || *p == ',')) {
+					++p;
+				}
+				float      v = 0.0f;
+				const auto r = std::from_chars(p, end, v);
+				if (r.ec != std::errc() || v < 0.0f || v > 1.0f) {
+					break;
+				}
+				out[n++] = v;
+				p = r.ptr;
+			}
+			if (n != 4) {
+				if (!text.empty()) {
+					logger::warn("[{}] {}: '{}' is not r,g,b,a in 0..1, keeping the default", section, key, text);
+				}
+				return def;
+			}
+			return out;
 		}
 
 		std::optional<RE::ActorValue> ParseResource(const std::string& text)
@@ -416,6 +449,14 @@ namespace rdf::game
 		pf.windowStart = ReadFloat("Perfect", "fPerfectWindowStart", pf.windowStart, 0.0f, 3.0f);
 		pf.windowEnd = ReadFloat("Perfect", "fPerfectWindowEnd", pf.windowEnd, 0.0f, 3.0f);
 		pf.keyword = ReadString("Perfect", "sPerfectDodgeKeyword", pf.keyword);
+		pf.ghost = ReadBool("Perfect", "bPerfectGhost", pf.ghost);
+		pf.ghostNPC = ReadBool("Perfect", "bPerfectGhostNPC", pf.ghostNPC);
+		pf.ghostCount = ReadInt("Perfect", "iPerfectGhostCount", pf.ghostCount, 1, 20);
+		pf.ghostInterval = ReadFloat("Perfect", "fPerfectGhostInterval", pf.ghostInterval, 0.0f, 1.0f);
+		pf.ghostLifetime = ReadFloat("Perfect", "fPerfectGhostLifetime", pf.ghostLifetime, 0.05f, 10.0f);
+		pf.ghostColor = ReadColor("Perfect", "sPerfectGhostColor", pf.ghostColor);
+		pf.ghostIntensity = ReadFloat("Perfect", "fPerfectGhostIntensity", pf.ghostIntensity, 0.0f, 20.0f);
+		pf.ghostRimPower = ReadFloat("Perfect", "fPerfectGhostRimPower", pf.ghostRimPower, 0.0f, 20.0f);
 		pf.windowKeyword = ReadString("Perfect", "sPerfectWindowKeyword", pf.windowKeyword);
 		pf.slowMotion = ReadFloat("Perfect", "fPerfectSlowMotion", pf.slowMotion, 0.05f, 1.0f);
 		pf.slowMotionPlayer = ReadFloat("Perfect", "fPerfectSlowMotionPlayer", pf.slowMotionPlayer, 0.05f, 1.0f);

@@ -734,3 +734,15 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   index.html = README) with a shared navigation, links between documents pointing at the .html pages, and
   light/dark themes. It needs no dependencies: a small converter for the Markdown the docs use. Checked in the browser
   (lists, tables, code, links). The FOMOD ships them under Docs/ru/html; rebuilt the archive (1344 files, 11.7 MB).
+* Perfect-dodge ghost (2026-10-24): through the user's Ghost Trails API (GhostTrails.dll, API v1, header copied to
+  src/third_party/ghosttrails). game/PerfectGhost:
+  - Init at kPostPostLoad.
+  - Every dodge start where a perfect dodge is possible calls Prepare(handle, count): a cold first clone can take
+    frames, and the silhouette must stand where the dodge turned perfect.
+  - The perfect dodge calls Spawn with the [Perfect] look.
+  - Owned IDs are released after a terminal state plus the whole lifetime, since Release also removes visible
+    silhouettes. Prepare IDs are released at once. At most 32 are kept; a session reset forgets them.
+  - Settings ([Perfect], the Rules page): bPerfectGhost, bPerfectGhostNPC, sPerfectGhostColor ("r,g,b,a"),
+    fPerfectGhostIntensity, fPerfectGhostRimPower, fPerfectGhostLifetime, iPerfectGhostCount, fPerfectGhostInterval.
+  - The menu gained a Color field kind (FUCK ColorEdit4), written to the ini as "r,g,b,a".
+  - GhostTrails.dll is installed in VanillaLike only. Built and deployed; not tried in game.
