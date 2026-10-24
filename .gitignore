@@ -5,3 +5,7 @@ build/
 behavior/**/*.hkx
 behavior/fixtures/
 *.hkx
+
+# archives made from the docs to hand out (not sources)
+docs/**/*.7z
+docs/**/*.zip

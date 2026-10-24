@@ -162,7 +162,9 @@ def main():
     for name in sorted(os.listdir(os.path.join(ROOT, "docs", "ru"))):
         if name.endswith(".md"):
             copy(os.path.join(ROOT, "docs", "ru", name), os.path.join(docs, name))
-    copy(os.path.join(ROOT, "docs", "ru", "html"), os.path.join(docs, "html"))
+    for name in sorted(os.listdir(os.path.join(ROOT, "docs", "ru", "html"))):
+        if name.endswith(".html"):  # only the pages (an archive made from them may sit beside them)
+            copy(os.path.join(ROOT, "docs", "ru", "html", name), os.path.join(docs, "html", name))
     clips = os.path.join("meshes", "actors", "character", "animations", "RDF")
     copy(os.path.join(MODS, "AI - Reactive Dodge Framework", clips), os.path.join(core, clips))
 
