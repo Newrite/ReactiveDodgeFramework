@@ -1199,3 +1199,29 @@ TEST(window_deltas_lengthen_at_the_end_and_shorten_from_the_start)
 	}
 	CHECK(!a.core.Invulnerable(0.0f, 0.0f, 0.03f));
 }
+
+TEST(chain_press_from_drops_early_presses)
+{
+	Config c;
+	c.policy.chainPressFrom = 0.2f;
+	Sim s(c);
+	s.Frame(kDt64, Dir(0), { CommandKind::Dodge });
+	s.Frame(kDt64, Dir(0), { CommandKind::Dodge });  // a mash 1/64 s in: dropped
+	int chains = 0;
+	while (s.core.DodgeRunning()) {
+		chains += s.Frame(kDt64, Dir(0)).decision.kind == DecisionKind::ChainDodge ? 1 : 0;
+	}
+	CHECK(chains == 0);
+
+	Sim t(c);
+	t.Frame(kDt64, Dir(0), { CommandKind::Dodge });
+	while (t.core.ActionTime() < 0.25f) {
+		t.Frame(kDt64, Dir(0));
+	}
+	t.Frame(kDt64, Dir(0), { CommandKind::Dodge });  // after fChainPressFrom: it waits for the chain window
+	int later = 0;
+	for (int i = 0; i < 40 && later == 0; ++i) {
+		later += t.Frame(kDt64, Dir(0)).decision.kind == DecisionKind::ChainDodge ? 1 : 0;
+	}
+	CHECK(later == 1);
+}

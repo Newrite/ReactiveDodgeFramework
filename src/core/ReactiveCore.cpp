@@ -37,6 +37,10 @@ namespace rdf
 
 	std::uint64_t ReactiveCore::Press(CommandKind kind, Vec2 dir)
 	{
+		// [Timing] fChainPressFrom: a press too early in a running dodge is the same mash, not the next dodge
+		if (kind == CommandKind::Dodge && action_.Running() && !action_.Exiting() && action_.Time() < cfg_.policy.chainPressFrom) {
+			return 0;
+		}
 		return buffer_.Push(kind, clock_.Now(), dir);
 	}
 

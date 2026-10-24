@@ -680,3 +680,14 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
 * Keyword amounts count only effects whose base effect has Recover (2026-10-24, the user's call). This covers
   EffectAmount and the stagger delay: magic::Filter::recoverOnly. An effect without Recover keeps changing a value
   instead of holding an amount. The kDataLoaded scan also warns of keyword effects without Recover.
+* Dodge input options (2026-10-24), after Reflyem's tapping dodge (DodgeCore process_event_input_handler: the Sprint key
+  from the ControlMap, a dodge on release within KeyUpDelay):
+  - `sDodgeKeyAction`: the dodge button is the game's binding of an action on each device (None / Sprint / Sneak /
+    Shout / Activate / ReadyWeapon / TogglePOV / Jump).
+  - `sDodgeTrigger` Press | Tap with `fTapMax`. A Tap counts on release only if the sink saw the press: presses made
+    in menus or while paused never reach it.
+  - `bDoubleTapDodge` / `fDoubleTapWindow`: the same movement key twice, keyboard.
+  - `fChainPressFrom` (core: ReactiveCore::Press) drops dodge presses made too early in a running dodge.
+  - Double dodges came from presses during a dodge, which bHoldPressesDuringDodge keeps for the chain window; presses
+    before the start are already merged (StartDodge consumes them), and fDebounce merges same-button presses within 60 ms.
+  - Checks: 112 tests. Deployed; not tried in game.

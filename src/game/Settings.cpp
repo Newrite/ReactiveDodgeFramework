@@ -211,6 +211,7 @@ namespace rdf::game
 			// iMaxChain (dodges in a row, 0 = unlimited).
 			const int legacy = ReadInt("Timing", "iMaxChain", p.chainDodges + 1, 0, 100);
 			p.chainDodges = ReadInt("Timing", "iChainDodges", legacy == 0 ? -1 : legacy - 1, -1, 100);
+			p.chainPressFrom = ReadFloat("Timing", "fChainPressFrom", p.chainPressFrom, 0.0f, 5.0f);
 			p.attackStateMask = ParseAttackStates(ReadString("Timing", "sAttackStates", AttackStatesToString(p.attackStateMask)));
 		}
 
@@ -255,6 +256,15 @@ namespace rdf::game
 			s.core.input.debounce = ReadFloat("Input", "fDebounce", s.core.input.debounce, 0.0f, 1.0f);
 			s.core.input.holdDuringDodge = ReadBool("Input", "bHoldPressesDuringDodge", s.core.input.holdDuringDodge);
 			s.powerAttackHold = ReadFloat("Input", "fPowerAttackHold", s.powerAttackHold, 0.05f, 2.0f);
+			s.dodgeTrigger = _stricmp(ReadString("Input", "sDodgeTrigger", "Press").c_str(), "Tap") == 0 ? Settings::DodgeTrigger::Tap :
+			                                                                                              Settings::DodgeTrigger::Press;
+			s.tapMax = ReadFloat("Input", "fTapMax", s.tapMax, 0.05f, 2.0f);
+			s.dodgeKeyAction = ReadString("Input", "sDodgeKeyAction", s.dodgeKeyAction);
+			if (_stricmp(s.dodgeKeyAction.c_str(), "None") == 0) {
+				s.dodgeKeyAction.clear();
+			}
+			s.doubleTap = ReadBool("Input", "bDoubleTapDodge", s.doubleTap);
+			s.doubleTapWindow = ReadFloat("Input", "fDoubleTapWindow", s.doubleTapWindow, 0.05f, 1.0f);
 			s.idleReplayChains = Split(ReadString("Input", "sIdleReplayChains", Join(s.idleReplayChains)));
 
 			s.costResource = ParseResource(ReadString("Cost", "sResource", "Stamina"));

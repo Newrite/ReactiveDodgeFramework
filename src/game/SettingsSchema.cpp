@@ -64,6 +64,9 @@ namespace rdf::game::schema
 		constexpr std::array<const char*, 3> kOrientations{ "Auto", "FaceMotion", "KeepFacing" };
 		constexpr std::array<const char*, 3> kResources{ "None", "Stamina", "Magicka" };
 		constexpr std::array<const char*, 3> kShortfalls{ "Refuse", "Minimum", "Always" };  // CostShortfall order
+		constexpr std::array<const char*, 2> kTriggers{ "Press", "Tap" };                   // DodgeTrigger order
+		// sDodgeKeyAction: the game's user events by their ini names (KeyActionEvent turns them into the game's own)
+		constexpr std::array<const char*, 8> kKeyActions{ "None", "Sprint", "Sneak", "Shout", "Activate", "ReadyWeapon", "TogglePOV", "Jump" };
 
 		Field Orientation()
 		{
@@ -92,6 +95,31 @@ namespace rdf::game::schema
 			return x;
 		}
 
+		Field Trigger()
+		{
+			Field x{ Page::Input, "Input", "sDodgeTrigger", Kind::Choice };
+			x.getChoice = [](const Settings& s) { return static_cast<int>(s.dodgeTrigger); };
+			x.setChoice = [](Settings& s, int v) { s.dodgeTrigger = v == 1 ? Settings::DodgeTrigger::Tap : Settings::DodgeTrigger::Press; };
+			x.choices = kTriggers;
+			return x;
+		}
+
+		Field KeyAction()
+		{
+			Field x{ Page::Input, "Input", "sDodgeKeyAction", Kind::Choice };
+			x.getChoice = [](const Settings& s) {
+				for (int i = 1; i < static_cast<int>(kKeyActions.size()); ++i) {
+					if (_stricmp(s.dodgeKeyAction.c_str(), kKeyActions[i]) == 0) {
+						return i;
+					}
+				}
+				return 0;
+			};
+			x.setChoice = [](Settings& s, int v) { s.dodgeKeyAction = v > 0 && v < static_cast<int>(kKeyActions.size()) ? kKeyActions[v] : ""; };
+			x.choices = kKeyActions;
+			return x;
+		}
+
 		Field Shortfall()
 		{
 			Field x{ Page::Rules, "Cost", "sShortfall", Kind::Choice };
@@ -113,6 +141,11 @@ namespace rdf::game::schema
 				Float(Page::Input, "Input", "fDebounce", RDF_F(core.input.debounce), 0.0f, 0.3f, "%.2f s"),
 				Bool(Page::Input, "Input", "bHoldPressesDuringDodge", RDF_B(core.input.holdDuringDodge)),
 				Float(Page::Input, "Input", "fPowerAttackHold", RDF_F(powerAttackHold), 0.05f, 1.0f, "%.2f s"),
+				KeyAction(),
+				Trigger(),
+				Float(Page::Input, "Input", "fTapMax", RDF_F(tapMax), 0.05f, 1.0f, "%.2f s"),
+				Bool(Page::Input, "Input", "bDoubleTapDodge", RDF_B(doubleTap)),
+				Float(Page::Input, "Input", "fDoubleTapWindow", RDF_F(doubleTapWindow), 0.05f, 1.0f, "%.2f s"),
 				// --- timing and windows
 				Float(Page::Timing, "Timing", "fStartup", RDF_F(core.timing.startup), 0.0f, 0.5f, "%.3f s"),
 				Float(Page::Timing, "Timing", "fActive", RDF_F(core.timing.active), 0.0f, 1.0f, "%.3f s"),
@@ -125,6 +158,7 @@ namespace rdf::game::schema
 				Float(Page::Timing, "Timing", "fBlockFrom", RDF_F(core.policy.blockFrom), 0.0f, 1.5f, "%.2f s"),
 				Float(Page::Timing, "Timing", "fExitFrom", RDF_F(core.policy.exitFrom), 0.0f, 1.5f, "%.2f s"),
 				Int(Page::Timing, "Timing", "iChainDodges", RDF_I(core.policy.chainDodges), -1, 10),
+				Float(Page::Timing, "Timing", "fChainPressFrom", RDF_F(core.policy.chainPressFrom), 0.0f, 1.0f, "%.2f s"),
 				Form(Page::Timing, "Timing", "sChainDodgesKeyword", RDF_S(chainDodgesKeyword), RE::FormType::Keyword),
 				Float(Page::Timing, "IFrames", "fIFrameStart", RDF_F(iFrameStart), 0.0f, 1.0f, "%.2f s"),
 				Float(Page::Timing, "IFrames", "fIFrameEnd", RDF_F(iFrameEnd), 0.0f, 1.5f, "%.2f s"),

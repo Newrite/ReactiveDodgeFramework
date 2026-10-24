@@ -105,6 +105,28 @@ T = {
     "fExitFrom": ("Exit from", "Выход с"),
     "fExitFrom_Desc": ("From when running (and a jump) may leave the dodge.",
                        "С какого момента додж можно прервать бегом (и прыжком)."),
+    "fChainPressFrom": ("Chain press from", "Нажатие для цепочки с"),
+    "fChainPressFrom_Desc": ("A dodge press made earlier than this into a dodge is dropped instead of queuing the next dodge (against mashing). 0 = any press counts.", "Нажатие доджа раньше этого момента доджа отбрасывается, а не ставит следующий додж в очередь (против спама). 0 = считается любое."),
+    "sDodgeKeyAction": ("Dodge button from", "Кнопка доджа от"),
+    "sDodgeKeyAction_Desc": ("Use the button the game binds to this action on each device, instead of the dodge keys below.", "Брать кнопку, которую игра назначила на это действие, на каждом устройстве, вместо клавиш доджа ниже."),
+    "sDodgeKeyAction_None": ("Own keys", "Свои клавиши"),
+    "sDodgeKeyAction_Sprint": ("Sprint", "Спринт"),
+    "sDodgeKeyAction_Sneak": ("Sneak", "Красться"),
+    "sDodgeKeyAction_Jump": ("Jump", "Прыжок"),
+    "sDodgeKeyAction_Shout": ("Shout", "Крик"),
+    "sDodgeKeyAction_Activate": ("Activate", "Активация"),
+    "sDodgeKeyAction_ReadyWeapon": ("Ready weapon", "Достать оружие"),
+    "sDodgeKeyAction_TogglePOV": ("Toggle view", "Смена вида"),
+    "sDodgeTrigger": ("Dodge on", "Додж по"),
+    "sDodgeTrigger_Desc": ("Press: when the button goes down. Tap: when it is released after at most the tap time, so holding it does the button's other action (Sprint...).", "Нажатие: когда кнопку нажали. Тап: когда её отпустили не позже времени тапа, так что удержание делает другое действие кнопки (спринт...)."),
+    "sDodgeTrigger_Press": ("Press", "Нажатию"),
+    "sDodgeTrigger_Tap": ("Tap", "Тапу"),
+    "fTapMax": ("Tap time", "Время тапа"),
+    "fTapMax_Desc": ("Tap: the longest hold that still counts as a tap.", "Тап: самое долгое удержание, которое ещё считается тапом."),
+    "bDoubleTapDodge": ("Double-tap dodge", "Додж двойным нажатием"),
+    "bDoubleTapDodge_Desc": ("Two presses of the same movement key dodge that way (keyboard).", "Два нажатия одной клавиши движения делают додж в ту сторону (клавиатура)."),
+    "fDoubleTapWindow": ("Double-tap window", "Окно двойного нажатия"),
+    "fDoubleTapWindow_Desc": ("The second press must come this soon after the first.", "Второе нажатие должно прийти не позже этого после первого."),
     "iChainDodges": ("Chained dodges", "Додж-цепочка"),
     "iChainDodges_Desc": ("Chained dodges allowed after the first. 0 = none, -1 = unlimited.", "Сколько доджей можно сделать цепочкой после первого. 0 = ни одного, -1 = без ограничений."),
     "sChainDodgesKeyword": ("Chained dodges keyword", "Кейворд цепочки"),
@@ -506,7 +528,8 @@ def schema_keys(root):
     for key in re.findall(r'"(?:Timing|IFrames|Motion|Steering|Graph|Cost|Jump|Stagger|Input|Dev)", "([A-Za-z]+)"', src):
         keys |= {key, key + "_Desc"}
     for key, items in (("sOrientation", "Auto FaceMotion KeepFacing"), ("sResource", "None Stamina Magicka"),
-                       ("sShortfall", "Refuse Minimum Always")):
+                       ("sShortfall", "Refuse Minimum Always"), ("sDodgeTrigger", "Press Tap"),
+                       ("sDodgeKeyAction", "None Sprint Sneak Jump Shout Activate ReadyWeapon TogglePOV")):
         keys |= {"%s_%s" % (key, c) for c in items.split()}
     keys |= {"Section_" + s for s in set(re.findall(r'Page::\w+, "(\w+)"', src))}
     keys |= {k for k in re.findall(r'"\$RDF_(\w+)"', menu) if not k.endswith("_")}

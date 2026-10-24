@@ -30,6 +30,7 @@ namespace rdf
 		float         blockFrom{ 0.30f };
 		float         exitFrom{ 0.34f };
 		int           chainDodges{ 2 };  // chained dodges allowed after the first; -1 = unlimited
+		float         chainPressFrom{ 0.0f };  // a dodge press made earlier than this into a dodge is dropped (mashing)
 		std::uint32_t attackStateMask{ attack_state::Bit(attack_state::kFollowThrough) | attack_state::Bit(attack_state::kNextAttack) |
 			                           attack_state::Bit(attack_state::kBowDrawn) | attack_state::Bit(attack_state::kBowReleased) |
 			                           attack_state::Bit(attack_state::kBowFollowThrough) };

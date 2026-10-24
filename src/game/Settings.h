@@ -60,6 +60,21 @@ namespace rdf::game
 		int   dodgeMouse{ -1 };
 		int   dodgeGamepad{ RE::BSWin32GamepadDevice::Keys::kRightThumb };  // XInput mask
 		float powerAttackHold{ 0.30f };
+		// [Input] when the dodge button counts: on its press, or on its release after at most fTapMax held (the button
+		// then also serves another action when held: the game's Sprint...).
+		enum class DodgeTrigger : std::uint8_t
+		{
+			Press,
+			Tap,
+		};
+		DodgeTrigger dodgeTrigger{ DodgeTrigger::Press };
+		float        tapMax{ 0.20f };
+		// The dodge button is the one the game binds to this action, on each device ("Sprint", "Sneak", "Jump"...);
+		// empty = iDodgeKeyboard / iDodgeMouse / iDodgeGamepad.
+		std::string  dodgeKeyAction;
+		// Two presses of the same movement key within fDoubleTapWindow dodge that way (keyboard).
+		bool         doubleTap{ false };
+		float        doubleTapWindow{ 0.25f };
 
 		// [Cost]
 		// Resource a dodge costs; nullopt = free.

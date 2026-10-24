@@ -4,6 +4,7 @@
 
 #include <array>
 #include <atomic>
+#include <chrono>
 
 namespace rdf::game::input
 {
@@ -50,9 +51,26 @@ namespace rdf::game::input
 			return !ui || ui->GameIsPaused() || ui->IsMenuOpen(RE::Console::MENU_NAME);
 		}
 
+		// sDodgeKeyAction's ini name as the game's user event ("ReadyWeapon" -> "Ready Weapon").
+		std::string KeyActionEvent(const std::string& name)
+		{
+			if (_stricmp(name.c_str(), "ReadyWeapon") == 0) {
+				return "Ready Weapon";
+			}
+			if (_stricmp(name.c_str(), "TogglePOV") == 0) {
+				return "Toggle POV";
+			}
+			return name;
+		}
+
+		bool IsMapped(const RE::BSFixedString& userEvent, RE::INPUT_DEVICE device, std::uint32_t code);
+
 		bool IsDodgeKey(RE::INPUT_DEVICE device, std::uint32_t code)
 		{
 			const auto& s = Settings::Get();
+			if (!s.dodgeKeyAction.empty()) {  // the button the game binds to that action, whatever the player made it
+				return IsMapped(RE::BSFixedString(KeyActionEvent(s.dodgeKeyAction)), device, code);
+			}
 			switch (device) {
 			case RE::INPUT_DEVICE::kKeyboard:
 				return s.dodgeKeyboard >= 0 && code == static_cast<std::uint32_t>(s.dodgeKeyboard);
@@ -111,10 +129,27 @@ namespace rdf::game::input
 					g_blockHeld.store(b.IsPressed(), std::memory_order_relaxed);
 				}
 
+				const auto& s = Settings::Get();
+				const bool  dodgeKey = IsDodgeKey(device, code);
+				if (dodgeKey && s.dodgeTrigger == Settings::DodgeTrigger::Tap) {
+					// On the release, if the button was held at most fTapMax. A release whose press this sink did not see
+					// (pressed in a menu, or while the game was paused) is not a tap.
+					auto& seen = tapSeen_[DeviceIndex(device)];
+					if (b.IsDown()) {
+						seen = true;
+					} else if (b.IsUp()) {
+						if (seen && b.HeldDuration() <= s.tapMax) {
+							Enqueue({ CommandKind::Dodge, false });
+						}
+						seen = false;
+					}
+				}
 				if (b.IsDown()) {
 					promoted_ = false;
-					if (IsDodgeKey(device, code)) {
-						Enqueue({ CommandKind::Dodge, false });
+					if (dodgeKey) {
+						if (s.dodgeTrigger == Settings::DodgeTrigger::Press) {
+							Enqueue({ CommandKind::Dodge, false });
+						}
 					} else if (IsMapped(events->rightAttack, device, code)) {
 						Enqueue({ CommandKind::Attack, false });
 					} else if (IsMapped(events->leftAttack, device, code)) {
@@ -130,10 +165,24 @@ namespace rdf::game::input
 				}
 			}
 
-			bool promoted_{ false };
+			static std::size_t DeviceIndex(RE::INPUT_DEVICE device)
+			{
+				switch (device) {
+				case RE::INPUT_DEVICE::kKeyboard: return 0;
+				case RE::INPUT_DEVICE::kMouse: return 1;
+				default: return 2;
+				}
+			}
+
+			bool                promoted_{ false };
+			std::array<bool, 3> tapSeen_{};  // per device: the dodge button's press was seen (Tap)
 		};
 
 		Sink g_sink;
+
+		// [Input] bDoubleTapDodge: the last movement key pressed and when (the input sink's thread only).
+		std::uint32_t                         g_lastMoveBit{ 0 };
+		std::chrono::steady_clock::time_point g_lastMoveDown{};
 
 		void TrackMoveKey(const RE::ButtonEvent& b, const RE::UserEvents& events)
 		{
@@ -156,6 +205,19 @@ namespace rdf::game::input
 				g_moveKeys.fetch_or(bit, std::memory_order_relaxed);
 			} else {
 				g_moveKeys.fetch_and(~bit, std::memory_order_relaxed);
+			}
+			// A second press of the same movement key soon after the first dodges that way: the dodge reads the move input,
+			// which that key holds now.
+			if (b.IsDown() && device == RE::INPUT_DEVICE::kKeyboard) {
+				const auto& s = Settings::Get();
+				const auto  now = std::chrono::steady_clock::now();
+				if (s.doubleTap && bit == g_lastMoveBit && now - g_lastMoveDown <= std::chrono::duration<float>(s.doubleTapWindow)) {
+					Enqueue({ CommandKind::Dodge, false });
+					g_lastMoveBit = 0;  // a third press starts over
+				} else {
+					g_lastMoveBit = bit;
+					g_lastMoveDown = now;
+				}
 			}
 		}
 
