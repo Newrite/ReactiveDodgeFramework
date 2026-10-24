@@ -1043,12 +1043,7 @@ namespace rdf::game
 		requestedDistance_ = step.command.speed * dt;
 		requestedHeading_ = core_->Heading();
 
-		const bool invulnerable = settings.iFrames && core_->Invulnerable(settings.iFrameStart, settings.iFrameEnd);
-		if (invulnerable && !invulnerable_) {
-			attack::RefreshAttackerRules(actor);  // [Rules] who may hit through the i-frames, read once as they begin
-		}
-		invulnerable_ = invulnerable;
-		effects::SetInvulnerable(actor, invulnerable);
+		effects::SetInvulnerable(actor, settings.iFrames && core_->Invulnerable(settings.iFrameStart, settings.iFrameEnd));
 		effects::SetPerfectOpen(actor, settings.perfect.enabled && core_->DodgeRunning() &&
 		                                   core_->PerfectWindow(settings.perfect.windowStart, settings.perfect.windowEnd));
 
@@ -1075,7 +1070,6 @@ namespace rdf::game
 		graph::SetLayer(actor, graph::Layer::Root);
 		effects::SetInvulnerable(actor, false);
 		effects::SetPerfectOpen(actor, false);
-		invulnerable_ = false;
 		awaitingEnter_ = false;
 		charged_ = 0.0f;
 		if (driver_) {

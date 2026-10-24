@@ -1,6 +1,5 @@
 #include "AttackCancel.h"
 
-#include "Effects.h"
 #include "Forms.h"
 #include "MagicEffects.h"
 #include "Settings.h"
@@ -35,10 +34,7 @@ namespace rdf::game::attack
 
 		bool HasKeyword(RE::Actor* actor, RE::BGSKeyword* keyword, bool inactive = false)
 		{
-			if (actor->HasKeyword(keyword)) {
-				return true;
-			}
-			if (const auto* race = actor->GetRace(); race && race->HasKeyword(keyword)) {
+			if (actor->HasKeyword(keyword)) {  // the race's keywords included
 				return true;
 			}
 			if (auto* changes = actor->GetInventoryChanges()) {
@@ -94,33 +90,22 @@ namespace rdf::game::attack
 		return magic::Query(actor, { .keyword = forms::Get<RE::BGSKeyword>(Settings::Get().stagger.escapeCostKeyword) }, magic::Reading::Authored).total;
 	}
 
-	void RefreshAttackerRules(RE::Actor* dodger)
+	AttackerRule RuleOf(RE::Actor* attacker)
 	{
+		if (!attacker) {
+			return AttackerRule::Normal;
+		}
+		// Peek: the hooks run on any thread; the keywords are resolved on the main thread (settings load / the menu).
 		const auto& ac = Settings::Get().attackCancel;
-		auto*       perfectOnly = forms::Get<RE::BGSKeyword>(ac.perfectOnlyKeyword);
-		auto*       undodgeable = forms::Get<RE::BGSKeyword>(ac.undodgeableKeyword);
-		if (!perfectOnly && !undodgeable) {
-			effects::ClearAttackerRules();
-			return;
+		auto*       undodgeable = ac.undodgeableKeyword.empty() ? nullptr : forms::Peek(ac.undodgeableKeyword, RE::FormType::Keyword).form;
+		auto*       perfectOnly = ac.perfectOnlyKeyword.empty() ? nullptr : forms::Peek(ac.perfectOnlyKeyword, RE::FormType::Keyword).form;
+		if (undodgeable && HasKeyword(attacker, undodgeable->As<RE::BGSKeyword>())) {
+			return AttackerRule::Undodgeable;
 		}
-		using Rule = effects::AttackerRule;
-		std::vector<std::pair<std::uint32_t, Rule>> rules;
-		const auto classify = [&](RE::Actor* a) {
-			if (!a || a == dodger || a->IsDead()) {
-				return;
-			}
-			const auto rule = undodgeable && HasKeyword(a, undodgeable) ? Rule::Undodgeable :
-			                  perfectOnly && HasKeyword(a, perfectOnly) ? Rule::PerfectOnly :
-			                                                              Rule::Normal;
-			rules.emplace_back(a->GetHandle().native_handle(), rule);
-		};
-		if (auto* lists = RE::ProcessLists::GetSingleton()) {
-			for (auto& handle : lists->highActorHandles) {
-				classify(handle.get().get());
-			}
+		if (perfectOnly && HasKeyword(attacker, perfectOnly->As<RE::BGSKeyword>())) {
+			return AttackerRule::PerfectOnly;
 		}
-		classify(RE::PlayerCharacter::GetSingleton());
-		effects::UpdateAttackerRules(rules);
+		return AttackerRule::Normal;
 	}
 
 	bool DrawDuringDodge(RE::Actor* actor)

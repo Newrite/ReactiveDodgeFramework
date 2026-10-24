@@ -1,9 +1,6 @@
 #pragma once
 
-#include <cstdint>
 #include <optional>
-#include <utility>
-#include <vector>
 
 namespace rdf::game::effects
 {
@@ -32,17 +29,6 @@ namespace rdf::game::effects
 	// attacker's hit needs to be dodged.
 	void SetPerfectOpen(RE::Actor* actor, bool open);
 
-	// [Rules] what the i-frames may do against an attacker (sPerfectOnlyKeyword / sUndodgeableKeyword). The keyword walk
-	// runs on the main thread (attack::RefreshAttackerRules); the hooks, on any thread, only read the result by handle.
-	enum class AttackerRule : std::uint8_t
-	{
-		Normal,
-		PerfectOnly,  // dodged only inside the dodger's perfect window
-		Undodgeable,  // never dodged: the i-frames let the hit through
-	};
-	// Main thread: the rules of these attackers (handle, rule) replace what was known of them; Normal ones are forgotten.
-	void UpdateAttackerRules(const std::vector<std::pair<std::uint32_t, AttackerRule>>& rules);
-	void ClearAttackerRules();
 	// The last hit the i-frames dodged for `dodger` since the previous call (melee, Precision, projectile, explosion),
 	// as the attacker's ref handle (0 = unknown); nullopt when there was none. A projectile ignored because it already
 	// passed through does not count. Main thread.

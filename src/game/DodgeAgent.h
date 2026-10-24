@@ -143,8 +143,7 @@ namespace rdf::game
 		float           staggerAge_{ 0.0f };      // seconds the actor has been staggered
 		float           clipLength_{ 0.667f };    // the dodge clip's length: fClipLength*, or its RDF_ClipLength
 		float           clipSpeed_{ 1.0f };       // its playback multiplier: fAnimSpeed, or its RDF_Speed
-		bool            stanceKept_{ false };
-		bool            invulnerable_{ false };   // the i-frames were on last tick (their start refreshes the attacker rules)     // the dodge keeps a weapon stance on the arms (RDF_ArmStance applies)
+		bool            stanceKept_{ false };     // the dodge keeps a weapon stance on the arms (RDF_ArmStance applies)
 		bool            escapeStagger_{ false };  // this tick a dodge may cut the stagger short
 		const char*     lastStaggerRule_{ nullptr };  // dev log: the [Stagger] rule last reported
 		bool            perfectFired_{ false };   // the current dodge already counted a perfect dodge

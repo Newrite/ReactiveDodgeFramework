@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <optional>
 
 namespace rdf::game::attack
@@ -19,13 +20,20 @@ namespace rdf::game::attack
 	// The summed magnitudes of the actor's active magic effects with sEscapeCostKeyword.
 	float StaggerEscapeCostBonus(RE::Actor* actor);
 
-	// The keyword walk itself (CastOn conditions): the actor, its race, a worn item or an active magic effect.
+	// The keyword walk itself (CastOn conditions): the actor (its race's keywords included), a worn item or an active
+	// magic effect.
 	// `inactiveEffects`: also effects their spell's conditions switched off, and dispelled ones (the engine's way).
 	bool ActorHasKeyword(RE::Actor* actor, RE::BGSKeyword* keyword, bool inactiveEffects = false);
 
-	// [Rules] sPerfectOnlyKeyword / sUndodgeableKeyword: the rules of the actors that may hit `dodger` now (every actor in
-	// high process, and the player), handed to the i-frame hooks. Main thread, when the dodger's i-frames begin.
-	void RefreshAttackerRules(RE::Actor* dodger);
+	// [Rules] what the i-frames may do against an attacker (sUndodgeableKeyword first, then sPerfectOnlyKeyword), read by
+	// the i-frame hooks when a hit meets them.
+	enum class AttackerRule : std::uint8_t
+	{
+		Normal,
+		PerfectOnly,  // dodged only inside the dodger's perfect window
+		Undodgeable,  // never dodged: the i-frames let the hit through
+	};
+	AttackerRule RuleOf(RE::Actor* attacker);
 
 	// [Casting] keywords (same sources): a dodge keeps the actor's bow draw / its cast going.
 	bool DrawDuringDodge(RE::Actor* actor);
