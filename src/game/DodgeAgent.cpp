@@ -306,6 +306,7 @@ namespace rdf::game
 			core_->OnWindowEvent(e);
 			DevLog("{:08X}: clip window event {} at t={:.3f}", formID_, static_cast<int>(e), core_->ActionTime());
 		});
+		ApplyClipMotion(actor);
 		const bool entered = graph::TakeEntered(actor);
 		const int  depth = graph::Depth(actor);
 		const int  previousDepth = prevDepth_;
@@ -531,6 +532,7 @@ namespace rdf::game
 		// RDF_ChainIndex: 0 for a fresh dodge, the running dodge's index + 1 for a chain (ChainCount is 1-based).
 		const int   chainIndex = chain ? core_->ChainCount() : 0;
 		const float playback = settings.core.timing.PlaybackSpeed(clipLength, settings.animSpeed);
+		clipLength_ = clipLength;  // until the clip says otherwise (RDF_ClipLength)
 		// [Casting] the bow / magic layer first (the keyword, a draw / a cast running), then the 1hm dodge (a
 		// weapon out: 1hm_behavior runs, third or first person), else the root one. A chain stays in the layer of the dodge it
 		// continues; outside the root it is the start of the other state.
@@ -793,6 +795,43 @@ namespace rdf::game
 		ctx.fromStagger = lastFromStagger_;
 		ctx.firstPerson = lastFirstPerson_;
 		castOn_.OnTrigger(trigger, ctx, core_->Now());
+	}
+
+	// The clip's RDF_Motion / RDF_ClipLength ([Graph] bClipMotion): its distance and phases replace the ini's (taken while the
+	// dodge is still in its startup), and its length sets the playback speed again so the clip spans the new timeline.
+	void DodgeAgent::ApplyClipMotion(RE::Actor* actor)
+	{
+		bool retime = false;
+		graph::DrainClipMotion(actor, [&](int kind, std::string_view payload) {
+			if (!Settings::Get().clipMotion || !core_->DodgeRunning()) {
+				return;
+			}
+			if (kind == 1) {
+				if (const auto length = clip_motion::ParseLength(payload)) {
+					clipLength_ = *length;
+					retime = true;
+				} else {
+					DevLog("{:08X}: RDF_ClipLength '{}' is not a length in seconds: ignored", formID_, payload);
+				}
+				return;
+			}
+			const auto motion = clip_motion::ParseMotion(payload);
+			if (!motion) {
+				DevLog("{:08X}: RDF_Motion '{}' is not <distance>[,<startup>,<active>,<recovery>]: ignored", formID_, payload);
+			} else if (!core_->OnClipMotion(*motion)) {
+				DevLog("{:08X}: RDF_Motion '{}' came after the startup (t={:.3f}): ignored", formID_, payload, core_->ActionTime());
+			} else {
+				retime = true;
+			}
+		});
+		if (!retime) {
+			return;
+		}
+		const float speed = core_->DodgeTiming().PlaybackSpeed(clipLength_, Settings::Get().animSpeed);
+		graph::SetPlaybackSpeed(actor, speed);
+		const auto& t = core_->DodgeTiming();
+		DevLog("{:08X}: clip motion at t={:.3f}: phases {:.3f}/{:.3f}/{:.3f}, clip {:.3f} s, playback {:.3f}", formID_,
+			core_->ActionTime(), t.startup, t.active, t.recovery, clipLength_, speed);
 	}
 
 	void DodgeAgent::DrainCastOnAnnotations(RE::Actor* actor)

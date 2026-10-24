@@ -81,6 +81,8 @@ namespace rdf::game
 		float      clipLengthFirstPerson{ 0.9f };
 		float      firstPersonLookScale{ 1.0f };  // mouse turn during a 1P dodge, x the engine's own rate
 		bool       armStanceWhenSheathed{ false };  // also keep the stance of a sheathed weapon / spell
+		// A clip's RDF_Motion / RDF_ClipLength replace fDistance, the phases and fClipLength for its dodge.
+		bool       clipMotion{ true };
 		int        enterTimeoutFrames{ 6 };
 
 		// [Motion]

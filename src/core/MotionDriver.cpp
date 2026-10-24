@@ -27,7 +27,10 @@ namespace rdf
 		exitFrom_ = -1.0f;
 		exitBlend_ = 0.0f;
 		heldFacing_ = facing_;
-		profile_.Plan(cfg_.timing, cfg_.motion, s.carrySpeed, ExitSpeed(s.moveHeld));
+		timing_ = cfg_.timing;
+		carrySpeed_ = s.carrySpeed;
+		exitSpeed_ = ExitSpeed(s.moveHeld);
+		profile_.Plan(timing_, cfg_.motion, carrySpeed_, exitSpeed_);
 		speed_ = profile_.Speed(0.0f);
 		retargeted_ = false;
 		exiting_ = false;
@@ -62,10 +65,10 @@ namespace rdf
 	// dodge facing the way it started (the camera / lock-on takes over from there).
 	float MotionDriver::WarpWeight(float t) const
 	{
-		const float from = cfg_.timing.startup + cfg_.timing.active;
+		const float from = timing_.startup + timing_.active;
 		float       w = 1.0f;
 		if (t > from) {
-			w = cfg_.timing.recovery > 0.0f ? 1.0f - Smoothstep(std::clamp((t - from) / cfg_.timing.recovery, 0.0f, 1.0f)) : 0.0f;
+			w = timing_.recovery > 0.0f ? 1.0f - Smoothstep(std::clamp((t - from) / timing_.recovery, 0.0f, 1.0f)) : 0.0f;
 		}
 		// Cut short (into running, an attack or a block): unwind within the hand-over instead.
 		if (exitFrom_ >= 0.0f) {
@@ -82,7 +85,7 @@ namespace rdf
 
 	MotionCommand MotionDriver::Step(float t0, float t1, float dt, DodgePhase phase, const DriverInput& in)
 	{
-		const float recoveryStart = cfg_.timing.startup + cfg_.timing.active;
+		const float recoveryStart = timing_.startup + timing_.active;
 		if (!retargeted_ && !exiting_ && t1 >= recoveryStart) {
 			profile_.RetargetExit(ExitSpeed(in.hasMove));
 			retargeted_ = true;
@@ -147,6 +150,20 @@ namespace rdf
 			exitFrom_ = t;
 			exitBlend_ = blend;
 		}
+	}
+
+	void MotionDriver::Replan(const Timing& timing, float distance)
+	{
+		if (exiting_) {
+			return;
+		}
+		timing_.startup = timing.startup;
+		timing_.active = timing.active;
+		timing_.recovery = timing.recovery;
+		auto motion = cfg_.motion;
+		motion.distance = distance;
+		profile_.Plan(timing_, motion, carrySpeed_, exitSpeed_);
+		retargeted_ = false;  // the recovery may start later now: the exit speed is decided there again
 	}
 
 	void MotionDriver::BeginExit(float t, bool moveHeld)

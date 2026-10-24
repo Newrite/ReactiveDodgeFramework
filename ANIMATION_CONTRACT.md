@@ -114,6 +114,13 @@ When a dodge's clip sends `RDF_Windows`, that dodge ignores the ini timers (`fCh
 | `RDF_CastOnClip` | at 0: this clip places its own CastOn moments. CastOn rules that accept an annotation wait for it instead of their delay (or fire at the dodge's end if the clip never reaches it) |
 | `RDF_CastOnDodge` / `RDF_CastOnDodge.<tag>` | the moment the CastOn rules of the Dodge trigger fire: untagged ones on the plain annotation, tagged ones on their tag (docs/CASTON_DESIGN.md) |
 | `RDF_CastOnPerfectDodge` / `RDF_CastOnPerfectDodge.<tag>` | the same for PerfectDodge rules; reached before the perfect hit, they fire at the hit |
+| `RDF_Motion.<distance>,<startup>,<active>,<recovery>` | at 0: how this clip moves. The distance it covers and its phases, in clip seconds at speed 1; they add up to the clip's length. They replace `[Motion] fDistance` and `[Timing] fStartup / fActive / fRecovery` for this dodge. `RDF_Motion.<distance>` alone changes the distance only. Taken while the dodge is still in its startup: the speed curve is planned again from the same carry-in speed, and the distance already covered is kept |
+| `RDF_ClipLength.<seconds>` | at 0: the clip's real length, replacing `[Graph] fClipLength` / `fClipLengthFirstPerson`, so `RDF_DodgeSpeed` makes it span its own timeline. The clip's length cannot be read from the game: a clip played for the first time is still streaming in and reports 0 |
+
+`RDF_Motion` and `RDF_ClipLength` carry their numbers after the first '.': the graph splits an annotation there, and the
+rest arrives as the event's payload, so the two names are registered once. `[Graph] bClipMotion=0` ignores both. A
+malformed or out-of-range one is ignored and logged with `bDevLog`. Limits: distance 0..5000, each phase 0..5 s with a
+total of at least 0.05 s, length 0.05..10 s.
 
 Times are clip-local; the plugin does not need to know the playback speed. Windows reset at every dodge, including a
 chain, so the incoming clip announces its own.
@@ -124,6 +131,15 @@ speed peak where the speed has fallen to a fraction of the peak: attack and bloc
 never later than 0.35 s), chain and exit to running at 75 % (still moving, so the blend lands in running instead of a
 planted stance); i-frames run from the first key at 30 % of peak until 60 % after the peak. Every fraction is a
 command-line option (`--attack`, `--block`, `--chain`, `--exit`, `--iframeEnd`).
+It also writes `RDF_Motion` and `RDF_ClipLength` unless `--no-motion` is given:
+- the distance is the root motion's horizontal path length, times `--distanceScale`;
+- the startup lasts until the speed first reaches 85 % of its peak;
+- the active phase lasts until the speed falls below 85 % again;
+- the recovery is the rest of the clip;
+- the length is the clip's own duration.
+
+`build_clip_set.py` does the same for every set; a spec takes `"motion": false` and `"distanceScale"`.
+
 `behavior/clip_windows.json` records the times written. `tools/clip_analyze.py` prints the per-frame speed and
 pelvis/head height of a clip for hand tuning. Note: the XML round trip keeps 6 decimals, so animation floats can move by
 up to 5e-7.

@@ -905,3 +905,83 @@ TEST(held_facing_is_handed_back_to_the_camera_as_the_dodge_ends)
 	s.Run(1.0, kDt64);
 	CHECK_NEAR(s.yaw * kRadToDeg, 90.0, 0.05);
 }
+
+// ---- clip motion (RDF_Motion / RDF_ClipLength) -------------------------------------------------
+
+TEST(clip_motion_payloads_parse_and_reject)
+{
+	using namespace rdf::clip_motion;
+	const auto full = ParseMotion("312.5,0.08,0.3,0.25");
+	CHECK(full && *full->distance == 312.5f && full->phases && (*full->phases)[1] == 0.3f);
+	const auto only = ParseMotion("250");
+	CHECK(only && *only->distance == 250.0f && !only->phases);
+	CHECK(ParseMotion(" 200 , 0.1 , 0.2 , 0.3 ").has_value());
+	CHECK(!ParseMotion(""));
+	CHECK(!ParseMotion("300,0.1,0.2"));        // phases come as three
+	CHECK(!ParseMotion("300,0.1,0.2,0.3,1"));  // too many
+	CHECK(!ParseMotion("-5"));
+	CHECK(!ParseMotion("300,0,0,0"));          // no time at all
+	CHECK(!ParseMotion("300;0.1"));
+	CHECK(ParseLength("0.72") && *ParseLength("0.72") == 0.72f);
+	CHECK(!ParseLength("0") && !ParseLength("abc") && !ParseLength("0.5s"));
+}
+
+TEST(clip_motion_replans_the_dodge_in_its_startup)
+{
+	const auto run = [](std::optional<ClipMotion> motion) {
+		Config c;
+		c.policy.exitFrom = 99.0f;  // an uncancelled dodge (as RunWholeDodge)
+		Sim s(c);
+		s.Frame(kDt64, Dir(0), { CommandKind::Dodge });
+		bool taken = false;
+		if (motion) {
+			taken = s.core.OnClipMotion(*motion);
+		}
+		int frames = 1;
+		while (s.core.DodgeRunning() && frames < 400) {
+			s.Frame(kDt64, Dir(0));
+			++frames;
+		}
+		return std::tuple{ taken, Length(s.pos), frames * kDt64, s.core.DodgeTiming() };
+	};
+	const auto [plainTaken, plainDistance, plainTime, plainTiming] = run(std::nullopt);
+	CHECK(std::fabs(plainDistance - 300.0f) < 3.0f);  // the ini's fDistance
+	CHECK(std::fabs(plainTime - Timing{}.Total()) < 2 * kDt64);
+
+	ClipMotion clip;
+	clip.distance = 150.0f;
+	clip.phases = std::array<float, 3>{ 0.10f, 0.20f, 0.20f };
+	const auto [taken, distance, time, timing] = run(clip);
+	CHECK(taken);
+	CHECK(std::fabs(distance - 150.0f) < 3.0f);
+	CHECK(std::fabs(time - 0.5f) < 2 * kDt64);
+	CHECK(timing.startup == 0.10f && timing.active == 0.20f && timing.recovery == 0.20f);
+
+	ClipMotion far;
+	far.distance = 450.0f;  // no phases: only the distance changes
+	const auto [farTaken, farDistance, farTime, farTiming] = run(far);
+	CHECK(farTaken && std::fabs(farDistance - 450.0f) < 4.0f && std::fabs(farTime - plainTime) < 2 * kDt64);
+}
+
+TEST(clip_motion_is_ignored_after_the_startup_and_reset_by_a_chain)
+{
+	Sim s;
+	s.Frame(kDt64, Dir(0), { CommandKind::Dodge });
+	for (int i = 0; i < 10; ++i) {  // past the 0.08 s startup
+		s.Frame(kDt64);
+	}
+	ClipMotion clip;
+	clip.distance = 100.0f;
+	clip.phases = std::array<float, 3>{ 0.2f, 0.2f, 0.2f };
+	CHECK(!s.core.OnClipMotion(clip));
+	CHECK(s.core.DodgeTiming().startup == Timing{}.startup);
+
+	Sim c;
+	c.Frame(kDt64, Dir(0), { CommandKind::Dodge });
+	CHECK(c.core.OnClipMotion(clip));
+	for (int i = 0; i < 30 && c.log.back().decision.kind != DecisionKind::ChainDodge; ++i) {
+		c.Frame(kDt64, {}, { CommandKind::Dodge });
+	}
+	CHECK(c.log.back().decision.kind == DecisionKind::ChainDodge);
+	CHECK(c.core.DodgeTiming().startup == Timing{}.startup);  // the chained clip announces its own
+}

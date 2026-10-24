@@ -51,14 +51,20 @@ namespace rdf::game::graph
 			// Several graphs (the player's first / third person): only this one counts; null = every graph.
 			const RE::BSTEventSource<RE::BSAnimationGraphEvent>* activeSource{ nullptr };
 			std::vector<std::pair<int, std::string>>              castOn;  // CastOn annotations since the last drain
+			std::vector<std::pair<int, std::string>>              motion;  // RDF_Motion (0) / RDF_ClipLength (1) payloads
 		};
 
 		// "RDF_CastOnDodge" with payload "tag", or the whole "RDF_CastOnDodge.tag" as the tag when the graph did not split it.
 		constexpr std::array kCastOnNames{ "RDF_CastOnDodge"sv, "RDF_CastOnPerfectDodge"sv, "RDF_CastOnClip"sv };
-		bool CastOnEvent(std::string_view tag, std::string_view payload, int& kind, std::string& out)
+		// The clip's motion (ANIMATION_CONTRACT.md 5): "RDF_Motion.<numbers>", "RDF_ClipLength.<seconds>", split the same way.
+		constexpr std::array kMotionNames{ "RDF_Motion"sv, "RDF_ClipLength"sv };
+
+		template <std::size_t N>
+		bool PayloadEvent(const std::array<std::string_view, N>& names, std::string_view tag, std::string_view payload, int& kind,
+			std::string& out)
 		{
-			for (int i = 0; i < static_cast<int>(kCastOnNames.size()); ++i) {
-				const auto name = kCastOnNames[i];
+			for (int i = 0; i < static_cast<int>(names.size()); ++i) {
+				const auto name = names[i];
 				if (tag.size() >= name.size() && _strnicmp(tag.data(), name.data(), name.size()) == 0 &&
 					(tag.size() == name.size() || tag[name.size()] == '.')) {
 					kind = i;
@@ -149,8 +155,10 @@ namespace rdf::game::graph
 				}
 				int         castOnKind = 0;
 				std::string castOnTag;
-				if (CastOnEvent(event->tag.c_str(), event->payload.c_str(), castOnKind, castOnTag)) {
+				if (PayloadEvent(kCastOnNames, event->tag.c_str(), event->payload.c_str(), castOnKind, castOnTag)) {
 					g.castOn.emplace_back(castOnKind, std::move(castOnTag));
+				} else if (PayloadEvent(kMotionNames, event->tag.c_str(), event->payload.c_str(), castOnKind, castOnTag)) {
+					g.motion.emplace_back(castOnKind, std::move(castOnTag));
 				}
 				if (event->tag == g_names.entered) {
 					++g.entered;
@@ -335,6 +343,19 @@ namespace rdf::game::graph
 		for (const auto& [kind, tag] : events) {
 			sink(kind, tag);
 		}
+	}
+
+	void DrainClipMotion(RE::Actor* actor, const std::function<void(int kind, std::string_view payload)>& sink)
+	{
+		const auto events = WithActor(actor, [](ActorGraph& g) { return std::exchange(g.motion, {}); });
+		for (const auto& [kind, payload] : events) {
+			sink(kind, payload);
+		}
+	}
+
+	void SetPlaybackSpeed(RE::Actor* actor, float speed)
+	{
+		actor->SetGraphVariableFloat(g_names.speed, speed);
 	}
 
 	void ClearEvents(RE::Actor* actor)

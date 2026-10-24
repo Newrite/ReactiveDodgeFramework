@@ -6,7 +6,9 @@ type...), so sets are added without touching the Pandora patch. The spec (behavi
 per direction (f fr r br b bl l fl, optional n = neutral, else the backward one); it is copied in, then annotated with the RDF_*
 windows (tools/annotate_clips.py, the source clip's own annotations are kept, except those starting with one of the
 spec's "dropAnnotations" prefixes: another dodge framework's events, such as DMCO's stamina payload, its
-SpecialFrames i-frames or MCO's recovery / input-buffer events, which RDF would take for an attack's).
+SpecialFrames i-frames or MCO's recovery / input-buffer events, which RDF would take for an attack's). Each clip also
+gets RDF_Motion / RDF_ClipLength from its root motion (its own distance, phases and length); the spec's optional
+"motion": false leaves them out, and "distanceScale" multiplies the measured distance.
 
     python tools/build_clip_set.py behavior/sets/greatsword-2hm.json --src <extracted archive folder>
 """
@@ -60,10 +62,15 @@ def build(spec_path, src, mods):
         shutil.copyfile(source, clips / f"{name}.hkx")
 
     annotate_clips.WORK.mkdir(parents=True, exist_ok=True)
+    with_motion = spec.get("motion", True)
+    distance_scale = spec.get("distanceScale", 1.0)
     report = {"rule": {"iframeOn": annotate_clips.IFRAME_ON, "actionLatest": annotate_clips.ACTION_LATEST,
                        **annotate_clips.DEFAULT_RULE}, "clips": {}}
+    if with_motion:
+        report["motionRule"] = {"plateau": annotate_clips.PLATEAU, "distanceScale": distance_scale}
     for clip in sorted(clips.glob("*.hkx")):
-        marks, problem = annotate_clips.annotate(clip, annotate_clips.DEFAULT_RULE, spec.get("dropAnnotations", []))
+        marks, problem = annotate_clips.annotate(clip, annotate_clips.DEFAULT_RULE, spec.get("dropAnnotations", []),
+                                                 with_motion, distance_scale)
         if problem:
             sys.exit(f"{clip.name}: {problem}")
         report["clips"][clip.stem] = marks
@@ -85,7 +92,7 @@ def main(argv):
         if name in G.CLIP_DIR_OF:
             print(f"  {G.CLIP_DIR_OF[name]:>2}: peak {m['peakSpeed']:.0f}@{m['peakTime']:.3f}  iframes {m['RDF_IFrameStart']:.3f}-"
                   f"{m['RDF_IFrameEnd']:.3f}  attack/block {m['RDF_AttackOpen']:.3f}  chain {m['RDF_ChainOpen']:.3f}"
-                  f"  exit {m['RDF_ExitOpen']:.3f}")
+                  f"  exit {m['RDF_ExitOpen']:.3f}{annotate_clips.describe_motion(m)}")
     print(f"windows written to {out}")
 
 

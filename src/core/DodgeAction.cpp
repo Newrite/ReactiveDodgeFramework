@@ -54,6 +54,17 @@ namespace rdf
 		phase_ = PhaseAt(t_);
 	}
 
+	void DodgeAction::Retime(const Timing& timing)
+	{
+		if (!Running() || exiting_) {
+			return;
+		}
+		startupEnd_ = timing.startup;
+		activeEnd_ = timing.startup + timing.active;
+		total_ = std::max(timing.Total(), t_);
+		phase_ = PhaseAt(t_);
+	}
+
 	void DodgeAction::Reset()
 	{
 		*this = DodgeAction{};

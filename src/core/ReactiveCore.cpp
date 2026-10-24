@@ -157,7 +157,8 @@ namespace rdf
 		windows_.Reset();  // the new clip announces its own windows
 		intoAction_ = false;
 		const int chainCount = chain ? action_.ChainCount() + 1 : 1;
-		action_.Start(cfg_.timing, chainCount);
+		timing_ = cfg_.timing;
+		action_.Start(timing_, chainCount);
 		driver_.Begin(start);
 		startAngleDeg_ = AngleDelta(frame_.actorYaw, start.heading) * kRadToDeg;
 	}
@@ -189,6 +190,21 @@ namespace rdf
 		if (action_.Running()) {
 			windows_.On(e);
 		}
+	}
+
+	bool ReactiveCore::OnClipMotion(const ClipMotion& motion)
+	{
+		if (!action_.Running() || action_.Exiting() || action_.Phase() != DodgePhase::Startup) {
+			return false;
+		}
+		if (motion.phases) {
+			timing_.startup = (*motion.phases)[0];
+			timing_.active = (*motion.phases)[1];
+			timing_.recovery = (*motion.phases)[2];
+		}
+		action_.Retime(timing_);
+		driver_.Replan(timing_, motion.distance.value_or(cfg_.motion.distance));
+		return true;
 	}
 
 	void ReactiveCore::Apply(const Decision& d, bool accepted)

@@ -24,6 +24,8 @@ namespace rdf
 		void Interrupt();
 		// Cancelled into locomotion: jump to Recovery and finish after `blend` seconds.
 		void RequestExit(float blend);
+		// The clip announced its own phases (ClipMotion): the timeline continues from now with them.
+		void Retime(const Timing& timing);
 		void Reset();
 
 		DodgePhase Phase() const { return phase_; }

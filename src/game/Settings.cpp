@@ -283,6 +283,7 @@ namespace rdf::game
 			s.firstPersonLookScale = ReadFloat("Graph", "fFirstPersonLookScale", s.firstPersonLookScale, -5.0f, 5.0f);
 			s.clipLengthFirstPerson = ReadFloat("Graph", "fClipLengthFirstPerson", s.clipLengthFirstPerson, 0.05f, 10.0f);
 			s.armStanceWhenSheathed = ReadBool("Graph", "bArmStanceWhenSheathed", s.armStanceWhenSheathed);
+			s.clipMotion = ReadBool("Graph", "bClipMotion", s.clipMotion);
 			s.enterTimeoutFrames = ReadInt("Graph", "iEnterTimeoutFrames", s.enterTimeoutFrames, 1, 120);
 		}
 	}

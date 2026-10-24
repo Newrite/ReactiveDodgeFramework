@@ -32,6 +32,10 @@ EVENTS += ANNOTATION_EVENTS
 # splits an annotation at its first '.', as PIE's "PIE.@..."); RDF_CastOnClip at 0.0 = the clip places its own moments.
 CASTON_EVENTS = ["RDF_CastOnDodge", "RDF_CastOnPerfectDodge", "RDF_CastOnClip"]
 EVENTS += CASTON_EVENTS
+# The clip's own motion (ANIMATION_CONTRACT.md 5), at its first frame: "RDF_Motion.<distance>,<startup>,<active>,<recovery>"
+# and "RDF_ClipLength.<seconds>", split at the first '.' like the CastOn ones (the numbers arrive as the payload).
+MOTION_EVENTS = ["RDF_Motion", "RDF_ClipLength"]
+EVENTS += MOTION_EVENTS
 # Sent by the plugin on a perfect dodge (to the player and to the attacker); registered so behaviors, OAR and other
 # plugins' graph-event sinks receive them (NotifyAnimationGraph drops a name the graph does not know).
 EVENTS += ["RDF_PerfectDodge", "RDF_PerfectDodged"]

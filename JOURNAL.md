@@ -597,3 +597,17 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   the magnitude is a per-second rate. The stagger delay and escape-cost keywords read Authored, so a detrimental effect
   no longer flips their sign. CastOn effect conditions gained "reading". Checked: nothing evaluates per frame with the
   menu closed. 98 tests, deployed.
+* Clip motion annotations (2026-10-24; ANIMATION_CONTRACT.md 5). A clip may now say how it moves:
+  - `RDF_Motion.<distance>,<startup>,<active>,<recovery>` gives the distance and phases. While the dodge is still in its
+    startup, the core retimes the DodgeAction and replans the MotionDriver's speed curve, keeping the distance already
+    covered. The warp and exit retarget use the dodge's own phases.
+  - `RDF_ClipLength.<s>` gives the real length; the agent sets RDF_DodgeSpeed again.
+  - Both arrive as a payload after the first '.'. The two names are registered in every patched graph.
+    `[Graph] bClipMotion` (default 1) turns them off.
+  - annotate_clips.py / build_clip_set.py write both from the root motion (path length; phases at 85 % of the peak;
+    recovery to the clip's end).
+  - Tests: 101 cases (parse, replan, after-startup, chain reset). The patch is regenerated: check_rdf_nemesis 105/105;
+    staged Pandora validate_rdf 267/267. validate_onehand 130/141: the same structural failures at HEAD, because its
+    prototype is now the regular patch.
+  - The default clips are not re-annotated yet: their root motion is ~250 u where fDistance is 300.
+  - Deployed the DLL and patches to both mods. Pandora must be run again for the new events. Not tried in game.

@@ -142,6 +142,7 @@ namespace rdf::game::schema
 				// --- animation
 				Float(Page::Animation, "Graph", "fAnimSpeed", RDF_F(animSpeed), 0.1f, 3.0f, "%.2f"),
 				Float(Page::Animation, "Graph", "fClipLength", RDF_F(clipLength), 0.1f, 3.0f, "%.3f s"),
+				Bool(Page::Animation, "Graph", "bClipMotion", RDF_B(clipMotion)),
 				Float(Page::Animation, "Graph", "fArmStance", RDF_F(armStance), 0.0f, 1.0f, "%.2f"),
 				Bool(Page::Animation, "Graph", "bArmStanceWhenSheathed", RDF_B(armStanceWhenSheathed)),
 				Float(Page::Animation, "Graph", "fArmStanceFirstPerson", RDF_F(armStanceFirstPerson), 0.0f, 1.0f, "%.2f"),

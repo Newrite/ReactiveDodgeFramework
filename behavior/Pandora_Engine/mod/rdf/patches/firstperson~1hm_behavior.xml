@@ -35,6 +35,10 @@
   <append path="#0087/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
   <append path="#0085/eventNames"><hkcstring>RDF_CastOnClip</hkcstring></append>
   <append path="#0087/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
+  <append path="#0085/eventNames"><hkcstring>RDF_Motion</hkcstring></append>
+  <append path="#0087/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
+  <append path="#0085/eventNames"><hkcstring>RDF_ClipLength</hkcstring></append>
+  <append path="#0087/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
   <append path="#0085/eventNames"><hkcstring>RDF_PerfectDodge</hkcstring></append>
   <append path="#0087/eventInfos"><hkobject><hkparam name="flags">0</hkparam></hkobject></append>
   <append path="#0085/eventNames"><hkcstring>RDF_PerfectDodged</hkcstring></append>

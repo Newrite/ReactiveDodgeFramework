@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ActionArbiter.h"
+#include "ClipMotion.h"
 #include "Clock.h"
 #include "Config.h"
 #include "DodgeAction.h"
@@ -94,6 +95,12 @@ namespace rdf
 		bool       PerfectWindow(float from, float to) const;
 		// RDF_* annotation events of the clip playing the current dodge.
 		void       OnWindowEvent(WindowEvent e);
+		// RDF_Motion of the clip playing the current dodge: its distance and phases replace the ini's. Taken only while
+		// the dodge is still in its startup and not exiting (the annotation sits at the clip's first frame); false when
+		// it was ignored. A clip without phases keeps the current ones and changes the distance only.
+		bool       OnClipMotion(const ClipMotion& motion);
+		// The current dodge's phases: the ini's, or the clip's own.
+		const Timing& DodgeTiming() const { return timing_; }
 		bool       ClipAnnotated() const { return windows_.Annotated().has_value(); }
 		double     Now() const { return clock_.Now(); }
 		const InputBuffer& Buffer() const { return buffer_; }
@@ -112,6 +119,7 @@ namespace rdf
 		MotionDriver  driver_;
 		FrameInput    frame_{};
 		float         startAngleDeg_{ 0.0f };
+		Timing        timing_;    // the current dodge's phases (blend lengths stay the ini's)
 		bool          intoAction_{ false };  // the current dodge was cancelled into an attack/block
 		WindowTracker windows_;
 	};

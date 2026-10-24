@@ -44,6 +44,9 @@ namespace rdf
 		// Cancel into an action: decelerate over `blend` instead of stopping dead, to rest, or to running speed when the
 		// move input is held (an attack out of a running dodge is an attack out of running).
 		void          BeginStop(float t, float blend, bool toRun = false);
+		// The clip announced its own phases and distance (ClipMotion): the speed curve is planned again from the same
+		// carry-in and exit speeds. Only before an exit; the distance travelled so far is kept (Step integrates deltas).
+		void          Replan(const Timing& timing, float distance);
 
 		float Speed() const { return speed_; }
 		float Heading() const { return steering_.Heading(); }
@@ -62,6 +65,9 @@ namespace rdf
 		bool  ResolveSteering(const DriverInput& in, float& desired, float& magnitude);
 
 		Config        cfg_;
+		Timing        timing_;            // this dodge's phases: the ini's, or the clip's own (Replan)
+		float         carrySpeed_{ 0.0f };
+		float         exitSpeed_{ 0.0f };   // the one planned at the start (RetargetExit may change it later)
 		Steering      steering_;
 		MotionProfile profile_;
 		float         facing_{ 0.0f };

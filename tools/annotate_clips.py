@@ -13,11 +13,21 @@ across +-2 keys, so a single jerky key cannot become the peak):
     RDF_ChainOpen    after the peak, speed <= 75 %                  (--chain)
     RDF_ExitOpen     after the peak, speed <= 75 % (still moving: blends into running)  (--exit)
 
+and, unless --no-motion, how the clip moves (both at 0; the plugin replaces fDistance, the [Timing] phases and
+fClipLength with them for this clip's dodge, ANIMATION_CONTRACT.md 5):
+
+    RDF_Motion.<distance>,<startup>,<active>,<recovery>
+                     distance: the root motion's horizontal path length (x --distanceScale)
+                     startup:  until the speed first reaches 85 % of the peak            (--plateau)
+                     active:   from there until it falls below 85 % again after the peak
+                     recovery: the rest of the clip, so the phases add up to its length
+    RDF_ClipLength.<seconds>   the clip's duration (a clip still streaming in reports 0 to the game)
+
 Existing RDF_* annotations are replaced, so re-running is idempotent; other annotations
 (animmotion, PIE, ...) are kept. A clip whose root motion is missing is reported and skipped.
 Times are clip-local seconds. Writes behavior/clip_windows.json as a record of what was written.
 
-    python tools/annotate_clips.py [--dir <animations\\RDF>] [--exit 0.75] [--action 0.6]
+    python tools/annotate_clips.py [--dir <animations\\RDF>] [--exit 0.75] [--action 0.6] [--no-motion] [--distanceScale 1]
 """
 import argparse
 import json
@@ -37,6 +47,7 @@ IFRAME_ON = 0.30
 
 TRACK0 = re.compile(r'(<hkparam name="annotationTracks"[^>]*>\s*<hkobject>\s*<hkparam name="trackName">[^<]*</hkparam>\s*)'
                     r'<hkparam name="annotations" numelements="(\d+)">(.*?)\n\t{5}</hkparam>(\s*</hkobject>)', re.S)
+DURATION = re.compile(r'<hkparam name="duration">([^<]*)</hkparam>')
 NOTE = re.compile(r'<hkobject>\s*<hkparam name="time">([^<]*)</hkparam>\s*<hkparam name="text">([^<]*)</hkparam>\s*</hkobject>', re.S)
 INDENT = "\t\t\t\t\t\t"
 
@@ -86,13 +97,36 @@ def windows(curve, rule, latest=ACTION_LATEST):
     }, peak_t, peak
 
 
+# The plugin's speed curve is a smoothstep up (startup), a plateau (active) and a smoothstep down (recovery); the phases
+# are read off the clip's own curve at this share of its peak.
+PLATEAU = 0.85
+MIN_RECOVERY = 0.05
+
+
+def path_length(notes):
+    """Horizontal length of the root-motion path (animmotion keys are cumulative x y z from the clip's start)."""
+    keys = [(0.0, 0.0)] + [tuple(map(float, s.split()[1:3])) for _, s in notes if s.startswith("animmotion ")]
+    return sum(((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2) ** 0.5 for a, b in zip(keys, keys[1:]))
+
+
+def motion(curve, duration, distance, plateau=PLATEAU):
+    """(startup, active, recovery) adding up to the clip's duration."""
+    peak_t, peak = max(curve, key=lambda p: p[1])
+    startup = min(next(t for t, v in curve if v >= plateau * peak), peak_t)
+    active_end = next((t for t, v in curve if t > peak_t and v < plateau * peak), peak_t)
+    active_end = min(max(active_end, startup), duration - MIN_RECOVERY)
+    startup = min(startup, active_end)
+    return {"distance": distance, "startup": startup, "active": active_end - startup, "recovery": duration - active_end}
+
+
 def render(notes):
     return "".join(f"\n{INDENT}<hkobject>\n{INDENT}\t<hkparam name=\"time\">{t:.6f}</hkparam>\n"
                    f"{INDENT}\t<hkparam name=\"text\">{s}</hkparam>\n{INDENT}</hkobject>" for t, s in notes)
 
 
-def annotate(clip, rule, drop=()):
-    """drop: prefixes of the clip's own annotations to remove (another framework's events, see build_clip_set)."""
+def annotate(clip, rule, drop=(), with_motion=True, distance_scale=1.0):
+    """drop: prefixes of the clip's own annotations to remove (another framework's events, see build_clip_set).
+    with_motion: also write RDF_Motion / RDF_ClipLength; distance_scale multiplies the measured distance."""
     xml = WORK / (clip.stem + ".xml")
     hkxc(clip, xml, "xml")
     text = xml.read_text(encoding="utf-8")
@@ -105,8 +139,18 @@ def annotate(clip, rule, drop=()):
         return None, "no animmotion root motion"
 
     marks, peak_t, peak = windows(curve, rule)
+    extra = []  # annotations with a payload: (time, full text)
+    moves = None
+    if with_motion:
+        found = DURATION.search(text)
+        duration = float(found.group(1)) if found else 0.0
+        if duration <= MIN_RECOVERY:
+            return None, "no duration"
+        moves = motion(curve, duration, path_length(notes) * distance_scale)
+        extra = [(0.0, "RDF_Motion.{distance:.1f},{startup:.3f},{active:.3f},{recovery:.3f}".format(**moves)),
+                 (0.0, f"RDF_ClipLength.{duration:.4f}")]
     kept = [(t, s) for t, s in notes if not s.startswith(("RDF_",) + tuple(drop))]
-    merged = sorted(kept + [(t, s) for s, t in marks.items()], key=lambda n: n[0])
+    merged = sorted(kept + [(t, s) for s, t in marks.items()] + extra, key=lambda n: n[0])
     body = f'<hkparam name="annotations" numelements="{len(merged)}">{render(merged)}\n\t\t\t\t\t</hkparam>'
     text = text[:m.start()] + m.group(1) + body + m.group(4) + text[m.end():]
     xml.write_text(text, encoding="utf-8")
@@ -115,14 +159,25 @@ def annotate(clip, rule, drop=()):
     check = WORK / (clip.stem + ".check.xml")
     hkxc(clip, check, "xml")
     found = {s for _, s in NOTE.findall(TRACK0.search(check.read_text(encoding="utf-8")).group(3))}
-    missing = [s for s in marks if s not in found]
+    missing = [s for s in marks if s not in found] + [s for _, s in extra if s not in found]
     if missing:
         sys.exit(f"{clip.name}: annotations missing after repack: {missing}")
     leftover = [s for s in found if drop and s.startswith(tuple(drop))]
     if leftover:
         sys.exit(f"{clip.name}: dropped annotations still there after repack: {leftover}")
-    return {"peakTime": round(peak_t, 4), "peakSpeed": round(peak, 1),
-            **{k: round(v, 4) for k, v in marks.items()}}, None
+    result = {"peakTime": round(peak_t, 4), "peakSpeed": round(peak, 1), **{k: round(v, 4) for k, v in marks.items()}}
+    if moves:
+        result["motion"] = {k: round(v, 4) for k, v in moves.items()}
+        result["clipLength"] = round(duration, 4)
+    return result, None
+
+
+def describe_motion(marks):
+    m = marks.get("motion")
+    if not m:
+        return ""
+    return (f"  motion {m['distance']:.0f} u {m['startup']:.3f}/{m['active']:.3f}/{m['recovery']:.3f}"
+            f"  length {marks['clipLength']:.3f}")
 
 
 def main(argv):
@@ -130,20 +185,24 @@ def main(argv):
     ap.add_argument("--dir", type=Path, default=DEFAULT_DIR)
     for key, value in DEFAULT_RULE.items():
         ap.add_argument("--" + key, type=float, default=value, help="speed fraction after the peak that opens this window")
+    ap.add_argument("--no-motion", action="store_true", help="do not write RDF_Motion / RDF_ClipLength")
+    ap.add_argument("--distanceScale", type=float, default=1.0, help="multiplies the measured root-motion distance")
     args = ap.parse_args(argv)
 
     WORK.mkdir(parents=True, exist_ok=True)
     rule = {key: getattr(args, key) for key in DEFAULT_RULE}
     report = {"rule": {"iframeOn": IFRAME_ON, **rule}, "clips": {}}
+    if not args.no_motion:
+        report["motionRule"] = {"plateau": PLATEAU, "distanceScale": args.distanceScale}
     for clip in sorted(args.dir.glob("*.hkx")):
-        marks, problem = annotate(clip, rule)
+        marks, problem = annotate(clip, rule, with_motion=not args.no_motion, distance_scale=args.distanceScale)
         if problem:
             print(f"skip {clip.name}: {problem}")
             continue
         report["clips"][clip.stem] = marks
         print(f"{clip.name}: peak {marks['peakSpeed']:.0f}@{marks['peakTime']:.3f}  iframes "
               f"{marks['RDF_IFrameStart']:.3f}-{marks['RDF_IFrameEnd']:.3f}  attack/block {marks['RDF_AttackOpen']:.3f}  chain {marks['RDF_ChainOpen']:.3f}"
-              f"  exit {marks['RDF_ExitOpen']:.3f}")
+              f"  exit {marks['RDF_ExitOpen']:.3f}{describe_motion(marks)}")
     REPORT.write_text(json.dumps(report, indent=2), encoding="utf-8")
     print(f"wrote {REPORT}")
 

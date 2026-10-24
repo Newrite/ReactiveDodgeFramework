@@ -84,6 +84,7 @@ namespace rdf::game
 		void              HoldReleases(RE::Actor* actor, float dt);
 		void              TriggerCastOn(RE::Actor* actor, caston::Trigger trigger, RE::Actor* attacker);
 		void              DrainCastOnAnnotations(RE::Actor* actor);
+		void              ApplyClipMotion(RE::Actor* actor);
 		graph::Layer      CastingLayer(RE::Actor* actor, std::uint8_t attackState) const;
 		bool              StaggerEscape(RE::Actor* actor);
 		void              RetryDeferred(RE::Actor* actor);
@@ -140,6 +141,7 @@ namespace rdf::game
 		CommandKind     lastRejectCommand_{ CommandKind::Dodge };
 		float           orphanTime_{ 0.0f };      // graph in a dodge state we do not own, seconds
 		float           staggerAge_{ 0.0f };      // seconds the actor has been staggered
+		float           clipLength_{ 0.667f };    // the dodge clip's length: fClipLength*, or its RDF_ClipLength
 		bool            escapeStagger_{ false };  // this tick a dodge may cut the stagger short
 		const char*     lastStaggerRule_{ nullptr };  // dev log: the [Stagger] rule last reported
 		bool            perfectFired_{ false };   // the current dodge already counted a perfect dodge
