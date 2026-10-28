@@ -1,0 +1,644 @@
+diff --git a/README.md b/README.md
+index 753ac52..758aaa6 100644
+--- a/README.md
++++ b/README.md
+@@ -80,3 +80,20 @@ Design notes: `docs/TREE_DESIGN.md`. Changes: `CHANGELOG.md`.
+ GPL-3.0-or-later (`LICENSE`); it links CommonLibSSE-NG, which is GPL-3.0-or-later. Third-party notices:
+ `THIRD_PARTY.md`. Credits: `CREDITS.md`. The release zip carries all three in
+ `SKSE/Plugins/EnhancedCombatBehavior/`.
++
++## Local RDF API v2 adaptation (SE 1.5.97)
++
++This branch prefers ReactiveDodgeFramework.dll API v2 over TK events when both are installed.
++ECB supplies a world direction and a probed maximum distance. RDF owns all resource charging, motion,
++clip selection, attack-cancel rules and protection windows. No second ECB stamina charge is applied.
++The old EnableTKDodgeIntegration setting still controls whether NPCs may dodge at all.
++DodgeStaminaCost, IFrameDuration, EnableStepDodge and DodgeEvent* apply only to the TK fallback backend;
++MinDodgeStamina and the forward-dodge stamina percentage remain optional tactical thresholds.
++
++Success accounting and cooldowns wait for RDF's graph-entry confirmation, not queue admission.
++Pending/active RDF dodges suppress further decisions. A refused forward dodge falls back to advancing.
++Requests use handles, can be cancelled while queued, and cannot start later out of RDF's input buffer.
++Without RDF API v2 this fork retains the original TK backend.
++
++Build tested for SE only; this integration still needs in-game verification. It does not extend dodge support
++for humanoid creatures that upstream deliberately excludes. The matching modified RDF DLL is required.
+diff --git a/include/ActionExecutor.h b/include/ActionExecutor.h
+index 2c320e1..7942fad 100644
+--- a/include/ActionExecutor.h
++++ b/include/ActionExecutor.h
+@@ -19,6 +19,7 @@ namespace CombatAI
+ 
+         // Execute a decision result
+         bool Execute(RE::Actor *a_actor, const DecisionResult &a_decision, const ActorStateData &a_state);
++        ReactiveDodgeAPI::Ticket TakeRdfTicket(RE::Actor* actor) { return m_dodgeSystem.TakeRdfTicket(actor); }
+ 
+ 
+         // True when a sprint attack can launch now: sprinting for a moment (so the graph is
+diff --git a/include/CombatDirector.h b/include/CombatDirector.h
+index 9a0e002..ef84336 100644
+--- a/include/CombatDirector.h
++++ b/include/CombatDirector.h
+@@ -69,6 +69,17 @@ namespace CombatAI
+         void ExecuteDecision(RE::Actor *a_actor, RE::FormID a_formID, const DecisionResult &a_decision,
+                              const ActorStateData &a_state);
+ 
++        void CompleteDecision(RE::Actor* actor, const DecisionResult& decision, const ActorStateData& state);
++        void UpdateRdfDodges();
++        struct PendingRdfDodge
++        {
++            RE::ActorHandle actor;
++            ReactiveDodgeAPI::Ticket ticket;
++            DecisionResult decision;
++            ActorStateData state;
++        };
++        ThreadSafeMap<RE::FormID, PendingRdfDodge> m_pendingRdf;
++
+         // Evict all per-actor bookkeeping (timers, spawn time, processed flag, observer
+         // caches) for a FormID. Called when an actor leaves combat / dies / is torn down
+         // so a recycled temporary FormID (0xFF...) starts fresh (spawn warmup re-applies)
+diff --git a/include/DodgeSystem.h b/include/DodgeSystem.h
+index e90b7ac..d4e9ebb 100644
+--- a/include/DodgeSystem.h
++++ b/include/DodgeSystem.h
+@@ -2,6 +2,8 @@
+ 
+ #include "ActorStateData.h"
+ #include "pch.h"
++#include "RdfIntegration.h"
++#include "ThreadSafeMap.h"
+ 
+ namespace CombatAI
+ {
+@@ -23,6 +25,16 @@ namespace CombatAI
+         // Check if actor can dodge
+         bool CanDodge(RE::Actor *a_actor);
+ 
++        ReactiveDodgeAPI::Ticket TakeRdfTicket(RE::Actor* actor)
++        {
++            ReactiveDodgeAPI::Ticket ticket = 0;
++            m_rdfTickets.WithWriteLock([&](auto& entries) {
++                const auto it = entries.find(actor->GetFormID());
++                if (it != entries.end()) { ticket = it->second; entries.erase(it); }
++            });
++            return ticket;
++        }
++
+         // Dodge along the first of a_options (horizontal directions, best first) whose path is clear: ground
+         // within reach and no wall, object or actor in the way. False if none is.
+         // a_ignore: a reference the path may run into (the forward dodge's own target).
+@@ -50,5 +62,6 @@ namespace CombatAI
+         void ApplyDodgeStaminaCost(RE::Actor *a_actor);
+ 
+         Config m_config;
++        ThreadSafeMap<RE::FormID, ReactiveDodgeAPI::Ticket> m_rdfTickets;
+     };
+ } // namespace CombatAI
+diff --git a/include/HavokString.h b/include/HavokString.h
+new file mode 100644
+index 0000000..2bb670e
+--- /dev/null
++++ b/include/HavokString.h
+@@ -0,0 +1,18 @@
++#pragma once
++
++#include <cstdint>
++#include <cstring>
++
++namespace CombatAI
++{
++    // hkStringPtr stores a pointer with an ownership flag in bit zero.
++    // CommonLib's current c_str() uses a 32-bit mask and truncates x64 pointers.
++    template <class StringPtr>
++    const char *ReadHavokString(const StringPtr &a_string) noexcept
++    {
++        static_assert(sizeof(StringPtr) == sizeof(std::uintptr_t));
++        std::uintptr_t address = 0;
++        std::memcpy(&address, &a_string, sizeof(address));
++        return reinterpret_cast<const char *>(address & ~std::uintptr_t{1});
++    }
++}
+diff --git a/include/RdfIntegration.h b/include/RdfIntegration.h
+new file mode 100644
+index 0000000..85335b6
+--- /dev/null
++++ b/include/RdfIntegration.h
+@@ -0,0 +1,22 @@
++#pragma once
++#include "ReactiveDodgeAPI.h"
++
++namespace CombatAI::RdfIntegration
++{
++    // First used after kDataLoaded, when every DLL has loaded. RDF wins over TK when both are present.
++    inline const ReactiveDodgeAPI::V2* Get()
++    {
++        static const auto api = [] {
++            const auto found = ReactiveDodgeAPI::GetV2();
++            if (found) { LOG_INFO("Dodge backend: Reactive Dodge Framework API v2 (world-space, graph-confirmed)"); }
++            else { LOG_INFO("Dodge backend: TK animation events (RDF API v2 not available)"); }
++            return found;
++        }();
++        return api;
++    }
++    inline bool Active(RE::Actor* actor)
++    {
++        const auto api = Get();
++        return api && api->State(actor) != ReactiveDodgeAPI::ActorState::Idle;
++    }
++}
+diff --git a/include/ReactiveDodgeAPI.h b/include/ReactiveDodgeAPI.h
+new file mode 100644
+index 0000000..1a6c6d7
+--- /dev/null
++++ b/include/ReactiveDodgeAPI.h
+@@ -0,0 +1,74 @@
++#pragma once
++
++// Reactive Dodge Framework: dodge any actor from another SKSE plugin.
++//
++//   if (auto request = ReactiveDodgeAPI::Get()) {
++//       request(actor, 90.0f);  // dodge to the actor's right
++//   }
++//
++// The dodge is the player's: the same behavior states, clips, annotation windows, chains, exits, cost,
++// i-frames (melee, Precision, projectiles, explosions) and perfect dodge. Only the decision is the caller's.
++// The actor needs the RDF behavior patch (every humanoid sharing 0_master.hkx has it).
++
++#include <cstdint>
++#include <Windows.h>
++#include "ReactiveDodgeTypes.h"
++
++namespace RE
++{
++	class Actor;
++}
++
++#define RDF_API_VERSION 1u
++
++namespace ReactiveDodgeAPI
++{
++	// Any thread. `angleDeg` is relative to where the actor faces: 0 forward, 90 right, 180 back, -90 left.
++	// The dodge starts on the next main-thread tick if the actor can dodge then (not staggered beyond the
++	// configured escape, not in a non-cancellable state, enough of the cost resource), or within the
++	// input-buffer window after. Returns false when the request could not be queued.
++	using RequestDodge_t = bool (*)(RE::Actor* actor, float angleDeg);
++	using GetApiVersion_t = std::uint32_t (*)();
++
++	// Call at or after SKSE's kPostLoad. Null when ReactiveDodgeFramework.dll is not loaded.
++	inline RequestDodge_t Get()
++	{
++		const auto module = ::GetModuleHandleW(L"ReactiveDodgeFramework.dll");
++		if (!module) {
++			return nullptr;
++		}
++		const auto version = reinterpret_cast<GetApiVersion_t>(::GetProcAddress(module, "RDF_GetApiVersion"));
++		if (!version || version() < RDF_API_VERSION) {
++			return nullptr;
++		}
++		return reinterpret_cast<RequestDodge_t>(::GetProcAddress(module, "RDF_RequestDodge"));
++	}
++
++	// V2: NPC AI only. All calls are thread-safe; game work happens on RDF's update tick.
++	// SubmitWorld: a horizontal WORLD vector, not a heading relative to a potentially turning actor.
++	// 0 = invalid/not ready/player/busy/capacity limit. A nonzero ticket is NOT a successful dodge.
++	// Each request is attempted once on the next active tick, never buffered or chained. Queued requests
++	// older than 250ms are rejected. Poll until Started/Rejected; Started means the graph confirmed entry.
++	// Results expire after 60 real seconds; Poll(..., true) consumes terminal results immediately.
++	// Cancel prevents an unprocessed request from starting; it does not interrupt a dodge already starting.
++	// All tickets become Unknown on load/new game; ticket numbers are never reused within the process.
++	// Resource, attack-cancel, i-frames, perfect and clip selection belong exclusively to RDF.
++	struct V2
++	{
++		std::uint32_t size;
++		std::uint32_t version;
++		// maxDistance is the AI's probed travel budget (game units). Must be finite and >0.
++		// Caps both INI distance and later RDF_Motion overrides, without changing the chosen clip/timing.
++		Ticket (*SubmitWorld)(RE::Actor*, float x, float y, float maxDistance);
++		Result (*Poll)(Ticket, bool consumeTerminal);
++		ActorState (*State)(RE::Actor*);
++		bool (*Cancel)(Ticket);
++	};
++	inline const V2* GetV2()
++	{
++		const auto module = ::GetModuleHandleW(L"ReactiveDodgeFramework.dll");
++		const auto get = module ? reinterpret_cast<const V2* (*)()>(::GetProcAddress(module, "RDF_GetApiV2")) : nullptr;
++		const auto api = get ? get() : nullptr;
++		return api && api->version == 2 && api->size >= sizeof(V2) ? api : nullptr;
++	}
++}
+diff --git a/include/ReactiveDodgeTypes.h b/include/ReactiveDodgeTypes.h
+new file mode 100644
+index 0000000..ff1291b
+--- /dev/null
++++ b/include/ReactiveDodgeTypes.h
+@@ -0,0 +1,15 @@
++#pragma once
++#include <cstdint>
++
++namespace ReactiveDodgeAPI
++{
++	using Ticket = std::uint64_t;
++	enum class RequestStatus : std::uint32_t { Unknown, Pending, Starting, Started, Rejected };
++	enum class Reject : std::uint32_t { None, Rules, Graph, Unavailable, Cancelled, Expired };
++	enum class ActorState : std::uint32_t { Idle, Pending, Starting, Dodging, Exiting };
++	struct Result
++	{
++		RequestStatus status{ RequestStatus::Unknown };
++		Reject reason{ Reject::None };
++	};
++}
+diff --git a/package/SKSE/Plugins/EnhancedCombatBehavior.ini b/package/SKSE/Plugins/EnhancedCombatBehavior.ini
+index f32e32d..08fe38b 100644
+--- a/package/SKSE/Plugins/EnhancedCombatBehavior.ini
++++ b/package/SKSE/Plugins/EnhancedCombatBehavior.ini
+@@ -58,20 +58,20 @@ PanicSkillPenalty = 0.75
+ 
+ [DodgeSystem]
+ 
+-# Stamina cost for dodging
++# TK backend only: stamina cost. With RDF API v2, RDF owns resource and cost.
+ DodgeStaminaCost = 10.000000
+ 
+-# Invulnerability frame duration in seconds
++# TK backend only: invulnerability frame duration in seconds. RDF uses its own windows.
+ # How long NPCs are invulnerable during dodge
+ IFrameDuration = 0.300000
+ 
+-# Enable step dodge variant
++# TK backend only: enable step dodge variant. RDF clips are selected by OAR.
+ # Uses iStep animation graph variable
+ EnableStepDodge = false
+ 
+ # Allow dodging during attacks (attack cancel)
+ EnableDodgeAttackCancel = true
+-# Forward dodge (TK Dodge) closes the last stretch only: when the target is at most this
++# Forward dodge (RDF or TK) closes the last stretch only: when the target is at most this
+ # far beyond attack reach (game units) and open - casting, drawing a bow, recovering
+ # from a swing, staggered, fleeing or facing away. Never at a ready, facing target.
+ ForwardDodgeMaxGap = 200.0
+@@ -99,7 +99,7 @@ DodgeEventRight = TKDodgeRight
+ # Tried when the graph rejects the direction's event. Empty = no second try.
+ DodgeEventFallback =
+ # Stamina an NPC needs to start a dodge, without being charged it (the larger of this and
+-# DodgeStaminaCost is checked). For dodge frameworks that charge their own cost, e.g. TUDM.
++# DodgeStaminaCost is checked for TK). RDF only uses this optional extra threshold; RDF checks its own cost.
+ MinDodgeStamina = 0.0
+ 
+ [DecisionMatrix]
+@@ -193,7 +193,7 @@ ShotHoldMaxSeconds = 3.0
+ 
+ TradeBlowsChance = 0.3
+ # Close dodge: chance per melee swing (light or power) aimed at the NPC from within the attacker's reach to
+-# dodge it (needs TK Dodge). Rolled before the back-off and trade-blows rolls; a failed roll leaves those as before.
++# dodge it (RDF API v2 or TK Dodge). Rolled before the back-off and trade-blows rolls; a failed roll leaves those as before.
+ CloseDodgeChance = 0.3
+ # Defend: chance per swing aimed at the NPC to parry it (a timed bash, with the bash stamina) or timed-block it,
+ # when the swing is inside the parry / timed block window. Rolled after the close dodge and before back-off and
+@@ -362,9 +362,8 @@ ProcessingIntervalFar = 0.500000
+ # Precision provides accurate weapon reach measurements
+ EnablePrecisionIntegration = true
+ 
+-# Enable TK Dodge RE integration
+-# If false, NPCs will not use TK Dodge for evasion
+-# TK Dodge provides dodge/evasion animations
++# Enable NPC dodge integration. RDF API v2 is preferred when installed; otherwise TK events.
++# The legacy key name is retained for existing INIs. False disables both backends.
+ EnableTKDodgeIntegration = true
+ 
+ # SCAR (Skyrim Combos AI Revolution). Auto-detected via SCAR.dll.
+@@ -568,7 +567,7 @@ BlockedPowerMult = 1.5
+ BlockedNormalMult = 0.25
+ 
+ [ProjectileAwareness]
+-# NPCs sidestep (TK Dodge) projectiles on course to hit them: arrows, bolts, spell
++# NPCs sidestep (RDF or TK) projectiles on course to hit them: arrows, bolts, spell
+ # projectiles, flame streams. Read from the engine's own combat threat list. The usual
+ # dodge cooldown and stamina cost still apply; DodgeChance replaces the skill roll.
+ EnableProjectileDodge = true
+diff --git a/src/CombatDirector.cpp b/src/CombatDirector.cpp
+index a6affc2..680c3fb 100644
+--- a/src/CombatDirector.cpp
++++ b/src/CombatDirector.cpp
+@@ -149,6 +149,9 @@ namespace CombatAI
+         if (!ShouldProcessActor(a_actor, formID, a_deltaTime, elapsed)) {
+             return;
+         }
++        // Do not choose another action while RDF is deciding/starting/dodging. Process lifetime checks above
++        // still evict dead or unloaded actors. Only the completion path records a successful AI dodge.
++        if (m_pendingRdf.Contains(formID) || RdfIntegration::Active(a_actor)) { return; }
+         // A direct block whose tree thread never ran its Exit (tree torn down): release it here
+         if (Intents::DualBlockOverdue(a_actor)) {
+             Trees::ReleaseDualBlock(a_actor, true);
+@@ -573,6 +576,16 @@ namespace CombatAI
+             }
+         }
+ 
++        if (const auto ticket = m_executor.TakeRdfTicket(a_actor)) {
++            m_pendingRdf.Insert(a_formID, PendingRdfDodge{ a_actor->GetHandle(), ticket, executedDecision, a_state });
++            return;
++        }
++        CompleteDecision(a_actor, executedDecision, a_state);
++    }
++
++    void CombatDirector::CompleteDecision(RE::Actor* a_actor, const DecisionResult& executedDecision, const ActorStateData& a_state)
++    {
++        const auto a_formID = a_actor->GetFormID();
+         if (Config::GetInstance().IsDebugTarget(a_formID)) {
+             LOG_DEBUG("Executed 0x{:08X}: {} (priority {:.2f}) target 0x{:08X} dist {:.0f} hp {:.0f}%/{:.0f}%",
+                       static_cast<std::uint32_t>(a_formID), ActionName(executedDecision.action),
+@@ -600,10 +613,47 @@ namespace CombatAI
+         APIManager::GetSingleton()->NotifyDecision(a_actor, executedDecision);
+     }
+ 
++    void CombatDirector::UpdateRdfDodges()
++    {
++        const auto api = RdfIntegration::Get();
++        if (!api) { return; }
++        std::vector<std::pair<PendingRdfDodge, ReactiveDodgeAPI::Result>> resolved;
++        m_pendingRdf.WithWriteLock([&](auto& entries) {
++            for (auto it = entries.begin(); it != entries.end();) {
++                const auto result = api->Poll(it->second.ticket, true);
++                if (result.status == ReactiveDodgeAPI::RequestStatus::Pending ||
++                    result.status == ReactiveDodgeAPI::RequestStatus::Starting) { ++it; continue; }
++                resolved.emplace_back(it->second, result);
++                it = entries.erase(it);
++            }
++        });
++        for (auto& [pending, result] : resolved) {
++            const auto actor = pending.actor.get();
++            if (!actor || actor->IsDead() || !actor->IsInCombat() || !actor->Is3DLoaded()) { continue; }
++            if (result.status == ReactiveDodgeAPI::RequestStatus::Started) {
++                CompleteDecision(actor.get(), pending.decision, pending.state);
++            } else if (result.status == ReactiveDodgeAPI::RequestStatus::Rejected &&
++                       result.reason != ReactiveDodgeAPI::Reject::Cancelled &&
++                       pending.decision.action == ActionType::ForwardDodge) {
++                // Re-evaluate against the current target/position; don't advance from an old snapshot.
++                const auto state = m_observer.GatherState(actor.get(), 0.0f);
++                if (!state.target.isValid) { continue; }
++                auto fallback = pending.decision;
++                fallback.action = ActionType::Advancing;
++                fallback.direction = state.target.position - state.self.position;
++                fallback.direction.z = 0;
++                fallback.direction.Unitize();
++                if (m_executor.Execute(actor.get(), fallback, state)) { CompleteDecision(actor.get(), fallback, state); }
++            }
++        }
++    }
++
+     void CombatDirector::Update(float a_deltaTime)
+     {
+         m_time.store(m_time.load(std::memory_order_relaxed) + a_deltaTime, std::memory_order_relaxed);
+ 
++        UpdateRdfDodges();
++
+         // Update per-frame systems (must be called once per frame, not per actor)
+         m_humanizer.Update(a_deltaTime);
+         Intents::LogSummary(a_deltaTime);
+@@ -702,6 +752,13 @@ namespace CombatAI
+         if (a_formID == 0) {
+             return;
+         }
++        if (const auto pending = m_pendingRdf.Find(a_formID)) {
++            if (const auto api = RdfIntegration::Get()) {
++                api->Cancel(pending->ticket);
++                api->Poll(pending->ticket, true);
++            }
++            m_pendingRdf.Erase(a_formID);
++        }
+         m_actorProcessTimers.Erase(a_formID);
+         m_actorCombatTimes.Erase(a_formID);
+         m_recentHits.Erase(a_formID);
+diff --git a/src/ConfigMenu.cpp b/src/ConfigMenu.cpp
+index faab5a7..ed9fe61 100644
+--- a/src/ConfigMenu.cpp
++++ b/src/ConfigMenu.cpp
+@@ -84,7 +84,7 @@ namespace CombatAI
+                 if (ImGuiMCP::CollapsingHeader("Integrations")) {
+                     ImGuiMCP::Text("Precision and TK Dodge are detected on game load (restart to re-detect).");
+                     ImGuiMCP::Checkbox("Precision integration", &config.m_modIntegrations.enablePrecisionIntegration);
+-                    ImGuiMCP::Checkbox("TK Dodge integration (dodges)", &config.m_modIntegrations.enableTKDodgeIntegration);
++                    ImGuiMCP::Checkbox("Dodge integration (RDF API v2 / TK Dodge)", &config.m_modIntegrations.enableTKDodgeIntegration);
+                     ImGuiMCP::Checkbox("SCAR integration (when SCAR.dll is loaded)", &config.m_modIntegrations.enableSCARIntegration);
+                     liveFloat("SCAR combo window (s)", &config.m_modIntegrations.scarComboWindowSeconds, 1.0f, 120.0f);
+                     liveFloat("SCAR stall fallback (s)", &config.m_modIntegrations.scarStallSeconds, 0.5f, 15.0f);
+diff --git a/src/DecisionMatrix.cpp b/src/DecisionMatrix.cpp
+index 3586a88..aa6792c 100644
+--- a/src/DecisionMatrix.cpp
++++ b/src/DecisionMatrix.cpp
+@@ -1,4 +1,5 @@
+ #include "DecisionMatrix.h"
++#include "RdfIntegration.h"
+ #include "ActorUtils.h"
+ #include "Config.h"
+ #include "BlockRules.h"
+@@ -1198,7 +1199,7 @@ namespace CombatAI
+             if (actorOwner) {
+                 float maxStamina = actorOwner->GetBaseActorValue(RE::ActorValue::kStamina);
+                 float currentStamina = a_state.self.staminaPercent * maxStamina;
+-                if (currentStamina < config.GetDodgeSystem().RequiredStamina()) {
++                if (currentStamina < (RdfIntegration::Get() ? config.GetDodgeSystem().minDodgeStamina : config.GetDodgeSystem().RequiredStamina())) {
+                     conditionsMet = false;
+                 }
+             }
+@@ -1640,7 +1641,7 @@ namespace CombatAI
+                 const bool opening = (gap <= dodgeCfg.forwardDodgeMaxGap && targetOpen) || counterOpening;
+                 bool canUseForwardDodge = config.GetModIntegrations().enableTKDodgeIntegration && opening && !guarded &&
+                                           !ActorUtils::IsHumanoidCreature(a_actor) &&
+-                                          a_state.self.currentStamina >= dodgeCfg.RequiredStamina() &&
++                                          a_state.self.currentStamina >= (RdfIntegration::Get() ? dodgeCfg.minDodgeStamina : dodgeCfg.RequiredStamina()) &&
+                                           a_state.self.staminaPercent >= dodgeCfg.forwardDodgeMinStamina;
+                 if (canUseForwardDodge) {
+                     const float risk = Personality::Effective(a_actor).risk;
+diff --git a/src/DodgeSystem.cpp b/src/DodgeSystem.cpp
+index 349b5a0..5754128 100644
+--- a/src/DodgeSystem.cpp
++++ b/src/DodgeSystem.cpp
+@@ -109,7 +109,8 @@ namespace CombatAI
+         // Check stamina
+         auto actorValueOwner = ActorUtils::SafeAsActorValueOwner(a_actor);
+         float currentStamina = actorValueOwner->GetActorValue(RE::ActorValue::kStamina);
+-        if (currentStamina < (std::max)(m_config.dodgeStaminaCost, config.GetDodgeSystem().minDodgeStamina)) {
++        if (currentStamina < (RdfIntegration::Get() ? config.GetDodgeSystem().minDodgeStamina :
++                              (std::max)(m_config.dodgeStaminaCost, config.GetDodgeSystem().minDodgeStamina))) {
+             return false;
+         }
+ 
+@@ -126,6 +127,7 @@ namespace CombatAI
+ 
+         // First clear option wins: a ledge, wall, object or actor in the way only bumps or drops the actor
+         std::string dodgeEvent;
++        RE::NiPoint3 selectedDirection;
+         std::string skipped;
+         for (RE::NiPoint3 dir : a_options) {
+             dir.z = 0.0f;
+@@ -140,6 +142,7 @@ namespace CombatAI
+                 continue;
+             }
+             dodgeEvent = event;
++            selectedDirection = dir;
+             break;
+         }
+         if (dodgeEvent.empty()) {
+@@ -149,6 +152,18 @@ namespace CombatAI
+             return false;
+         }
+ 
++        if (const auto api = RdfIntegration::Get()) {
++            const auto& environment = ::CombatAI::Config::GetInstance().GetEnvSensor();
++            const float budget = environment.enableCliffSafeDodge ?
++                (std::min)(kPathLength, environment.dodgeLedgeProbeDistance) : kPathLength;
++            const auto ticket = api->SubmitWorld(a_actor, selectedDirection.x, selectedDirection.y, budget);
++            if (!ticket) { return false; }
++            m_rdfTickets.Insert(a_actor->GetFormID(), ticket);
++            if (debug) { LOG_DEBUG("RDF request {} for 0x{:08X}: world {:.2f},{:.2f} (not yet executed)",
++                                  ticket, a_actor->GetFormID(), selectedDirection.x, selectedDirection.y); }
++            return true; // CombatDirector defers all success accounting until graph entry is confirmed.
++        }
++
+         // Set step dodge variable if enabled
+         if (m_config.enableStepDodge) {
+             a_actor->SetGraphVariableInt(RE::BSFixedString("iStep"), 2);
+@@ -266,6 +281,7 @@ namespace CombatAI
+             return false;
+         }
+ 
++        if (RdfIntegration::Get()) { return RdfIntegration::Active(a_actor); }
+         bool isDodging = false;
+         a_actor->GetGraphVariableBool(RE::BSFixedString("bIsDodging"), isDodging);
+         return isDodging;
+diff --git a/src/SCARData.cpp b/src/SCARData.cpp
+index c73b982..b37b0ee 100644
+--- a/src/SCARData.cpp
++++ b/src/SCARData.cpp
+@@ -4,6 +4,7 @@
+ #include "SCARIntegration.h"
+ #include "Config.h"
+ #include "Logger.h"
++#include "HavokString.h"
+ 
+ #include <cmath>
+ #include <numbers>
+@@ -184,7 +185,7 @@ namespace CombatAI::SCARData
+                 continue;
+             }
+             for (auto &annotation : animation->annotationTracks[0].annotations) {
+-                const char *text = annotation.text.c_str();
++                const char *text = ReadHavokString(annotation.text);
+                 const std::string_view view = text ? text : "";
+                 Action action;
+                 if (view.starts_with(kPrefix) && Parse(view.substr(kPrefix.size()), action)) {
+diff --git a/tests/havok_string_test.cpp b/tests/havok_string_test.cpp
+new file mode 100644
+index 0000000..0e5a32f
+--- /dev/null
++++ b/tests/havok_string_test.cpp
+@@ -0,0 +1,24 @@
++#include "HavokString.h"
++
++#include <array>
++#include <cstdlib>
++#include <iostream>
++
++int main()
++{
++    struct StoredString { std::uintptr_t bits; };
++    for (auto address : std::array<std::uintptr_t, 4>{0, 0x245231093c0ULL, 0x7ffe551c2a30ULL, 0x100000000ULL}) {
++        for (std::uintptr_t flag : {0U, 1U}) {
++            const auto decoded = reinterpret_cast<std::uintptr_t>(CombatAI::ReadHavokString(StoredString{address | flag}));
++            if (decoded != address) {
++                return EXIT_FAILURE;
++            }
++        }
++    }
++    alignas(2) const char text[] = "SCAR_ActionData{}";
++    const StoredString stored{reinterpret_cast<std::uintptr_t>(text) | 1};
++    if (std::strcmp(CombatAI::ReadHavokString(stored), text) != 0) {
++        return EXIT_FAILURE;
++    }
++    std::cout << "Havok string regression: 8 address/flag cases and real string passed\n";
++}
+diff --git a/xmake-requires.lock b/xmake-requires.lock
+index 8426577..2b30083 100644
+--- a/xmake-requires.lock
++++ b/xmake-requires.lock
+@@ -4,21 +4,51 @@
+     },
+     ["windows|x64"] = {
+         ["cmake#f56260b5"] = {
++            repo = {
++                branch = "master",
++                commit = "e97add9a9781124ffc3804f50e5d03a1b5cb4a65",
++                url = "https://github.com/xmake-io/xmake-repo.git"
++            },
+             version = "3.30.3"
+         },
+         ["directxmath 2024.02#f56260b5"] = {
++            repo = {
++                branch = "master",
++                commit = "e97add9a9781124ffc3804f50e5d03a1b5cb4a65",
++                url = "https://github.com/xmake-io/xmake-repo.git"
++            },
+             version = "2024.02"
+         },
+         ["directxtk 24.2.0#f56260b5"] = {
++            repo = {
++                branch = "master",
++                commit = "e97add9a9781124ffc3804f50e5d03a1b5cb4a65",
++                url = "https://github.com/xmake-io/xmake-repo.git"
++            },
+             version = "24.2.0"
+         },
+         ["ninja#f56260b5"] = {
++            repo = {
++                branch = "master",
++                commit = "e97add9a9781124ffc3804f50e5d03a1b5cb4a65",
++                url = "https://github.com/xmake-io/xmake-repo.git"
++            },
+             version = "1.12.1"
+         },
+         ["simpleini#f56260b5"] = {
++            repo = {
++                branch = "master",
++                commit = "e97add9a9781124ffc3804f50e5d03a1b5cb4a65",
++                url = "https://github.com/xmake-io/xmake-repo.git"
++            },
+             version = "v4.25"
+         },
+         ["spdlog v1.16.0#09c8c173"] = {
++            repo = {
++                branch = "master",
++                commit = "e97add9a9781124ffc3804f50e5d03a1b5cb4a65",
++                url = "https://github.com/xmake-io/xmake-repo.git"
++            },
+             version = "v1.16.0"
+         }
+     }
+diff --git a/xmake.lua b/xmake.lua
+index f2fc38d..32baf17 100644
+--- a/xmake.lua
++++ b/xmake.lua
+@@ -32,11 +32,11 @@ target("EnhancedCombatBehavior")
+ add_deps("commonlibsse-ng")
+ add_packages("simpleini")
+ if has_config("skyrim_se") and has_config("skyrim_ae") then
+-    set_targetdir("/build/SkyrimSEAE/skse/plugins")
++    set_targetdir("build/SkyrimSEAE/skse/plugins")
+ elseif has_config("skyrim_ae") then
+-    set_targetdir("/build/SkyrimAE/skse/plugins")
++    set_targetdir("build/SkyrimAE/skse/plugins")
+ else
+-    set_targetdir("/build/SkyrimSE/skse/plugins")
++    set_targetdir("build/SkyrimSE/skse/plugins")
+ end
+ 
+ -- add commonlibsse-ng plugin
+@@ -52,3 +52,9 @@ add_files("src/**.cpp")
+ add_headerfiles("include/**.h")
+ add_includedirs("include")
+ set_pcxxheader("include/pch.h")
++
++target("havok_string_test")
++set_kind("binary")
++set_default(false)
++add_files("tests/havok_string_test.cpp")
++add_includedirs("include")

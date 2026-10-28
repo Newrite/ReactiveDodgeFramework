@@ -1,4 +1,5 @@
 #pragma once
+#include "../../api/ReactiveDodgeTypes.h"
 
 namespace rdf::game::update
 {
@@ -13,4 +14,8 @@ namespace rdf::game::update
 	// on the next main-thread tick, with the same rules as a dodge press (buffer, stagger, cost, chains).
 	// False if the request could not be queued (no actor / handle).
 	bool RequestDodge(RE::Actor* actor, float angleDeg);
+	ReactiveDodgeAPI::Ticket RequestWorld(RE::Actor* actor, float x, float y, float maxDistance);
+	ReactiveDodgeAPI::Result PollRequest(ReactiveDodgeAPI::Ticket ticket, bool consume);
+	ReactiveDodgeAPI::ActorState ActorStatus(RE::Actor* actor);
+	bool CancelRequest(ReactiveDodgeAPI::Ticket ticket);
 }

@@ -76,7 +76,7 @@ SKSEPluginLoad(const SKSE::LoadInterface* a_skse)
 	const auto* plugin = SKSE::PluginDeclaration::GetSingleton();
 	logger::info("{} v{} is loading...", plugin->GetName(), plugin->GetVersion());
 
-	SKSE::Init(a_skse, { .log = false, .trampoline = true, .trampolineSize = 512 });
+	SKSE::Init(a_skse, { .log = false, .trampoline = true, .trampolineSize = 768 });
 
 	rdf::game::Settings::Observe([] { rdf::game::forms::Invalidate(); });  // forms named by settings resolve again
 	rdf::game::Settings::Load();

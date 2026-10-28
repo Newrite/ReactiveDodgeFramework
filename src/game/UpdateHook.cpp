@@ -14,6 +14,8 @@
 #include "PerfectGhost.h"
 #include "Settings.h"
 #include "SlowMotion.h"
+#include "core/AiRequests.h"
+#include <atomic>
 
 #include <chrono>
 #include <memory>
@@ -87,6 +89,13 @@ namespace rdf::game::update
 		std::mutex           g_requestLock;
 		std::vector<Request> g_requests;
 
+		AiRequests g_ai;
+		std::atomic<bool> g_apiReady{ false };
+		double RequestTime()
+		{
+			return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+		}
+
 		// A requested dodge's direction: the angle is relative to where the actor faces, +right.
 		Vec2 RequestDir(RE::Actor* actor, float angleDeg)
 		{
@@ -129,6 +138,7 @@ namespace rdf::game::update
 		{
 		public:
 			void Request(RE::Actor* actor, float angleDeg);
+			void Request(RE::Actor* actor, const AiRequests::Request& request);
 			void Tick(float dt);
 			void Clear();
 
@@ -137,6 +147,9 @@ namespace rdf::game::update
 			{
 				std::unique_ptr<DodgeAgent> agent;
 				std::vector<float>          pending;  // requested angles, fed on the next tick
+				std::optional<AiRequests::Request> immediate;
+				ReactiveDodgeAPI::Ticket confirming{ 0 };
+				std::uint64_t startsBefore{ 0 };
 				int                         idleTicks{ 0 };
 			};
 			static AgentInput BuildInput(RE::Actor* actor);
@@ -350,8 +363,23 @@ namespace rdf::game::update
 				it->second.agent = std::make_unique<DodgeAgent>(actor, nullptr);
 				DevLog("{:08X}: dodge agent created", actor->GetFormID());
 			}
+			if (it->second.immediate || it->second.confirming) { return; } // v2 owns this start attempt
 			it->second.pending.push_back(angleDeg);
 			it->second.idleTicks = 0;
+		}
+
+		void Npcs::Request(RE::Actor* actor, const AiRequests::Request& request)
+		{
+			auto [it, added] = agents_.try_emplace(HandleOf(actor));
+			if (added) { it->second.agent = std::make_unique<DodgeAgent>(actor, nullptr); }
+			auto& entry = it->second;
+			if (entry.agent->Busy() || !entry.pending.empty() || entry.immediate || entry.confirming ||
+				entry.agent->Core().Buffer().Peek(CommandKind::Dodge, entry.agent->Core().Now())) {
+				g_ai.Resolve(request.ticket, AiRequests::Status::Rejected, AiRequests::Reject::Rules, RequestTime());
+				return;
+			}
+			entry.immediate = request;
+			entry.idleTicks = 0;
 		}
 
 		void Npcs::Tick(float dt)
@@ -362,17 +390,46 @@ namespace rdf::game::update
 				auto*      actor = ref ? ref->As<RE::Actor>() : nullptr;
 				if (!actor || !actor->Is3DLoaded() || actor->IsDead()) {
 					DevLog("{:08X}: dodge agent dropped (actor gone, unloaded or dead)", e.agent->FormID());
+					g_ai.Resolve(e.confirming ? e.confirming : e.immediate ? e.immediate->ticket : 0,
+						AiRequests::Status::Rejected, AiRequests::Reject::Unavailable, RequestTime());
 					e.agent->Release(actor);
+					g_ai.Publish(it->first, AiRequests::State::Idle);
 					it = agents_.erase(it);
 					continue;
 				}
 				const auto pending = std::exchange(e.pending, {});
+				const auto immediate = std::exchange(e.immediate, {});
+				std::uint64_t oneShotSeq = 0;
+				if (immediate) {
+					e.confirming = immediate->ticket;
+					e.startsBefore = e.agent->ConfirmedStarts();
+				}
 				e.agent->Tick(actor, dt, BuildInput(actor), [&](ReactiveCore& core) {
+					if (immediate) {
+						core.LimitNextDodgeDistance(immediate->maxDistance);
+						oneShotSeq = core.Press(CommandKind::Dodge, immediate->direction);
+					}
 					for (const float angle : pending) {
 						core.Press(CommandKind::Dodge, RequestDir(actor, angle));
 						DevLog("{:08X}: dodge requested at {:.1f} deg", actor->GetFormID(), angle);
 					}
 				});
+				e.agent->Core().ClearNextDistanceLimit();
+				e.agent->Core().DiscardPress(oneShotSeq); // an AI dodge never waits for a later cancel/resource window
+				if (e.confirming) {
+					if (e.agent->ConfirmedStarts() != e.startsBefore) {
+						g_ai.Resolve(e.confirming, AiRequests::Status::Started, AiRequests::Reject::None, RequestTime());
+						e.confirming = 0;
+					} else if (!e.agent->AwaitingEnter()) {
+						g_ai.Resolve(e.confirming, AiRequests::Status::Rejected,
+							immediate ? AiRequests::Reject::Rules : AiRequests::Reject::Graph, RequestTime());
+						e.confirming = 0;
+					}
+				}
+				const auto& core = e.agent->Core();
+				g_ai.Publish(it->first, e.agent->AwaitingEnter() ? AiRequests::State::Starting :
+					core.DodgeRunning() ? (core.Exiting() ? AiRequests::State::Exiting : AiRequests::State::Dodging) : AiRequests::State::Idle);
+
 				// A request the core refused (the actor was busy) stays buffered for its window, so the agent waits
 				// that long before it is dropped.
 				e.idleTicks = e.agent->Busy() ? 0 : e.idleTicks + 1;
@@ -425,6 +482,17 @@ namespace rdf::game::update
 						g_npcs.Request(actor, r.angleDeg);
 					}
 				}
+				for (const auto& request : g_ai.Drain(RequestTime())) {
+					if (!g_ai.Claim(request.ticket, RequestTime())) { continue; }
+					const auto ref = RE::TESObjectREFR::LookupByHandle(request.actor);
+					auto* actor = ref ? ref->As<RE::Actor>() : nullptr;
+					if (!actor || !actor->Is3DLoaded() || actor->IsDead() || actor->IsDisabled() || actor->IsDeleted()) {
+						g_ai.Resolve(request.ticket, AiRequests::Status::Rejected, AiRequests::Reject::Unavailable, RequestTime());
+						continue;
+					}
+					g_npcs.Request(actor, request);
+				}
+
 				// Under a magic slowdown (ours or the Slow Time shout) the engine runs the player's own updates, movement
 				// included, faster than the world by this factor; the player's dodge clock follows them.
 				g_player.Tick(player, dt * slowmo::PlayerDtScale(), forPlayer);
@@ -440,6 +508,7 @@ namespace rdf::game::update
 	void Configure()
 	{
 		g_player.Configure(RE::PlayerCharacter::GetSingleton());
+		g_apiReady.store(true, std::memory_order_release);
 	}
 
 	void Install()
@@ -455,6 +524,7 @@ namespace rdf::game::update
 			std::scoped_lock lock(g_requestLock);
 			g_requests.clear();
 		}
+		g_ai.Reset();
 		g_npcs.Clear();
 		g_player.Reset();
 		motion::Reset();
@@ -477,4 +547,16 @@ namespace rdf::game::update
 		g_requests.push_back({ handle, angleDeg });
 		return true;
 	}
+	ReactiveDodgeAPI::Ticket RequestWorld(RE::Actor* actor, float x, float y, float maxDistance)
+	{
+		if (!g_apiReady.load(std::memory_order_acquire) || !actor || actor->IsPlayerRef()) { return 0; }
+		return g_ai.Submit(HandleOf(actor), { x, y }, RequestTime(), maxDistance);
+	}
+	ReactiveDodgeAPI::Result PollRequest(ReactiveDodgeAPI::Ticket ticket, bool consume)
+	{
+		return g_ai.Poll(ticket, consume, RequestTime());
+	}
+	ReactiveDodgeAPI::ActorState ActorStatus(RE::Actor* actor) { return g_ai.GetState(HandleOf(actor)); }
+	bool CancelRequest(ReactiveDodgeAPI::Ticket ticket) { return g_ai.Cancel(ticket, RequestTime()); }
+
 }

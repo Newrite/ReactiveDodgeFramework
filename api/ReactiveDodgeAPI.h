@@ -12,6 +12,7 @@
 
 #include <cstdint>
 #include <Windows.h>
+#include "ReactiveDodgeTypes.h"
 
 namespace RE
 {
@@ -41,5 +42,33 @@ namespace ReactiveDodgeAPI
 			return nullptr;
 		}
 		return reinterpret_cast<RequestDodge_t>(::GetProcAddress(module, "RDF_RequestDodge"));
+	}
+
+	// V2: NPC AI only. All calls are thread-safe; game work happens on RDF's update tick.
+	// SubmitWorld: a horizontal WORLD vector, not a heading relative to a potentially turning actor.
+	// 0 = invalid/not ready/player/busy/capacity limit. A nonzero ticket is NOT a successful dodge.
+	// Each request is attempted once on the next active tick, never buffered or chained. Queued requests
+	// older than 250ms are rejected. Poll until Started/Rejected; Started means the graph confirmed entry.
+	// Results expire after 60 real seconds; Poll(..., true) consumes terminal results immediately.
+	// Cancel prevents an unprocessed request from starting; it does not interrupt a dodge already starting.
+	// All tickets become Unknown on load/new game; ticket numbers are never reused within the process.
+	// Resource, attack-cancel, i-frames, perfect and clip selection belong exclusively to RDF.
+	struct V2
+	{
+		std::uint32_t size;
+		std::uint32_t version;
+		// maxDistance is the AI's probed travel budget (game units). Must be finite and >0.
+		// Caps both INI distance and later RDF_Motion overrides, without changing the chosen clip/timing.
+		Ticket (*SubmitWorld)(RE::Actor*, float x, float y, float maxDistance);
+		Result (*Poll)(Ticket, bool consumeTerminal);
+		ActorState (*State)(RE::Actor*);
+		bool (*Cancel)(Ticket);
+	};
+	inline const V2* GetV2()
+	{
+		const auto module = ::GetModuleHandleW(L"ReactiveDodgeFramework.dll");
+		const auto get = module ? reinterpret_cast<const V2* (*)()>(::GetProcAddress(module, "RDF_GetApiV2")) : nullptr;
+		const auto api = get ? get() : nullptr;
+		return api && api->version == 2 && api->size >= sizeof(V2) ? api : nullptr;
 	}
 }

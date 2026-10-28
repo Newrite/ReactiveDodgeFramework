@@ -763,3 +763,57 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   - Updated menu/docs/contract; rebuilt 1344-file FOMOD (11.7 MB), copied to F:/downloads and verified.
   - Validation: 120 C++ tests, 3 migration tests, generator HKX round trip and DLL build pass. NOT tested in game.
     Event names are unchanged, so this change needs no behavior regeneration.
+
+* ECB / RDF API v2 integration (2026-10-27, SE-only test build):
+  - Added world-space one-shot NPC requests, bounded handle/ticket handoff, cancel-before-claim, status polling
+    and actor-state snapshots. Started is published only after the existing graph-entry handshake; rejected
+    presses are discarded instead of retained in the player's input buffer. V1 exports remain compatible.
+  - AI path budget caps INI distance and clip motion without affecting the next ordinary dodge.
+  - Local ECB fork (_ext/enhanced-combat-behavior, codex/rdf-backend, upstream 6c33674) prefers API v2, skips
+    TK iframe/iStep/cost writes and defers observer/cooldown accounting until Started. Refused forward dodges
+    fall back to advancing. TK backend remains available when API v2 is absent.
+  - Integration details and test procedure: docs/ECB_INTEGRATION.md. Runtime launches are left to the user.
+  - Direct DLL loading through Python is invalid for this plugin: CommonLib tries to detect python.exe as the
+    game; that abandoned probe is not runtime validation. Static PE export inspection is used instead.
+  - Final checks: 127 C++ tests pass, both DLLs build for SE 1.5.97, exports checked statically. Matched DLLs and
+    licenses/readme installed as a disabled VanillaLike override mod, AI - Enhanced Combat Behavior - RDF API v2
+    (SE 1.5.97). Test ZIP and modified-source ZIP in _work/ecb-rdf-se and F:/downloads. CPR remains user-controlled.
+    Reproducible upstream patch stored in integrations/enhanced-combat-behavior/rdf-api-v2.patch.
+
+* ECB crash hotfix (2026-10-28): dump code confirms CommonLib hkStringPtr::c_str()
+  truncates x64 annotation pointers to 32 bits; SCARData::Read crashes in strlen
+  when an enemy draws its weapon. Added a local full-width flagged-pointer reader
+  and standalone regression test (8 address/flag cases + real tagged string pass).
+  Evidence and limitations: docs/ECB_CRASH_2026-10-28.md. User performs game launches.
+  SE build succeeded, new DLL disassembly verifies qword load/full-width mask.
+  Installed in existing VanillaLike test mod; old DLL/PDB backed up in _work.
+  Binary/source ZIPs and manifests updated and checked. INI/profile left as configured.
+
+* Area magic / early projectile impact corrections (2026-10-28, SE 1.5.97):
+  - Checked both supplied audits against the SkyrimSE IDB. Ray helper 42983 now
+    filters collidable candidates before early magic/impact feedback, preserving
+    traversal to later actors/walls and existing Ignore/remembered-stream policy.
+  - MagicHit area loop 33686 filters hostile/detrimental effects per actor after
+    distance/ghost checks, before AddTarget AND its independent follow-up. Keeps
+    beneficial/self delivery, attacker rules and original explosion LOS filtering.
+  - Both adapters execute in native synthetic-frame regression tests; 129 cases
+    pass. SE DLL build succeeded. Contracts and manual gameplay checks documented
+    in docs/IFRAMES_DELIVERY_FIXES_2026-10-28.md; both original audits marked with
+    implementation follow-up. User controls game launches.
+
+* Remaining Fireball impact feedback (2026-10-28): user confirmed explosion
+  damage fixed, but fire BGSImpactData VFX/sound remained. Traced primary slots
+  and delivery routes of Arrow/Missile/Grenade/Cone/Beam/Flame/Barrier in IDA.
+  Enabled transient HandleHits collector filtering for Beam/Flame/Barrier;
+  guarded all four native magic-contact calls and three feedback calls before
+  side effects. Added per-route/type/target diagnostics including allowed world
+  impacts. SE build and 129 tests pass; seven call sites checked against PE bytes
+  and Address Library. Specific reported variant still needs in-game retest.
+  Details: docs/PROJECTILE_ALL_TYPES_TRACE_2026-10-28.md.
+
+* v0.3.0 release cleanup: user reports the additional impact filters did not fix
+  the VFX/sound. Removed the seven extra native call-site wrappers and verbose
+  impact diagnostics. Kept working explosion/area protection, early ray and
+  transient stream-contact filters, API v2, and ECB's SCAR string fix. Recorded
+  the remaining impact issue as unresolved rather than claiming compatibility.
+  Final RDF validation: 129 cases pass and SE 1.5.97 DLL builds.

@@ -36,5 +36,15 @@ extern "C" __declspec(dllexport) bool RDF_RequestDodge(RE::Actor* actor, float a
 
 extern "C" __declspec(dllexport) std::uint32_t RDF_GetApiVersion()
 {
-	return RDF_API_VERSION;
+	return 2u; // v1 exports remain ABI-compatible
+}
+
+extern "C" __declspec(dllexport) const ReactiveDodgeAPI::V2* RDF_GetApiV2()
+{
+	static const ReactiveDodgeAPI::V2 api{
+		sizeof(ReactiveDodgeAPI::V2), 2,
+		rdf::game::update::RequestWorld, rdf::game::update::PollRequest,
+		rdf::game::update::ActorStatus, rdf::game::update::CancelRequest
+	};
+	return &api;
 }

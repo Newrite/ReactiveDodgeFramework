@@ -333,6 +333,7 @@ namespace rdf::game
 		}
 
 		if (entered) {
+			if (awaitingEnter_) { ++confirmedStarts_; }
 			awaitingEnter_ = false;  // any Entered completes the start/chain handshake
 			DevLog("{:08X}: graph entered dodge (depth {}, graph var {})", formID_, depth, graph::GraphIsDodging(actor));
 		} else if (awaitingEnter_) {

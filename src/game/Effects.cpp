@@ -4,6 +4,7 @@
 #include "Diagnostics.h"
 #include "PrecisionAPI.h"
 #include "Settings.h"
+#include "IFrameHookCode.h"
 
 #include <algorithm>
 #include <atomic>
@@ -158,6 +159,11 @@ namespace rdf::game::effects
 
 		std::atomic<const void*> g_lastStream{ nullptr };
 
+		bool RemembersDodgers(const RE::Projectile* projectile)
+		{
+			return !projectile->Is(RE::FormType::ProjectileBeam, RE::FormType::ProjectileFlame, RE::FormType::ProjectileBarrier);
+		}
+
 		// True: projectile `p` must not hit `target` now. `remember`: once through, it never hits that target again.
 		bool Ignore(RE::Projectile* p, const RE::TESObjectREFR* target, bool remember)
 		{
@@ -178,15 +184,113 @@ namespace rdf::game::effects
 		}
 
 		// HandleHits: does this contact point touch an actor the projectile must not hit?
-		bool PointIgnored(RE::Projectile* p, const RE::hkpRootCdPoint& point)
+		bool PointIgnored(RE::Projectile* p, const RE::hkpRootCdPoint& point, bool remember)
 		{
 			for (const auto* root : { point.rootCollidableA, point.rootCollidableB }) {
 				auto* ref = root ? RE::TESHavokUtilities::FindCollidableRef(*root) : nullptr;
-				if (ref && ref->Is(RE::FormType::ActorCharacter) && Ignore(p, ref, true)) {
+				if (ref && ref->Is(RE::FormType::ActorCharacter) && Ignore(p, ref, remember)) {
 					return true;
 				}
 			}
 			return false;
+		}
+
+		using FindObject_t = RE::NiAVObject* (*)(const RE::hkpCollidable*);
+		FindObject_t g_findRayObject = nullptr;
+
+		RE::NiAVObject* RayCandidateThunk(const RE::hkpCollidable* collidable, RE::Projectile* projectile)
+		{
+			auto* object = g_findRayObject(collidable);
+			if (!object || !projectile ||
+				(g_invulnerableCount.load(std::memory_order_acquire) == 0 && !g_anyDodged.load(std::memory_order_acquire))) {
+				return object;
+			}
+			// Use the SAME reference resolver as the ray helper (including player 3D
+			// and owner resolution), rather than guessing from a scene-node field.
+			using Resolve_t = RE::TESObjectREFR* (*)(RE::NiAVObject*);
+			static REL::Relocation<Resolve_t> resolve{ REL::ID(19323) };
+			auto* target = resolve(object);
+			const bool remember = RemembersDodgers(projectile);
+			if (target && target->Is(RE::FormType::ActorCharacter) && Ignore(projectile, target, remember)) {
+				DevLog("i-frames: ray candidate projectile {:08X} skips {:08X} before impact processing", projectile->GetFormID(), target->GetFormID());
+				return nullptr;  // game's null-object path advances to the next ray hit
+			}
+			return object;
+		}
+
+		void InstallRayCandidateFilter()
+		{
+			const REL::Relocation<std::uintptr_t> function{ REL::ID(42983) };
+			const auto site = function.address() + 0x1BC;
+			const auto* bytes = reinterpret_cast<const std::uint8_t*>(site);
+			const REL::Relocation<std::uintptr_t> expected{ REL::ID(15644) };
+			std::int32_t displacement = 0;
+			std::memcpy(&displacement, bytes + 1, sizeof(displacement));
+			if (bytes[0] != 0xE8 || site + 5 + displacement != expected.address()) {
+				logger::error("projectile early i-frames: unexpected object resolver at {:#x}; not installing", site);
+				return;
+			}
+			code::RayCandidateFilter stub{ reinterpret_cast<std::uintptr_t>(RayCandidateThunk) };
+			auto& trampoline = SKSE::GetTrampoline();
+			const auto entry = reinterpret_cast<std::uintptr_t>(trampoline.allocate(stub));
+			g_findRayObject = reinterpret_cast<FindObject_t>(trampoline.write_call<5>(site, entry));
+			logger::info("projectile early i-frames installed at {:#x} (ray candidates before magic/impact feedback)", site);
+		}
+
+		// Prefix of MagicHit's per-effect area delivery context, verified against
+		// 33686 in IDA. This is not MagicTarget::AddTargetData.
+		struct AreaEffectContext
+		{
+			RE::MagicCaster* caster;          // 00
+			RE::MagicTarget* directTarget;    // 08
+			RE::Effect* effect;               // 10
+			void* unknown18;                 // 18
+			RE::MagicItem* magicItem;         // 20
+			RE::TESBoundObject* source;       // 28
+			RE::TESObjectREFR* attacker;      // 30
+		};
+		static_assert(offsetof(AreaEffectContext, effect) == 0x10);
+		static_assert(offsetof(AreaEffectContext, attacker) == 0x30);
+		static_assert(sizeof(AreaEffectContext) == 0x38);
+
+		bool IgnoreAreaTarget(RE::TESObjectREFR* target, const AreaEffectContext* context)
+		{
+			if (g_invulnerableCount.load(std::memory_order_acquire) == 0 ||
+				!context || !target || target == context->attacker || !target->Is(RE::FormType::ActorCharacter)) {
+				return false;
+			}
+			const auto* base = context->effect ? context->effect->baseEffect : nullptr;
+			if (!base || (!base->IsHostile() && !base->IsDetrimental())) {
+				return false;  // beneficial area spells retain their normal delivery
+			}
+			const auto attacker = HandleOf(context->attacker);
+			if (!Dodges(target, attacker)) {
+				return false;
+			}
+			NoteDodgedHit(target, attacker);
+			DevLog("i-frames: magic area spell {:08X} effect {:08X} from {:08X} skips {:08X}",
+				context->magicItem ? context->magicItem->GetFormID() : 0u, base->GetFormID(),
+				context->attacker ? context->attacker->GetFormID() : 0u, target->GetFormID());
+			return true;
+		}
+
+		bool InstallAreaTargetFilter()
+		{
+			const REL::Relocation<std::uintptr_t> function{ REL::ID(33686) };
+			const auto site = function.address() + 0x10B;
+			constexpr std::uint8_t expected[]{ 0x49, 0x8B, 0x4C, 0x24, 0x10 };
+			if (std::memcmp(reinterpret_cast<const void*>(site), expected, sizeof(expected)) != 0) {
+				logger::error("magic area i-frames: unexpected delivery entry at {:#x}; not installing", site);
+				return false;
+			}
+			// After ghost/distance/direct-target checks; skip to the common per-target
+			// reference release, BEFORE AddTarget and its independent follow-up callback.
+			code::AreaTargetFilter stub{ reinterpret_cast<std::uintptr_t>(IgnoreAreaTarget), site + 5, function.address() + 0x2C9 };
+			auto& trampoline = SKSE::GetTrampoline();
+			const auto entry = reinterpret_cast<std::uintptr_t>(trampoline.allocate(stub));
+			trampoline.write_branch<5>(site, entry);
+			logger::info("magic area i-frames installed at {:#x} (per hostile/detrimental effect, after range checks)", site);
+			return true;
 		}
 
 		template <int Kind>
@@ -217,7 +321,7 @@ namespace rdf::game::effects
 				std::vector<RE::hkpRootCdPoint>   saved(hits._data, hits._data + count);
 				std::int32_t                      kept = 0;
 				for (std::int32_t i = 0; i < count; ++i) {
-					if (!PointIgnored(p, saved[i])) {
+					if (!PointIgnored(p, saved[i], remember)) {
 						hits._data[kept++] = saved[i];
 					}
 				}
@@ -308,17 +412,19 @@ namespace rdf::game::effects
 
 	void InstallProjectileIFrames()
 	{
+		InstallRayCandidateFilter();
 		HookProjectile<0>(RE::VTABLE_ArrowProjectile[0], "ArrowProjectile", true, true);
 		HookProjectile<1>(RE::VTABLE_MissileProjectile[0], "MissileProjectile", true, true);
 		HookProjectile<2>(RE::VTABLE_GrenadeProjectile[0], "GrenadeProjectile", true, true);
 		HookProjectile<3>(RE::VTABLE_ConeProjectile[0], "ConeProjectile", true, false);
-		HookProjectile<4>(RE::VTABLE_BeamProjectile[0], "BeamProjectile", false, false);
-		HookProjectile<5>(RE::VTABLE_FlameProjectile[0], "FlameProjectile", false, false);
-		HookProjectile<6>(RE::VTABLE_BarrierProjectile[0], "BarrierProjectile", false, false);
+		HookProjectile<4>(RE::VTABLE_BeamProjectile[0], "BeamProjectile", false, true);
+		HookProjectile<5>(RE::VTABLE_FlameProjectile[0], "FlameProjectile", false, true);
+		HookProjectile<6>(RE::VTABLE_BarrierProjectile[0], "BarrierProjectile", false, true);
 	}
 
 	bool InstallExplosionIFrames()
 	{
+		const bool areaInstalled = InstallAreaTargetFilter();
 		const REL::Relocation<std::uintptr_t> function{ REL::ID(kExplosionApplyId) };
 		const auto                           site = function.address() + kLineOfSightCall;
 		const auto*                          bytes = reinterpret_cast<const std::uint8_t*>(site);
@@ -331,7 +437,7 @@ namespace rdf::game::effects
 		const REL::Relocation<std::uintptr_t> vanilla{ REL::ID(kLineOfSightId) };
 		logger::info("explosion i-frames installed at {:#x} ({})", site,
 			reinterpret_cast<std::uintptr_t>(g_lineOfSight) == vanilla.address() ? "game's line-of-sight check" : "chained to another hook");
-		return true;
+		return areaInstalled;
 	}
 
 	bool InstallIFrames()

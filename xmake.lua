@@ -3,7 +3,7 @@ set_xmakever("3.0.8")
 includes("S:/Programming/CommonLibSSE-NG")
 
 set_project("ReactiveDodgeFramework")
-set_version("0.2.0")
+set_version("0.3.0")
 
 add_rules("mode.debug", "mode.releasedbg")
 set_defaultplat("windows")
@@ -75,7 +75,7 @@ target("ReactiveDodgeFramework")
 target("rdf_tests")
     set_kind("binary")
     set_rundir("$(projectdir)")  -- tests read dist/ files by their repo path
-    add_packages("glaze")
+    add_packages("glaze", "xbyak")
     add_includedirs("src", "tests")
     add_headerfiles("src/core/**.h", "tests/**.h")
     add_files("src/core/**.cpp", "tests/**.cpp")

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <utility>
 
 namespace rdf
 {
@@ -167,6 +168,8 @@ namespace rdf
 		timing_ = cfg_.timing;
 		action_.Start(timing_, chainCount);
 		driver_.Begin(start);
+		distanceLimit_ = std::exchange(nextDistanceLimit_, std::nullopt);
+		if (distanceLimit_) { driver_.Replan(timing_, std::min(cfg_.motion.distance, *distanceLimit_)); }
 		startAngleDeg_ = AngleDelta(frame_.actorYaw, start.heading) * kRadToDeg;
 	}
 
@@ -207,7 +210,8 @@ namespace rdf
 			timing_.recovery = (*motion.phases)[2];
 		}
 		action_.Retime(timing_);
-		driver_.Replan(timing_, motion.distance.value_or(cfg_.motion.distance));
+		const float distance = motion.distance.value_or(cfg_.motion.distance);
+		driver_.Replan(timing_, distanceLimit_ ? std::min(distance, *distanceLimit_) : distance);
 		clipMotionAppliedThisFrame_ = true;
 		return true;
 	}
@@ -312,5 +316,7 @@ namespace rdf
 		action_.Reset();
 		windows_.Reset();
 		intoAction_ = false;
+		nextDistanceLimit_.reset();
+		distanceLimit_.reset();
 	}
 }

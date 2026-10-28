@@ -15,13 +15,17 @@ namespace rdf::game::effects
 
 	// Melee hit hook (ID 37673 + 0x3C0): while invulnerable, hits on the player are dropped.
 	bool InstallIFrames();
-	// Every projectile type. While invulnerable a projectile never records a hit on the player (AddImpact, vfunc
+	// Every projectile type. Ray candidates are rejected before spell/impact feedback;
+	// while invulnerable a projectile never records a hit on the actor (AddImpact, vfunc
 	// 189); single ones (arrow, missile, grenade) also drop their contact step (vfunc 190) and fly on, and once one
-	// has passed through it ignores the player for the rest of its life. Beams, flames, cones and barriers only
-	// skip the player while the i-frames last.
+	// has passed through it ignores the actor for the rest of its life (also cones).
+	// Beams, flames and barriers only skip the actor while the i-frames last.
+	// Stream HandleHits filters use transient protection rather than remembering.
 	void InstallProjectileIFrames();
 	// Explosions: the per-actor line-of-sight check in Explosion::ApplyToTargets (42677 + 0x38C) says "blocked" for
-	// an invulnerable player, which skips the explosion's damage, spell and knockdown.
+	// an invulnerable actor, which skips the explosion's damage, spell and knockdown.
+	// Also filters MagicHit's separate per-target hostile/detrimental area delivery,
+	// before AddTarget and its independent callbacks. Beneficial effects are preserved.
 	bool InstallExplosionIFrames();
 	// Precision's pre-hit callback (API V4): its hits on an invulnerable player are ignored before
 	// any hitstop or impact. Call once Precision is loaded (kPostPostLoad or later).

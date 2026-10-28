@@ -76,3 +76,34 @@ invalid/ambiguous metadata rejection). All 54 migrated clips passed full XML rou
 End, root motion and other annotation preservation. The updated generator also passed a real HKX round trip.
 Deployed DLLs and clips match build/staging outputs; FOMOD CRC, DLL, INI and base clips were verified.
 This revision still needs an in-game dodge/perfect test.
+
+### Area delivery and early projectile feedback, 2026-10-28
+
+Added two native tests using the production Xbyak adapters in synthetic engine
+frames: area allow/reject/re-allow, displaced Effect* restoration, ray collidable
+and projectile argument forwarding, and null/non-null result forwarding. These
+exercise generated code without loading a game DLL into another process.
+Gameplay cases and hook contracts: docs/IFRAMES_DELIVERY_FIXES_2026-10-28.md.
+Result: 129 cases, 0 failed checks; SE 1.5.97 DLL build succeeded. Game launches
+are left to the user. Test output: _work/iframes-20261028-tests.log.
+
+v0.3.0 final cleanup: removed experimental extra projectile delivery/feedback
+wrappers after the user's negative runtime result. Retained area/ray adapters
+and stream-contact protection. Final run: _work/release-0.3.0-tests.log,
+129 cases, 0 failed checks; DLL build passed. Remaining impact feedback is open.
+
+## ECB / API v2 — 2026-10-27
+
+127 C++ cases pass. New checks cover exclusive concurrent actor reservation, queued vs confirmed result,
+terminal consumption, busy/exiting rejection, cancellation racing processing, stale queue rejection, reset without
+reusing ticket IDs, invalid vectors/budgets, capacity/abandoned result expiry, cancellation without undrained queue
+growth, rejected one-shot removal from the input buffer, and clip-motion distance capped to the probed path.
+The following normal player dodge has no inherited distance cap.
+
+Both modified DLLs compile for Skyrim SE 1.5.97 (x64). Static PE inspection confirms RDF_GetApiV2, the v1 exports
+and the SKSE export triad. The test override ZIP contains both matched DLLs; installed copies, SHA256 manifest,
+source ZIP and archive CRC were verified. No game startup or in-game behavior verification is claimed.
+A direct Python LoadLibrary probe was abandoned because CommonLib expects the game executable; it is not a
+valid way to validate a loaded SKSE plugin.
+
+ECB upstream and reproducible integration patch: integrations/enhanced-combat-behavior/.

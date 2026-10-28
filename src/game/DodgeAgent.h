@@ -60,6 +60,7 @@ namespace rdf::game
 		ReactiveCore&       Core() { return *core_; }
 		const ReactiveCore& Core() const { return *core_; }
 		bool                AwaitingEnter() const { return awaitingEnter_; }
+		std::uint64_t       ConfirmedStarts() const { return confirmedStarts_; }
 		bool                Busy() const;  // dodging, entering, or still carrying its speed into running
 		std::uint32_t       FormID() const { return formID_; }
 
@@ -123,6 +124,7 @@ namespace rdf::game
 
 		// graph handshake
 		bool  awaitingEnter_{ false };
+		std::uint64_t confirmedStarts_{ 0 }; // incremented only by the graph entry handshake
 		int   enterFrames_{ 0 };
 		bool  exitSent_{ true };
 		bool  wasRunning_{ false };

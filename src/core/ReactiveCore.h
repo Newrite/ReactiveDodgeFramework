@@ -56,6 +56,11 @@ namespace rdf
 
 		void          BeginFrame(const FrameInput& frame);
 		std::uint64_t Press(CommandKind kind, Vec2 dir);
+		// One-shot AI attempts must not leave a rejected press in the input buffer.
+		void          DiscardPress(std::uint64_t seq) { if (seq) { buffer_.Consume(seq); } }
+		// One-shot AI request: clip motion cannot extend beyond the path its caller checked.
+		void LimitNextDodgeDistance(float distance) { nextDistanceLimit_ = distance; }
+		void ClearNextDistanceLimit() { nextDistanceLimit_.reset(); }
 		void          PromoteAttack() { buffer_.PromoteAttack(clock_.Now()); }
 		// Called every frame the button behind `kind` is held (a held block outlasts the buffer window).
 		void          KeepAlive(CommandKind kind) { buffer_.KeepAlive(kind, clock_.Now()); }
@@ -132,5 +137,6 @@ namespace rdf
 		bool          intoAction_{ false };  // the current dodge was cancelled into an attack/block
 		bool          clipMotionAppliedThisFrame_{ false }; // frame-zero metadata shares the pre-retime startup gate
 		WindowTracker windows_;
+		std::optional<float> nextDistanceLimit_, distanceLimit_;
 	};
 }
