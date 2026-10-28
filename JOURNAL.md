@@ -817,3 +817,8 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   transient stream-contact filters, API v2, and ECB's SCAR string fix. Recorded
   the remaining impact issue as unresolved rather than claiming compatibility.
   Final RDF validation: 129 cases pass and SE 1.5.97 DLL builds.
+
+* Release packaging correction: publish RDF only. ECB remains a separate local
+  repository/build, not a dependency or binary asset of the RDF release. Move the
+  current RDF DLL/PDB into the main VanillaLike ReactiveDodgeFramework mod and
+  remove duplicate RDF binaries from the ECB override folder.
