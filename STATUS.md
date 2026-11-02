@@ -24,6 +24,11 @@
   firing a clip-end exit). 0/72 failures after the fix.
 
 ## Built and deployed, waiting for an in-game check
+* Menu gate (2026-11-03): a dodge no longer fires in a menu that is not the game's own pause. `GameIsPaused()` plus the
+  same explicit vanilla list TrueFlasksNG uses, QuickLoot's `LootMenuIE` / `LootMenu`, FLICK's own menu (this plugin's
+  settings) and Wheeler's wheel (only when `wheeler.dll` is loaded; absent in this order). Held keys stay in sync while a
+  menu is open. Waiting: open F7 settings / QuickLoot / a dialogue and press the dodge key -- nothing must happen; a dodge
+  already running must finish normally.
 * Left-hand spell (2026-11-02): a cast with a spell in the left hand is no longer taken for a block, so it does not come
   out of a dodge as `blockStart` and does not turn an attack into a bash (engine facts in REVERSE_ENGINEERING.md). The
   test is the engine's own, `wantBlocking` included, so a block-button mod (Input Support, CGO, dual-wield block patches)

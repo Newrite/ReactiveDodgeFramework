@@ -2,6 +2,14 @@
 
 #include "Settings.h"
 
+#ifndef NOMINMAX
+#	define NOMINMAX
+#endif
+#include <Windows.h>
+
+// FLICK's API: its menu is one of the menus a dodge must not fire in (this plugin's settings pages live in it).
+#include "FUCK_API.h"
+
 #include <array>
 #include <atomic>
 #include <chrono>
@@ -43,13 +51,77 @@ namespace rdf::game::input
 		std::atomic<float>         g_stickX{ 0.0f };
 		std::atomic<float>         g_stickY{ 0.0f };
 
-		void TrackMoveKey(const RE::ButtonEvent& b, const RE::UserEvents& events);
+		void TrackMoveKey(const RE::ButtonEvent& b, const RE::UserEvents& events, bool blocked);
 
+		// Wheeler's wheel, only while that DLL is loaded: it publishes IsWheelerOpen for exactly this question (the same
+		// check TrueFlasksNG makes). Resolved once; a missing DLL is not an error, it just means "never open".
+		using IsWheelerOpen_t = bool (*)();
+
+		IsWheelerOpen_t WheelerIsOpen()
+		{
+			static const IsWheelerOpen_t fn = [] {
+				const ::HMODULE wheeler = ::GetModuleHandleA("wheeler.dll");
+				return wheeler ? reinterpret_cast<IsWheelerOpen_t>(::GetProcAddress(wheeler, "IsWheelerOpen")) : nullptr;
+			}();
+			return fn;
+		}
+
+		// A menu that keeps the player's hands off the dodge. UI::GameIsPaused() is the cheap catch-all first (the game's
+		// own paused-by-a-menu counter, UI::numPausesGame); the named menus follow it, so the answer does not depend on
+		// whether a given menu raises that counter: the vanilla ones that are known not to pause (console, dialogue) and,
+		// for the rest, the same list as TrueFlasksNG's is_any_menu_open() so a pausing menu is named as well.
+		// Mod menus a dodge must not fire in: QuickLoot's loot window (IE / EE), FLICK's own menu -- this plugin's
+		// settings pages live in it -- and Wheeler's wheel while that DLL is loaded.
 		bool GameIsInputBlocked()
 		{
 			auto* ui = RE::UI::GetSingleton();
-			return !ui || ui->GameIsPaused() || ui->IsMenuOpen(RE::Console::MENU_NAME) ||
-				ui->IsMenuOpen(RE::DialogueMenu::MENU_NAME);
+			if (!ui) {
+				return true;
+			}
+			if (ui->GameIsPaused()) {
+				return true;
+			}
+			static constexpr std::array kMenus{
+				RE::Console::MENU_NAME,       // does not pause: typing must not dodge
+				RE::DialogueMenu::MENU_NAME,  // does not pause: the world runs while talking
+				RE::TweenMenu::MENU_NAME,
+				RE::MagicMenu::MENU_NAME,
+				RE::InventoryMenu::MENU_NAME,
+				RE::LockpickingMenu::MENU_NAME,
+				RE::RaceSexMenu::MENU_NAME,
+				RE::StatsMenu::MENU_NAME,
+				RE::LoadingMenu::MENU_NAME,
+				RE::FaderMenu::MENU_NAME,
+				RE::FavoritesMenu::MENU_NAME,
+				RE::SleepWaitMenu::MENU_NAME,
+				RE::JournalMenu::MENU_NAME,
+				RE::BarterMenu::MENU_NAME,
+				RE::MainMenu::MENU_NAME,
+				RE::BookMenu::MENU_NAME,
+				RE::ContainerMenu::MENU_NAME,
+				RE::GiftMenu::MENU_NAME,
+				RE::MessageBoxMenu::MENU_NAME,
+				RE::TrainingMenu::MENU_NAME,
+				RE::MapMenu::MENU_NAME,
+				RE::TutorialMenu::MENU_NAME,
+				RE::LevelUpMenu::MENU_NAME,
+				RE::CreditsMenu::MENU_NAME,
+				RE::CraftingMenu::MENU_NAME,
+				RE::CursorMenu::MENU_NAME,
+			};
+			for (const auto& name : kMenus) {
+				if (ui->IsMenuOpen(name)) {
+					return true;
+				}
+			}
+			if (ui->IsMenuOpen("LootMenuIE") || ui->IsMenuOpen("LootMenu")) {   // QuickLoot IE / EE: pick an item
+				return true;
+			}
+			if (FUCK::IsMenuOpen()) {   // FLICK's menu (F7), where this plugin's settings are edited
+				return true;
+			}
+			const auto wheeler = WheelerIsOpen();
+			return wheeler && wheeler();
 		}
 
 		// sDodgeKeyAction's ini name as the game's user event ("ReadyWeapon" -> "Ready Weapon").
@@ -99,19 +171,20 @@ namespace rdf::game::input
 		public:
 			RE::BSEventNotifyControl ProcessEvent(RE::InputEvent* const* events, RE::BSTEventSource<RE::InputEvent*>*) override
 			{
-				if (GameIsInputBlocked()) {
-					// A menu consumes the whole gesture. Its release after closing
-					// must not turn an earlier press into a Tap dodge.
+				const bool blocked = GameIsInputBlocked();
+				if (blocked) {
+					// A menu consumes the whole gesture: its release after closing must not turn an earlier press into a
+					// Tap dodge, and nothing pressed in it may queue a command. The keys themselves are still tracked
+					// below, so a movement or block key released inside the menu does not stay "held" for the next dodge.
 					tapSeen_.fill(false);
 					promoted_ = false;
-					return RE::BSEventNotifyControl::kContinue;
 				}
 				if (!events) {
 					return RE::BSEventNotifyControl::kContinue;
 				}
 				for (auto* e = *events; e; e = e->next) {
 					if (e->GetEventType() == RE::INPUT_EVENT_TYPE::kButton) {
-						Handle(*e->AsButtonEvent());
+						Handle(*e->AsButtonEvent(), blocked);
 					} else if (e->GetEventType() == RE::INPUT_EVENT_TYPE::kThumbstick) {
 						const auto* stick = static_cast<const RE::ThumbstickEvent*>(e);
 						if (stick->IsLeft()) {
@@ -124,7 +197,7 @@ namespace rdf::game::input
 			}
 
 		private:
-			void Handle(const RE::ButtonEvent& b)
+			void Handle(const RE::ButtonEvent& b, bool blocked)
 			{
 				const auto device = b.GetDevice();
 				const auto code = b.GetIDCode();
@@ -132,9 +205,12 @@ namespace rdf::game::input
 				if (!events) {
 					return;
 				}
-				TrackMoveKey(b, *events);
+				TrackMoveKey(b, *events, blocked);
 				if (IsMapped(events->leftAttack, device, code)) {
 					g_blockHeld.store(b.IsPressed(), std::memory_order_relaxed);
+				}
+				if (blocked) {
+					return;   // the menu has the player's hands: no dodge / attack / block command, no tap, no promotion
 				}
 
 				const auto& s = Settings::Get();
@@ -192,7 +268,7 @@ namespace rdf::game::input
 		std::uint32_t                         g_lastMoveBit{ 0 };
 		std::chrono::steady_clock::time_point g_lastMoveDown{};
 
-		void TrackMoveKey(const RE::ButtonEvent& b, const RE::UserEvents& events)
+		void TrackMoveKey(const RE::ButtonEvent& b, const RE::UserEvents& events, bool blocked)
 		{
 			const auto device = b.GetDevice();
 			const auto code = b.GetIDCode();
@@ -213,6 +289,9 @@ namespace rdf::game::input
 				g_moveKeys.fetch_or(bit, std::memory_order_relaxed);
 			} else {
 				g_moveKeys.fetch_and(~bit, std::memory_order_relaxed);
+			}
+			if (blocked) {
+				return;   // a key pressed in a menu is tracked, but it is not the first tap of a double tap
 			}
 			// A second press of the same movement key soon after the first dodges that way: the dodge reads the move input,
 			// which that key holds now.
