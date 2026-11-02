@@ -36,6 +36,29 @@ Details (O unless marked):
 Implication used by the design: owning this call = owning the actor's animation-driven
 displacement, with the character controller still doing collision (I).
 
+## Time slowdown: which delta each side gets (verified in IDA 2026-11-02)
+
+| What | Address / value | Conf. |
+|---|---|---|
+| `VATS::SetMagicTimeSlowdown(vats, world, player)` → `TimeManager::SetGlobalTimeMultiplier(world)` and VATS +0x80 / +0x84 | `0x140759360` | O |
+| `VATS::GetPlayerTimeScale` = `(globalMultTarget / globalMultCurrent) x (playerMagicTimeSlowdown / magicTimeSlowdown)` | `0x140759420` | O |
+| TimeManager at `qword_142F6B930`: +0x18 = the frame delta, written as `realDelta x globalMultCurrent` | `0x140C07898` | O |
+| the player's `PlayerCharacter::Update` (vfunc 0xAD) is called with `frameDelta x GetPlayerTimeScale()`: `movss xmm6,[142F6B948]` / `call 140759420` / `mulss xmm0,xmm6` / `call [vtbl+568h]` | `0x1405B406B`-`0x1405B407A` | O |
+| the player's movement job dt is the same product; NPC movement jobs get the plain world `deltaSeconds` | `0x1406D51E5` / `0x1406D5336` | O |
+| world ≤ 0 in `SetMagicTimeSlowdown` means "none": it restores the global multiplier to 1 (the Slow Time effect's destructor writes `(0, 1)`) | `0x140759360` | O |
+| `SlowTimeEffect::Func20` (the vanilla Slow Time shout / perk spell): world = the effect's value, player = `ModPlayerMagicSlowdown` entry-point value, default 0.8 | `0x140562D30` | O |
+
+Consequences for anything that keeps its own clock:
+
+* the world factor **cancels** for the player, so `PlayerCharacter::Update` already runs at
+  `real x playerMagicTimeSlowdown`; a player-side timeline must not scale by `player / world` on top of that
+  (RDF did until 2026-11-02, which multiplied its dodge clock by `1 / world` — see JOURNAL.md).
+* an actor that does not get that factor (an NPC's dodge, ticked from the player's update) runs on the world's
+  clock: divide the player's delta by `player / world`.
+* a world-only slowdown is common and much deeper than it sounds: vanilla `QuickReflexes` (Skyrim.esm `0D8C33`)
+  sets the player value to 1 through `ModPlayerMagicSlowdown` and applies `PerkQuickReflexes` (`0D8C31`), whose
+  effect magnitude is **0.05** for 1 s — world x0.05, player x1.0.
+
 ## Controls-driven movement and the post-dodge speed
 
 | What | ID | Address | Conf. |
@@ -125,6 +148,33 @@ Primary vtables are CommonLib's `VTABLE_*Projectile[0]` (each class also has a s
   (`FUN_14073b510`). RDF answers "no line of sight" for an invulnerable player, which skips damage, spell and knockdown.
 - An Explosion keeps no link to the projectile that spawned it (CommonLib layout, IDA), so a dodged fireball's blast is
   only covered by the i-frame window at the moment it goes off.
+
+## The player's left button: attack, cast or block (verified in IDA 2026-11-02)
+
+| What | Address / value | Conf. |
+|---|---|---|
+| `AttackBlockHandler::ProcessButton` (the left button's whole decision) | `0x1407096B0` | O |
+| its **first** branch: `PlayerCharacter::IsEquippedSpell(player, kLeftHand) && (actorState2 & 0x100) == 0 && (onFlyingMount \|\| !onMount)` → `FUN_140709840(handler, event, kLeftHand)` and return | `0x140709735` | O |
+| `PlayerCharacter::IsEquippedSpell(player, source)` = `selectedSpells[source] != null && GetSpellType() != 6 (kEnchantment)` | `0x140632230` | O |
+| `selectedSpells` array: `[rcx + source*8 + 0x1C0]` (= `Actor::selectedSpells`, CommonLib `Actor+0x1C0`) | `0x140632237` | O |
+| `FUN_140709840` drives the hand's `ActorMagicCaster` (charge / release / interrupt) — never an attack action or a block | `0x140709840` | O |
+| `ActorState2::wantBlocking` is bit 8 of `actorState2` (`0x100`), i.e. Actor+0xC4 bit 8 | CommonLib `ActorState.h` | O |
+
+So with a spell in the left hand the left button **casts and can never mean block**, whatever the right hand holds
+(a bow, a one-hander, nothing) — but only while no block is wanted: the `(actorState2 & 0x100) == 0` half of the branch
+is what keeps block-button mods working. `wantBlocking` is the state those mods set (Input Support, CGO's and dual-wield
+block patches), and while it is up the engine itself routes the press to the attack/block path, so nothing may overrule
+it with the spell. Three consequences for RDF:
+
+* the `kActionLeftAttack` action the game dispatches is the cast, not a block: classifying it as `Block` (the
+  `capture::LeftHandAttacks` question) makes a dodge hold the press back and raise `blockStart` instead of the cast —
+  the spell + one-hander bug of 2026-11-02. `EngineState`'s `LeftButtonCasts` is the engine's own test, `wantBlocking`
+  part included, so any setup where a mod (or the player) has a block up keeps the old behaviour.
+* `wantBlocking` is not free to set with a spell equipped and no block up: it is part of that same cast gate, so a
+  stray `wantBlocking = 1` makes the next left press go to the attack/block path and the cast never starts.
+* the same test is why the left-button bash cases are as classified: with no spell in the left hand the engine falls
+  through to the attack/block path, and the idle tree turns it into `blockStart` (a shield, torch, weapon or an empty
+  hand with a blockable right hand) or a `bashStart` (bow / crossbow in the right hand).
 
 ## Attack frameworks (MCO / BFCO) and attack cancels (2026-10-22)
 

@@ -66,6 +66,22 @@ namespace rdf::game::engine
 		player->AsActorState()->actorState2.staggered = 0;
 	}
 
+	bool LeftButtonCasts(RE::Actor* actor)
+	{
+		if (!actor) {
+			return false;
+		}
+		// The engine's own first test is `(actorState2 & 0x100) == 0` (ActorState2::wantBlocking, Actor+0xC4 bit 8):
+		// while a block is wanted -- the player's, or a block-button mod's such as CGO's / Input Support's -- the left
+		// press goes to the attack/block path instead, so it is not a cast and this whole question is moot.
+		if (actor->AsActorState()->actorState2.wantBlocking) {
+			return false;
+		}
+		const auto  source = static_cast<std::size_t>(RE::MagicSystem::CastingSource::kLeftHand);
+		const auto* spell = actor->selectedSpells[source];
+		return spell && spell->GetSpellType() != RE::MagicSystem::SpellType::kEnchantment;
+	}
+
 	float LookTurnRate(RE::PlayerCharacter* player)
 	{
 		constexpr std::size_t kGetMovementData = 8;

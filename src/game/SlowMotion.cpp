@@ -4,6 +4,7 @@
 #include "Settings.h"
 
 #include <chrono>
+#include <cmath>
 
 namespace rdf::game::slowmo
 {
@@ -130,12 +131,33 @@ namespace rdf::game::slowmo
 		g_cooldownUntil = {};
 	}
 
-	float PlayerDtScale()
+	// Not for the player's own clock: PlayerCharacter::Update is already called with the player's delta.
+	//   0x1405B3FD0: movss xmm6,[dword_142F6B948] (the world frame delta, TimeManager+0x18, i.e. real x timeMultiplier)
+	//                call VATS::GetPlayerTimeScale_140759420 (0x140759420: (target/current) x (player/world))
+	//                mulss xmm0,xmm6 / call [vtbl+568h] (= vfunc 0xAD, PlayerCharacter::Update)
+	//   ProcessLists::QueueMovementJobs 0x1406D51E5: the player's movement job gets the same product.
+	// So the world factor cancels for the player, the player's own dt is real x playerMagicTimeSlowdown, and
+	// multiplying by player/world again multiplies the dodge clock by 1/world (JOURNAL 2026-11-02).
+	float PlayerOverWorld()
 	{
 		const auto* vats = RE::VATS::GetSingleton();
 		if (!vats || !(vats->magicTimeSlowdown > 0.0f)) {
 			return 1.0f;
 		}
-		return vats->playerMagicTimeSlowdown / vats->magicTimeSlowdown;
+		const float ratio = vats->playerMagicTimeSlowdown / vats->magicTimeSlowdown;
+		return std::isfinite(ratio) && ratio > 1e-4f ? ratio : 1.0f;
+	}
+
+	float WorldDt(float playerDt)
+	{
+		const float ratio = PlayerOverWorld();
+		return ratio == 1.0f ? playerDt : playerDt / ratio;
+	}
+
+	void Read(float& world, float& player)
+	{
+		const auto* vats = RE::VATS::GetSingleton();
+		world = vats ? vats->magicTimeSlowdown : 0.0f;
+		player = vats ? vats->playerMagicTimeSlowdown : 0.0f;
 	}
 }

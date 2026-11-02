@@ -24,7 +24,9 @@ namespace rdf::game::input
 		bool Pop(Press& out);
 	}
 
-	// Drops presses made while the game is paused or in a text-input menu.
+	// Gameplay input is blocked by pause, console and dialogue (dialogue does not pause).
+	bool IsBlocked();
+	// Drops queued gameplay presses.
 	void DiscardQueued();
 
 	// Analog move input (x right, y forward) rotated into world space by the camera yaw. Length 0..1.
@@ -37,6 +39,10 @@ namespace rdf::game::input
 	template <class F>
 	void Drain(F&& handler)
 	{
+		if (IsBlocked()) {
+			DiscardQueued();
+			return;
+		}
 		Press p;
 		while (detail::Pop(p)) {
 			handler(p);

@@ -50,6 +50,15 @@ namespace rdf::game::update
 			return blocking;
 		}
 
+		// The game's block button as the actor's hands make it: with a spell in the left hand the left button is that
+		// hand's cast, engine-side (AttackBlockHandler 0x1407096B0 -> the magic caster, never its block path), so it is
+		// not a block to hold, keep, bash with or replay. Without this a spell + weapon build raised a block out of a
+		// dodge (the held left press went through Kind::Block and StartBlock; 2026-11-02).
+		bool BlockButtonHeld(RE::Actor* actor)
+		{
+			return input::BlockHeld() && !engine::LeftButtonCasts(actor);
+		}
+
 		// The game's left button pressed during the dodge was held back while wantBlocking was 0, so AttackBlockHandler took it
 		// for a left attack (attackType kLeft, 0x1407096B0) and, still held, would send LeftPowerAttack once past the power
 		// delay: a power bash out of a plain block. Our block replaces that press. (PlayerControls+0x1B8, attackType +0x28:
@@ -66,6 +75,14 @@ namespace rdf::game::update
 		// Raised block without an action record: wantBlocking + the vanilla graph event.
 		bool StartBlock(RE::Actor* actor)
 		{
+			// With a spell in the left hand there is no block to raise, and wantBlocking is not free to set: bit 0x100 of
+			// actorState2 (ActorState2::wantBlocking) is part of the engine's own cast gate -- AttackBlockHandler::ProcessButton
+			// (0x1407096B0) takes the magic-caster path for a left-hand spell only while `(actorState2 & 0x100) == 0`, so a
+			// stray wantBlocking would eat the next cast.
+			if (engine::LeftButtonCasts(actor)) {
+				DevLog("{}", "block asked for with a spell in the left hand: not raised");
+				return false;
+			}
 			ClearStaleLeftPress();
 			actor->AsActorState()->actorState2.wantBlocking = 1;
 			if (gate::Send(actor, "blockStart"sv)) {
@@ -119,7 +136,7 @@ namespace rdf::game::update
 
 		private:
 			AgentInput BuildInput(RE::PlayerCharacter* player);
-			void       DrainInput(ReactiveCore& core, Vec2 move);
+			void       DrainInput(ReactiveCore& core, Vec2 move, RE::Actor* actor);
 			void       MaintainBlock(RE::PlayerCharacter* player);
 			void       TracePose(RE::PlayerCharacter* player) const;
 
@@ -203,12 +220,12 @@ namespace rdf::game::update
 		{
 			const AgentInput in = BuildInput(player);
 			agent_->Tick(player, dt, in, [&](ReactiveCore& core) {
-				DrainInput(core, in.move);
+				DrainInput(core, in.move, player);
 				for (const float angle : requested) {
 					core.Press(CommandKind::Dodge, RequestDir(player, angle));
 					DevLog("player: dodge requested through the API at {:.1f} deg", angle);
 				}
-				if (input::BlockHeld()) {
+				if (BlockButtonHeld(player)) {
 					core.KeepAlive(CommandKind::Block);
 				}
 				MaintainBlock(player);
@@ -222,11 +239,19 @@ namespace rdf::game::update
 			}
 		}
 
-		void Player::DrainInput(ReactiveCore& core, Vec2 move)
+		void Player::DrainInput(ReactiveCore& core, Vec2 move, RE::Actor* actor)
 		{
 			input::Drain([&](const input::Press& press) {
 				if (press.promote) {
 					core.PromoteAttack();
+					return;
+				}
+				// The sink names every press of the left button "block"; when that hand casts, the button is neither a block
+				// nor one of our attacks: the game's caster takes it (AttackBlockHandler 0x1407096B0), and RDF has no
+				// left-hand action to replay -- shaping it into CommandKind::Attack played kActionRightAttack, a swing with
+				// the weapon in the other hand (2026-11-02, the second half of the spell + one-hander bug).
+				if (press.kind == CommandKind::Block && engine::LeftButtonCasts(actor)) {
+					DevLog("{}", "press of the casting left hand: left to the game's caster");
 					return;
 				}
 				const bool recorded = core.Press(press.kind, move) != 0;
@@ -273,8 +298,13 @@ namespace rdf::game::update
 			if (weap && (weap->IsBow() || weap->IsCrossbow())) {
 				return false;
 			}
+			// A spell in the left hand: the engine's left button casts, and a bash needs a blockable left hand at all, so
+			// the press is the cast it is (replayed as an attack), never a bash. A mod's wantBlocking cannot make one.
+			if (engine::LeftButtonCasts(actor)) {
+				return false;
+			}
 			auto&      state = actor->AsActorState()->actorState2;
-			const bool key = input::BlockHeld();
+			const bool key = BlockButtonHeld(actor);
 			if (!key && !state.wantBlocking) {
 				return false;
 			}
@@ -302,7 +332,7 @@ namespace rdf::game::update
 				return;
 			}
 			auto& state = player->AsActorState()->actorState2;
-			if (input::BlockHeld()) {
+			if (BlockButtonHeld(player)) {
 				state.wantBlocking = 1;
 				return;
 			}
@@ -493,10 +523,16 @@ namespace rdf::game::update
 					g_npcs.Request(actor, request);
 				}
 
-				// Under a magic slowdown (ours or the Slow Time shout) the engine runs the player's own updates, movement
-				// included, faster than the world by this factor; the player's dodge clock follows them.
-				g_player.Tick(player, dt * slowmo::PlayerDtScale(), forPlayer);
-				g_npcs.Tick(dt);
+				// `dt` is already the player's own delta: the game calls vfunc 0xAD with
+				// `worldFrameDelta * VATS::GetPlayerTimeScale()` (0x1405B3FD0, see SlowMotion.cpp), so under any magic
+				// slowdown -- ours, the Slow Time shout, a perk mod's Quick Reflexes -- it runs at
+				// real x playerMagicTimeSlowdown while the world runs at real x magicTimeSlowdown. Scaling it again by
+				// player/world (as this did until 2026-11-02) sped the dodge clock up by 1/world: a world-only slow
+				// motion at x0.05 finished a 0.7 s dodge in 3 frames.
+				g_player.Tick(player, dt, forPlayer);
+				// An NPC's dodge is ticked from the player's update, so for it the player/world factor has to come back
+				// out: its animation and its movement job run on the world's clock.
+				g_npcs.Tick(slowmo::WorldDt(dt));
 				caston::UpdateChannels(dt);
 				ghost::Update(dt);
 			}

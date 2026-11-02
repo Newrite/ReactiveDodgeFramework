@@ -22,4 +22,12 @@ namespace rdf::game::engine
 	float LookTurnRate(RE::PlayerCharacter* player);
 	// What the engine's StaggeredStopHandler does (0x140721280: actorState2 bit 13 = staggered).
 	void EndStagger(RE::Actor* actor);
+	// The game's left button casts with this actor instead of attacking or blocking -- the engine's own condition, so a
+	// mod's block never gets overruled by it: a spell in the left hand (any magic item but an enchantment) AND no block
+	// wanted. AttackBlockHandler::ProcessButton (0x1407096B0) hands the press to that hand's magic caster on
+	// `IsEquippedSpell(player, kLeftHand) && (actorState2 & 0x100) == 0` -- PlayerCharacter::IsEquippedSpell
+	// (0x140632230) = `selectedSpells[kLeftHand]` (Actor+0x1C0, `Actor::selectedSpells` in CommonLib) with a spell type
+	// other than kEnchantment -- and returns before any attack, block or power-attack handling, so a spell in that hand
+	// also wins over a bow or a crossbow in the right one.
+	bool LeftButtonCasts(RE::Actor* actor);
 }

@@ -53,6 +53,10 @@ what is still waiting.
 | Arm stance layer on steps | 72 steps with stance 1.0; user: looks good |
 
 ### Waiting
+* Timebase fix (2026-11-02, 129 cases still pass, DLL deployed): a dodge keeps its length under someone else's time
+  slowdown (block an enemy power attack with Quick Reflexes right after pressing dodge) and with
+  `fPerfectSlowMotionPlayer` split from `fPerfectSlowMotion` (e.g. 1.0 / 0.35). The dev trace's second line now carries
+  `time world= player= p/w=`, so the run names the slowdown instead of needing it inferred.
 * Post-dodge speed floor (`carry` / `floorHits` in the trace).
 * Projectile i-frames (`i-frames: projectile ... passed through` lines).
 * Power attack from a dodge, attack -> dodge, MCO-style windows; arm stance with fArmStance below 1.

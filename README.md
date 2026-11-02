@@ -3,9 +3,9 @@
 An SKSE plugin + Pandora behavior patch for **Skyrim SE 1.5.97** that turns the dodge into a
 player-controlled movement action instead of an animation the player waits out:
 
-Current release: **0.3.0**, Skyrim SE **1.5.97**. See
-[release notes](docs/RELEASE_0.3.0.md) for area i-frame fixes, NPC API v2 and the
-optional Enhanced Combat Behavior integration. Projectile impact feedback from
+Current release: **0.3.1**, Skyrim SE **1.5.97**. See
+[release notes](docs/RELEASE_0.3.1.md) for the time-slowdown fix, the left-hand cast / block
+classification and the two handed-handling fixes. Projectile impact feedback from
 other mods remains an open compatibility issue.
 
 * the plugin owns the character's displacement during the dodge (one authoritative source per frame,

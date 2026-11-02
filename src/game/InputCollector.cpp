@@ -48,7 +48,8 @@ namespace rdf::game::input
 		bool GameIsInputBlocked()
 		{
 			auto* ui = RE::UI::GetSingleton();
-			return !ui || ui->GameIsPaused() || ui->IsMenuOpen(RE::Console::MENU_NAME);
+			return !ui || ui->GameIsPaused() || ui->IsMenuOpen(RE::Console::MENU_NAME) ||
+				ui->IsMenuOpen(RE::DialogueMenu::MENU_NAME);
 		}
 
 		// sDodgeKeyAction's ini name as the game's user event ("ReadyWeapon" -> "Ready Weapon").
@@ -98,7 +99,14 @@ namespace rdf::game::input
 		public:
 			RE::BSEventNotifyControl ProcessEvent(RE::InputEvent* const* events, RE::BSTEventSource<RE::InputEvent*>*) override
 			{
-				if (!events || GameIsInputBlocked()) {
+				if (GameIsInputBlocked()) {
+					// A menu consumes the whole gesture. Its release after closing
+					// must not turn an earlier press into a Tap dodge.
+					tapSeen_.fill(false);
+					promoted_ = false;
+					return RE::BSEventNotifyControl::kContinue;
+				}
+				if (!events) {
 					return RE::BSEventNotifyControl::kContinue;
 				}
 				for (auto* e = *events; e; e = e->next) {
@@ -265,6 +273,11 @@ namespace rdf::game::input
 		Press p;
 		while (detail::Pop(p)) {
 		}
+	}
+
+	bool IsBlocked()
+	{
+		return GameIsInputBlocked();
 	}
 
 	bool BlockHeld()

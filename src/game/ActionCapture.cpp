@@ -1,6 +1,7 @@
 #include "ActionCapture.h"
 
 #include "Diagnostics.h"
+#include "EngineState.h"
 #include "Settings.h"
 
 #include <algorithm>
@@ -92,6 +93,12 @@ namespace rdf::game::capture
 		// a bash. Held back as attacks they came out of the dodge as a (power) bash.
 		bool LeftHandAttacks(RE::Actor* actor)
 		{
+			// A spell in the left hand first: the engine sends that press to the hand's magic caster and returns before it
+			// ever looks at an attack or a block, whatever the right hand holds (0x1407096B0 / 0x140632230). Classified
+			// as a block it came out of a dodge as blockStart instead of the cast (the spell + one-hander bug, 2026-11-02).
+			if (engine::LeftButtonCasts(actor)) {
+				return true;
+			}
 			// With a bow or a crossbow the game's left button bashes (1HM_Ready_State: bashStart for iRightHandType 7 / 12;
 			// its blockStart excludes them): an attack to replay as it was, a tap bashing, a hold power-bashing.
 			const auto* right = actor->GetEquippedObject(false);

@@ -10,6 +10,7 @@
 #include "MotionHook.h"
 #include "PerfectGhost.h"
 #include "Settings.h"
+#include "SlowMotion.h"
 
 #include <algorithm>
 #include <array>
@@ -1250,7 +1251,12 @@ namespace rdf::game
 				midSpeed = process->middleHigh->currentMovementSpeed;
 			}
 		}
-		logger::info("trace {:08X} graph Speed={:.1f} SpeedSampled={:.1f} Direction={:.2f} inJump={} depth={} | process moveSpeed={:.1f} | carry={:.1f} floorHits={}",
-			formID_, speed, sampled, direction, inJump, graph::Depth(actor), midSpeed, carry_, hook.floorHits);
+		// The engine's magic slowdown as it stands now; the dodge clock above (`t`) is on the player's dt, which is
+		// real x player, so world 0 with player 0 is normal time and world 0.05 / player 1 is a world-only slowdown.
+		float world = 0.0f, player = 0.0f;
+		slowmo::Read(world, player);
+		logger::info("trace {:08X} graph Speed={:.1f} SpeedSampled={:.1f} Direction={:.2f} inJump={} depth={} | process moveSpeed={:.1f} | carry={:.1f} floorHits={} | time world={:.3f} player={:.3f} p/w={:.2f}",
+			formID_, speed, sampled, direction, inJump, graph::Depth(actor), midSpeed, carry_, hook.floorHits, world, player,
+			slowmo::PlayerOverWorld());
 	}
 }

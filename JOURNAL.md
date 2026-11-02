@@ -822,3 +822,65 @@ Deviations from / refinements of ARCHITECTURE.md, with reasons.
   repository/build, not a dependency or binary asset of the RDF release. Move the
   current RDF DLL/PDB into the main VanillaLike ReactiveDodgeFramework mod and
   remove duplicate RDF binaries from the ECB override folder.
+
+* Dodge cut short by another mod's time slowdown (2026-11-02, user: with the Quick Reflexes slowdown a dodge breaks at
+  once and the character sometimes drops into a sprint right after; also unsure whether the perfect-dodge world/player
+  split works): the player tick was scaling its dt by `slowmo::PlayerDtScale()` = player / world, on the belief that the
+  delta reaching `PlayerCharacter::Update` (vfunc 0xAD) was the world's. It is not: 0x1405B3FD0 does
+  `movss xmm6,[dword_142F6B948]` (TimeManager+0x18, the world frame delta) / `call VATS::GetPlayerTimeScale_140759420`
+  (0x140759420 returns `(target/current) x (player/world)`) / `mulss xmm0,xmm6` / `call [vtbl+568h]`, and
+  `ProcessLists::QueueMovementJobs` (0x1406D51E5) gives the player's movement job the same product -- so the world
+  factor cancels for the player and vfunc 0xAD already runs at real x `playerMagicTimeSlowdown`. Multiplying again
+  multiplied the dodge clock by 1/world. Vanilla `QuickReflexes` (Skyrim.esm 0D8C33, unmodified here) is
+  `ModPlayerMagicSlowdown` Set 1 on `PerkQuickReflexes` (0D8C31, effect magnitude 0.05, 1 s, USSEP's copy winning), so
+  world = 0.05, player = 1.0 and the dodge clock ran at 20x: the trace's `t` advanced 0.343 per 17 ms frame and 8 of the
+  14 dodges in the log lasted 17-293 ms instead of 0.5-0.73 s (`dodge start` -> `dodge stopped`, every long episode of
+  ratio ~20 coinciding with a broken dodge). The sprint is the same failure downstream: the dodge is gone three frames
+  in, so the graph leaves it with the exit speed still ~480 u/s and locomotion picks the sprint state
+  (`FootSprintLeft`/`FootSprintRight`/`tailSprint` follow all but two of the broken dodges, and no healthy one but the
+  first). The user's own perfect-dodge setting (fPerfectSlowMotion = fPerfectSlowMotionPlayer = 0.35) makes the factor
+  exactly 1, which is why their own slow motion never showed it and why the split sliders looked inert -- with the split
+  at 0.35 / 1 the clock would have run 2.86x too fast, and at 0.35 / 0.5 it would have lagged. Fix: the player tick uses
+  the delta as it arrives; `PlayerDtScale` became `PlayerOverWorld` plus `WorldDt(dt)`, and the NPC agents -- ticked from
+  the player's update -- now get `WorldDt(dt)`, so an NPC's dodge runs on the world's clock instead of the player's.
+  The dev trace's second line carries `time world= player= p/w=` (VATS +0x80 / +0x84) so a run with anyone's slowdown in
+  effect shows the numbers. 129 tests pass, SE 1.5.97 DLL builds and is deployed (previous DLL in
+  `_work/timebase-fix-2026-11-02`); in-game re-check with Quick Reflexes and with the split sliders is the user's.
+* A spell in the left hand came out of a dodge as a block (2026-11-02, user: dodging with a spell in one hand and a
+  one-hander in the other, the dodge's exit raises a block instead of the next dodge): `capture::LeftHandAttacks` treats
+  every left hand that is not a one-handed weapon / staff / bow as "the left button blocks", and a spell is not a
+  weapon, so the game's `kActionLeftAttack` for a left-hand cast was classified `Kind::Block`: held back, pushed into
+  the buffer as `CommandKind::Block`, and answered by the dodge's own `blockStart` at the block window. The input layer
+  did the same thing independently (`AttackBlockHandler`'s `leftAttack` binding was enqueued as `Block` and kept alive
+  as a held block), so a spell + weapon build also made `PrepareBash` raise `wantBlocking` and turned the following
+  attack into a bash. The engine settles it: `AttackBlockHandler::ProcessButton` (0x1407096B0) tests
+  `PlayerCharacter::IsEquippedSpell(player, kLeftHand)` (0x140632230 = `selectedSpells[kLeftHand]`, Actor+0x1C0, with a
+  spell type other than `kEnchantment`) as its *first* branch and hands the press to that hand's magic caster
+  (0x140709840), returning before any attack, block or power-attack handling -- a spell also wins over a bow in the
+  right hand. New `engine::LeftButtonCasts` is that test, `wantBlocking` half included (`(actorState2 & 0x100) == 0`):
+  while a block is wanted -- the player's, or a block-button mod's (Input Support, CGO's and dual-wield block patches set
+  exactly that bit) -- the engine itself sends the press down the attack/block path, so RDF falls back to its old
+  behaviour there and no third-party block is overruled by the spell. `LeftHandAttacks` now starts with it (a cast is an attack: held
+  and replayed as one), the input press of the left button is kept as an attack instead of a block, `PrepareBash` never
+  bashes on a casting hand, and `StartBlock` refuses to raise a block for one -- `wantBlocking` is bit 8 of
+  `actorState2` and part of that same cast gate, so a stray one would eat the next cast. 129 tests pass, SE 1.5.97 DLL
+  built and deployed. Open, same family, not reported yet: an empty left hand with nothing blockable in the right
+  (fists, a spell in the right hand) still reads as "the left button blocks"; the same engine test has no answer for it
+  (there is no spell in that hand and no blockable item either), so it needs its own rule before it is touched.
+* The left-button fix, second half (2026-11-02, user: now the character swings the weapon in the right hand instead of casting):
+  the first fix turned the held left press into `CommandKind::Attack` so it would be "replayed like any other attack", but
+  RDF's attack has no hand in it -- `Player::PerformAction` plays `kActionRightAttack` for every attack decision
+  (`attack straight out of the 1hm dodge: own action accepted` in the log, i.e. `capture::Replay` found nothing to replay
+  because the cast never reaches `ActorMediator::PerformAction`: a left-hand cast goes through the hand's magic caster,
+  `AttackBlockHandler::ProcessButton` 0x1407096B0 -> 0x140709840, and none of the 11 capture sites sees it). So the
+  fabricated attack came out as a swing with the other hand. The press is now not shaped at all: it is left to the game's
+  caster and logged as `press of the casting left hand: left to the game's caster`. The dodge then runs its course instead
+  of being cancelled. What a press during a dodge actually loses: the engine consumes it in that frame and the caster is
+  not retried, so a cast asked for mid-dodge does not happen -- a real dodge -> cast needs the caster's own charge /
+  release state machine (FUN_140709840's states 1-6, `ActorMagicCaster::StartChargeImpl` / `StartCastImpl`), which is a
+  feature, not this fix, and is not in yet. 129 tests pass, DLL built and deployed.
+  Same run, the timebase fix verified in game: the user's split is 0.30 / 0.85 and the dodges that overlapped it lasted
+  0.677 / 0.720 s (before the fix a world-only slowdown cut them to 17-86 ms); the trace's new
+  `time world=0.300 player=0.850 p/w=2.83` shows it. Also visible: the perfect-dodge slow motion was repeatedly
+  `taken over by another time slowdown` 20 ms after starting and `skipped: another time slowdown ... runs` twice, i.e. the
+  Quick Reflexes effect was up at the same time -- by design RDF backs off and lets it own the slowdown.

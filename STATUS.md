@@ -24,6 +24,20 @@
   firing a clip-end exit). 0/72 failures after the fix.
 
 ## Built and deployed, waiting for an in-game check
+* Left-hand spell (2026-11-02): a cast with a spell in the left hand is no longer taken for a block, so it does not come
+  out of a dodge as `blockStart` and does not turn an attack into a bash (engine facts in REVERSE_ENGINEERING.md). The
+  test is the engine's own, `wantBlocking` included, so a block-button mod (Input Support, CGO, dual-wield block patches)
+  keeps its block: while one is wanted the press is not a cast and RDF behaves as before. Neither is the press shaped
+  into an attack any more: RDF's attack is `kActionRightAttack`, which with a spell in the left hand swung the weapon in
+  the other hand; the press is left to the game's caster, so a cast asked for *during* a dodge does not happen (a real
+  dodge -> cast needs the magic caster's charge / release path, not built).
+  Waiting: dodge with a spell in the left hand and a one-hander in the right -- the press must do nothing, the dodge must
+  run its course, and the left button right after the dodge must cast.
+* Timebase (2026-11-02): another mod's time slowdown no longer breaks a dodge. The player tick scaled its dt by
+  player/world on top of the engine, which already applies that factor to vfunc 0xAD (REVERSE_ENGINEERING.md,
+  "Time slowdown"); under Quick Reflexes (world x0.05) that ran the dodge clock at 20x. The perfect-dodge
+  fPerfectSlowMotion / fPerfectSlowMotionPlayer split now behaves as the ini documents. Waiting: a blocked power attack
+  with Quick Reflexes mid-dodge, and a perfect dodge with the split at 0.35 / 1.
 * Projectile i-frames (`bProjectileIFrames`): arrows and spell missiles fly through during the window.
 * Precision hits ignored during i-frames (pre-hit callback, `[Compat] bUsePrecision`).
 * Gamepad and analog magnitudes; dodge button on RS click collides with TDM's target lock (rebind in the menu).
