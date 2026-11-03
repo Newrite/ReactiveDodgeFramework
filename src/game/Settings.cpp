@@ -312,6 +312,7 @@ namespace rdf::game
 			}
 			s.doubleTap = ReadBool("Input", "bDoubleTapDodge", s.doubleTap);
 			s.doubleTapWindow = ReadFloat("Input", "fDoubleTapWindow", s.doubleTapWindow, 0.05f, 1.0f);
+			s.blockDodgeInLootMenu = ReadBool("Input", "bBlockDodgeInLootMenu", s.blockDodgeInLootMenu);
 			s.idleReplayChains = Split(ReadString("Input", "sIdleReplayChains", Join(s.idleReplayChains)));
 
 			s.costResource = ParseResource(ReadString("Cost", "sResource", "Stamina"));

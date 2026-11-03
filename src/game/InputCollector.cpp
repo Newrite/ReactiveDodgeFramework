@@ -114,7 +114,9 @@ namespace rdf::game::input
 					return true;
 				}
 			}
-			if (ui->IsMenuOpen("LootMenuIE") || ui->IsMenuOpen("LootMenu")) {   // QuickLoot IE / EE: pick an item
+			// QuickLoot IE / EE: the loot window keeps the world running while the player picks an item, so a dodge would
+			// start from it. [Input] bBlockDodgeInLootMenu=0 lets it through for players who want to dodge from there.
+			if (Settings::Get().blockDodgeInLootMenu && (ui->IsMenuOpen("LootMenuIE") || ui->IsMenuOpen("LootMenu"))) {
 				return true;
 			}
 			if (FUCK::IsMenuOpen()) {   // FLICK's menu (F7), where this plugin's settings are edited

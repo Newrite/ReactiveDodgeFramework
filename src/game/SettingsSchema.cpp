@@ -153,6 +153,7 @@ namespace rdf::game::schema
 				Float(Page::Input, "Input", "fTapMax", RDF_F(tapMax), 0.05f, 1.0f, "%.2f s"),
 				Bool(Page::Input, "Input", "bDoubleTapDodge", RDF_B(doubleTap)),
 				Float(Page::Input, "Input", "fDoubleTapWindow", RDF_F(doubleTapWindow), 0.05f, 1.0f, "%.2f s"),
+				Bool(Page::Input, "Input", "bBlockDodgeInLootMenu", RDF_B(blockDodgeInLootMenu)),
 				// --- timing and windows
 				Float(Page::Timing, "Timing", "fStartup", RDF_F(core.timing.startup), 0.0f, 0.5f, "%.3f s"),
 				Float(Page::Timing, "Timing", "fActive", RDF_F(core.timing.active), 0.0f, 1.0f, "%.3f s"),

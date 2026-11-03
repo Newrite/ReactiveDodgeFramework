@@ -517,6 +517,11 @@ T = {
     "fPowerAttackHold": ("Power attack hold", "Удержание силовой атаки"),
     "fPowerAttackHold_Desc": ("Holding attack this long during a dodge makes the cancel a power attack.",
                               "Удержание атаки столько времени в додже превращает отмену в силовую атаку."),
+    "bBlockDodgeInLootMenu": ("Block dodge in the loot menu", "Блокировать додж в меню лута"),
+    "bBlockDodgeInLootMenu_Desc": ("QuickLoot's loot window does not pause the game, so a dodge would start while it is open. "
+                                   "Off: the dodge key works with the loot window open.",
+                                   "Окно быстрого лута (QuickLoot) не ставит игру на паузу, поэтому додж начинался бы в нём. "
+                                   "Выкл.: кнопка доджа работает и с открытым окном лута."),
     # --- debug
     "bDevLog": ("Developer log", "Отладочный лог"),
     "bDevLog_Desc": ("Write decisions, graph events and a per-frame trace to ReactiveDodgeFramework.log.",

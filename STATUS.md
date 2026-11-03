@@ -24,6 +24,9 @@
   firing a clip-end exit). 0/72 failures after the fix.
 
 ## Built and deployed, waiting for an in-game check
+* Loot-window toggle (2026-11-03): `[Input] bBlockDodgeInLootMenu` (default 1) decides whether QuickLoot's loot window
+  holds the dodge back; 0 lets the dodge key work with it open. Also on the FLICK Input page. The rest of the 0.3.2
+  menu gate is unchanged.
 * Menu gate (2026-11-03): a dodge no longer fires in a menu that is not the game's own pause. `GameIsPaused()` plus the
   same explicit vanilla list TrueFlasksNG uses, QuickLoot's `LootMenuIE` / `LootMenu`, FLICK's own menu (this plugin's
   settings) and Wheeler's wheel (only when `wheeler.dll` is loaded; absent in this order). Held keys stay in sync while a

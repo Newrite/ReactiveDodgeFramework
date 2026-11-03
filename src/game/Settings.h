@@ -76,6 +76,9 @@ namespace rdf::game
 		// Two presses of the same movement key within fDoubleTapWindow dodge that way (keyboard).
 		bool         doubleTap{ false };
 		float        doubleTapWindow{ 0.25f };
+		// QuickLoot's loot window (LootMenu / LootMenuIE) does not pause the game, so a dodge would start from it: 0 lets it
+		// (the dodge key works with the loot window open), 1 holds the dodge back like any other menu.
+		bool         blockDodgeInLootMenu{ true };
 
 		// [Cost]
 		// Resource a dodge costs; nullopt = free.
